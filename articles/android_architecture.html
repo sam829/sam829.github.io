@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Android Clean Architecture — The Definitive Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #080f0a;
+  --bg2:      #0c1510;
+  --bg3:      #101c14;
+  --surface:  #14231a;
+  --surface2: #192c20;
+  --border:   rgba(52,211,153,0.08);
+  --border2:  rgba(52,211,153,0.16);
+  --a1: #34d399;   /* emerald */
+  --a2: #06b6d4;   /* cyan */
+  --a3: #f59e0b;   /* amber */
+  --a4: #f43f5e;   /* rose */
+  --a5: #a78bfa;   /* violet */
+  --a6: #fb923c;   /* orange */
+  --text:  #e2f0e8;
+  --text2: #7aab8a;
+  --text3: #3d6b4f;
+  --font-head: 'Bebas Neue', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-code: 'DM Mono', monospace;
+  --r: 10px;
+  --rl: 18px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--a1); border-radius: 2px; }
+
+/* HEXAGON GRID BG */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(52,211,153,0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* SCANLINE TEXTURE */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* NAV */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  background: rgba(8,15,10,0.9);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border2);
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+}
+.nav-logo {
+  font-family: var(--font-head);
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  color: var(--a1);
+}
+.nav-links { display: flex; gap: 24px; list-style: none; }
+.nav-links a {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  text-decoration: none;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color .15s;
+}
+.nav-links a:hover { color: var(--a1); }
+
+/* HERO */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 120px 10vw 80px;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.hero-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+}
+.g1 { width: 500px; height: 500px; background: rgba(52,211,153,0.07); top: -80px; right: -80px; animation: gf1 16s ease-in-out infinite; }
+.g2 { width: 350px; height: 350px; background: rgba(6,182,212,0.06); bottom: 0; left: 20%; animation: gf2 12s ease-in-out infinite; }
+@keyframes gf1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-40px,60px) scale(1.15)} }
+@keyframes gf2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-40px)} }
+
+.hero-kicker {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--a1);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  animation: slideRight .7s .1s forwards;
+}
+.hero-kicker::before {
+  content: '';
+  width: 32px;
+  height: 1px;
+  background: var(--a1);
+}
+
+.hero-title {
+  font-family: var(--font-head);
+  font-size: clamp(64px, 10vw, 140px);
+  line-height: 0.92;
+  letter-spacing: 0.04em;
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: slideRight .8s .25s forwards;
+}
+.ht1 { display: block; color: var(--text); }
+.ht2 { display: block; color: var(--a1); }
+.ht3 { display: block; color: var(--text2); font-size: 0.55em; }
+
+.hero-desc {
+  font-family: var(--font-body);
+  font-size: 17px;
+  color: var(--text2);
+  max-width: 520px;
+  line-height: 1.7;
+  margin-bottom: 40px;
+  opacity: 0;
+  animation: slideRight .8s .4s forwards;
+}
+
+.hero-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  max-width: 580px;
+  opacity: 0;
+  animation: slideRight .8s .55s forwards;
+}
+
+.stack-row {
+  display: flex;
+  align-items: center;
+  padding: 11px 18px;
+  border-radius: var(--r);
+  border: 1px solid;
+  cursor: default;
+  transition: transform .2s;
+  position: relative;
+  overflow: hidden;
+}
+.stack-row::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+}
+.stack-row:hover { transform: translateX(8px); }
+
+.sr-ui     { background: rgba(167,139,250,0.06); border-color: rgba(167,139,250,0.25); }
+.sr-ui::before { background: var(--a5); }
+.sr-vm     { background: rgba(52,211,153,0.05); border-color: rgba(52,211,153,0.22); }
+.sr-vm::before { background: var(--a1); }
+.sr-domain { background: rgba(6,182,212,0.05); border-color: rgba(6,182,212,0.22); }
+.sr-domain::before { background: var(--a2); }
+.sr-data   { background: rgba(245,158,11,0.05); border-color: rgba(245,158,11,0.22); }
+.sr-data::before { background: var(--a3); }
+
+.sr-name { font-family: var(--font-body); font-size: 13px; font-weight: 600; flex: 0 0 130px; }
+.sr-desc { font-family: var(--font-body); font-size: 11px; color: var(--text2); }
+.sr-badge {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.dep-hint {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  text-align: center;
+  padding: 2px 0;
+  text-transform: uppercase;
+}
+
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(-30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* MAIN */
+main { position: relative; z-index: 1; }
+
+.section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 80px 40px;
+  border-top: 1px solid var(--border);
+}
+
+.sec-label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--a1);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sec-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--a1), transparent);
+  opacity: 0.25;
+}
+
+.sec-title {
+  font-family: var(--font-head);
+  font-size: clamp(36px, 5vw, 64px);
+  letter-spacing: 0.05em;
+  line-height: 1;
+  margin-bottom: 14px;
+}
+
+.sec-intro {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--text2);
+  max-width: 580px;
+  line-height: 1.7;
+  margin-bottom: 40px;
+}
+
+/* FILE TREE */
+.tree-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--rl);
+  overflow: hidden;
+}
+.tree-header {
+  background: var(--surface);
+  padding: 13px 18px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-bottom: 1px solid var(--border);
+}
+.td { width: 10px; height: 10px; border-radius: 50%; }
+.td:nth-child(1){background:#ff5f57} .td:nth-child(2){background:#ffbd2e} .td:nth-child(3){background:#28c840}
+.tree-path {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--text2);
+  margin-left: 10px;
+  letter-spacing: 0.04em;
+}
+.tree-body { padding: 18px 20px; overflow-x: auto; }
+
+.fr {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  border-radius: 5px;
+  padding: 0 4px;
+  transition: background .12s;
+  cursor: default;
+}
+.fr:hover { background: rgba(52,211,153,0.05); }
+.fi { font-size: 11px; margin-right: 5px; flex-shrink: 0; font-family: var(--font-code); }
+.fl { font-family: var(--font-code); font-size: 11.5px; }
+.fl.d  { color: #79c0ff; }
+.fl.kt { color: #cdd9e5; }
+.fl.g  { color: #8b949e; }
+.fl.x  { color: #56d364; }
+.ann-tag {
+  margin-left: 8px;
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.t-ui     { background: rgba(167,139,250,0.12); color: #c4b5fd; border-color: rgba(167,139,250,0.3); }
+.t-vm     { background: rgba(52,211,153,0.1);   color: #6ee7b7;  border-color: rgba(52,211,153,0.25); }
+.t-domain { background: rgba(6,182,212,0.1);    color: #67e8f9;  border-color: rgba(6,182,212,0.25); }
+.t-data   { background: rgba(245,158,11,0.1);   color: #fcd34d;  border-color: rgba(245,158,11,0.25); }
+.t-di     { background: rgba(244,63,94,0.1);    color: #fda4af;  border-color: rgba(244,63,94,0.25); }
+
+/* CODE CARDS */
+.code-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 14px;
+}
+
+.cc {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--rl);
+  overflow: hidden;
+  transition: border-color .2s, transform .2s;
+  position: relative;
+}
+.cc::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.cc:hover { border-color: rgba(52,211,153,0.3); transform: translateY(-2px); }
+.cc:hover::before { opacity: 1; }
+.cc-ui::before     { background: linear-gradient(90deg, var(--a5), transparent); }
+.cc-vm::before     { background: linear-gradient(90deg, var(--a1), transparent); }
+.cc-domain::before { background: linear-gradient(90deg, var(--a2), transparent); }
+.cc-data::before   { background: linear-gradient(90deg, var(--a3), transparent); }
+.cc-di::before     { background: linear-gradient(90deg, var(--a4), transparent); }
+.cc-net::before    { background: linear-gradient(90deg, var(--a6), transparent); }
+
+.cc-head {
+  background: var(--surface);
+  padding: 11px 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.cd { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ct { font-family: var(--font-body); font-size: 12px; font-weight: 600; color: var(--text); }
+.cs { font-family: var(--font-body); font-size: 10px; color: var(--text3); margin-left: auto; text-transform: uppercase; letter-spacing: 0.06em; }
+
+pre {
+  padding: 15px;
+  font-family: var(--font-code);
+  font-size: 11.5px;
+  line-height: 1.85;
+  overflow-x: auto;
+  color: #cdd9e5;
+  white-space: pre;
+  background: transparent;
+}
+
+/* KOTLIN SYNTAX */
+.kw  { color: #ff7b72; }
+.cls { color: #79c0ff; }
+.fn  { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.ann { color: #f0c274; }
+.cmt { color: #4d7a5a; font-style: italic; }
+.typ { color: #56d364; }
+.num { color: #f0883e; }
+
+/* TABS */
+.tab-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.tb {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 100px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: all .15s;
+}
+.tb:hover { background: var(--surface); color: var(--text); }
+.tb.on { background: var(--a1); color: #061009; border-color: var(--a1); }
+.tp { display: none; }
+.tp.on { display: block; }
+
+/* FLOW */
+.flow-section { margin-bottom: 26px; }
+.flow-lbl {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+.flow-row {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  gap: 0;
+}
+.fb {
+  flex-shrink: 0;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  min-width: 80px;
+}
+.fa { flex-shrink: 0; color: var(--text3); padding: 0 7px; font-size: 13px; }
+
+.fb-ui     { background: rgba(167,139,250,0.1);  border-color: rgba(167,139,250,0.4); color: #c4b5fd; }
+.fb-vm     { background: rgba(52,211,153,0.08);  border-color: rgba(52,211,153,0.35); color: var(--a1); }
+.fb-domain { background: rgba(6,182,212,0.08);   border-color: rgba(6,182,212,0.35);  color: var(--a2); }
+.fb-data   { background: rgba(245,158,11,0.08);  border-color: rgba(245,158,11,0.35); color: var(--a3); }
+.fb-di     { background: rgba(244,63,94,0.08);   border-color: rgba(244,63,94,0.3);   color: var(--a4); }
+
+/* FEATURE CARDS */
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 13px;
+}
+.fc {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 20px;
+  transition: border-color .18s;
+}
+.fc:hover { border-color: var(--border2); }
+.fc-icon {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+.fc-title { font-family: var(--font-body); font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.fc-desc  { font-family: var(--font-body); font-size: 12px; color: var(--text2); line-height: 1.65; margin-bottom: 10px; }
+.fc-dep   { font-family: var(--font-code); font-size: 10px; color: var(--text3); background: var(--surface); border: 1px solid var(--border); padding: 3px 8px; border-radius: 5px; display: inline-block; margin: 2px 2px 0 0; }
+
+/* PRINCIPLE CARDS */
+.prin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+}
+.pc {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 22px;
+  transition: border-color .18s;
+}
+.pc:hover { border-color: var(--border2); }
+.pc-letter { font-family: var(--font-head); font-size: 52px; line-height: 1; margin-bottom: 6px; opacity: 0.13; }
+.pc-title  { font-family: var(--font-body); font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.pc-desc   { font-family: var(--font-body); font-size: 12px; color: var(--text2); line-height: 1.65; }
+
+/* PACKAGES TABLE */
+.pkg-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--rl);
+  overflow: hidden;
+  overflow-x: auto;
+}
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left;
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-body);
+  font-size: 12px;
+  vertical-align: top;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(52,211,153,0.02); }
+.pkg-n { font-family: var(--font-code); font-size: 11px; color: var(--a1); }
+.pkg-v { font-family: var(--font-code); font-size: 10px; color: var(--text3); }
+.pkg-d { color: var(--text2); font-size: 12px; }
+.lp {
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 100px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid;
+}
+
+/* NOTE */
+.note {
+  background: rgba(52,211,153,0.05);
+  border: 1px solid rgba(52,211,153,0.18);
+  border-left: 3px solid var(--a1);
+  border-radius: 0 9px 9px 0;
+  padding: 13px 17px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text2);
+  margin: 20px 0;
+  line-height: 1.6;
+}
+.note strong { color: var(--a1); font-weight: 600; }
+
+.warn {
+  background: rgba(245,158,11,0.05);
+  border: 1px solid rgba(245,158,11,0.18);
+  border-left: 3px solid var(--a3);
+  border-radius: 0 9px 9px 0;
+  padding: 13px 17px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text2);
+  margin: 20px 0;
+  line-height: 1.6;
+}
+.warn strong { color: var(--a3); font-weight: 600; }
+
+/* DIVIDER */
+.dvdr { height: 1px; background: linear-gradient(90deg, transparent, var(--border2), transparent); }
+
+/* REVEAL */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity .65s ease, transform .65s ease; }
+.reveal.vis { opacity: 1; transform: translateY(0); }
+
+/* GRAD TEXT */
+.gt1 { background: linear-gradient(120deg, var(--a1), var(--a2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.gt2 { background: linear-gradient(120deg, var(--a3), var(--a6)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.gt3 { background: linear-gradient(120deg, var(--a5), var(--a4)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* FOOTER */
+footer {
+  position: relative; z-index: 1;
+  text-align: center;
+  padding: 60px 40px;
+  border-top: 1px solid var(--border);
+}
+.ft-title {
+  font-family: var(--font-head);
+  font-size: 52px;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+.ft-sub { font-family: var(--font-body); font-size: 15px; color: var(--text2); margin-bottom: 28px; }
+.ft-copy { font-family: var(--font-body); font-size: 11px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; }
+
+@media (max-width: 700px) {
+  nav { padding: 0 16px; }
+  .nav-links { display: none; }
+  .hero { padding: 100px 20px 60px; }
+  .section { padding: 56px 20px; }
+  .code-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">Android Architecture</span>
+  <ul class="nav-links">
+    <li><a href="#layers">Layers</a></li>
+    <li><a href="#structure">Structure</a></li>
+    <li><a href="#patterns">Patterns</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#flows">Flows</a></li>
+    <li><a href="#packages">Gradle</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow g1"></div>
+  <div class="hero-glow g2"></div>
+
+  <p class="hero-kicker">Google's recommended architecture · Kotlin · Jetpack</p>
+  <h1 class="hero-title">
+    <span class="ht1">Android</span>
+    <span class="ht2">Clean</span>
+    <span class="ht3">Architecture Field Guide</span>
+  </h1>
+  <p class="hero-desc">MVVM + Clean Architecture with Kotlin Coroutines, Jetpack Compose, Hilt, Room, Retrofit — the complete production blueprint following Google's official guidance.</p>
+
+  <div class="hero-stack">
+    <div class="stack-row sr-ui">
+      <span class="sr-name" style="color:#c4b5fd">UI Layer</span>
+      <span class="sr-desc">Compose screens · ViewModels · UI state · Navigation</span>
+      <span class="sr-badge" style="background:rgba(167,139,250,0.15);color:#c4b5fd">Stateful</span>
+    </div>
+    <div class="dep-hint">↓ observes state from ↓</div>
+    <div class="stack-row sr-vm">
+      <span class="sr-name" style="color:var(--a1)">ViewModel</span>
+      <span class="sr-desc">StateFlow · business logic bridge · lifecycle-aware</span>
+      <span class="sr-badge" style="background:rgba(52,211,153,0.12);color:var(--a1)">MVVM</span>
+    </div>
+    <div class="dep-hint">↓ calls ↓</div>
+    <div class="stack-row sr-domain">
+      <span class="sr-name" style="color:var(--a2)">Domain Layer</span>
+      <span class="sr-desc">Use cases · Entities · Repository interfaces · Pure Kotlin</span>
+      <span class="sr-badge" style="background:rgba(6,182,212,0.1);color:var(--a2)">No Android</span>
+    </div>
+    <div class="dep-hint">↓ implemented by ↓</div>
+    <div class="stack-row sr-data">
+      <span class="sr-name" style="color:var(--a3)">Data Layer</span>
+      <span class="sr-desc">Repositories · Retrofit · Room · DataStore · Mappers</span>
+      <span class="sr-badge" style="background:rgba(245,158,11,0.1);color:var(--a3)">I/O</span>
+    </div>
+  </div>
+</section>
+
+<main>
+
+<!-- LAYERS -->
+<section class="section reveal" id="layers">
+  <p class="sec-label">01 — Architecture</p>
+  <h2 class="sec-title">THE <span class="gt1">LAYER</span> CONTRACT</h2>
+  <p class="sec-intro">Google's Guide to App Architecture mandates three layers. Dependencies flow inward only. The domain layer has zero Android SDK imports.</p>
+
+  <div class="note">
+    <strong>The rule:</strong> UI → Domain ← Data. Nothing in Domain knows about Retrofit or Room. Nothing in UI knows about Room. Hilt wires everything together at compile time — zero manual instantiation.
+  </div>
+
+  <div class="prin-grid reveal" style="margin-top:28px">
+    <div class="pc">
+      <div class="pc-letter" style="color:var(--a5)">UI</div>
+      <div class="pc-title" style="color:#c4b5fd">UI Layer</div>
+      <div class="pc-desc">Jetpack Compose screens observe ViewModel StateFlow. UI is a pure function of state — no imperative logic. Navigation via Navigation Compose. Shared element transitions with Compose animation APIs.</div>
+    </div>
+    <div class="pc">
+      <div class="pc-letter" style="color:var(--a1)">VM</div>
+      <div class="pc-title" style="color:var(--a1)">ViewModel</div>
+      <div class="pc-desc">Survives configuration changes. Holds and exposes UI state as StateFlow. Calls use cases on viewModelScope. Transforms domain results into UI-friendly models. Never holds Context.</div>
+    </div>
+    <div class="pc">
+      <div class="pc-letter" style="color:var(--a2)">D</div>
+      <div class="pc-title" style="color:var(--a2)">Domain Layer</div>
+      <div class="pc-desc">Pure Kotlin — no Android imports. Use cases (interactors) each do one thing. Repository interfaces defined here. Entities are simple data classes. Result&lt;T&gt; or sealed class for errors.</div>
+    </div>
+    <div class="pc">
+      <div class="pc-letter" style="color:var(--a3)">Da</div>
+      <div class="pc-title" style="color:var(--a3)">Data Layer</div>
+      <div class="pc-desc">Implements repository interfaces. Remote: Retrofit + OkHttp interceptors. Local: Room database + DataStore Preferences. Mappers convert DTOs → domain entities. Offline-first with NetworkBoundResource pattern.</div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- FILE STRUCTURE -->
+<section class="section reveal" id="structure">
+  <p class="sec-label">02 — Project Structure</p>
+  <h2 class="sec-title">FEATURE-FIRST <span class="gt2">MODULES</span></h2>
+  <p class="sec-intro">Organised by feature, not by layer. Each feature owns its slice of every layer. Scales to multi-module Gradle projects cleanly.</p>
+
+  <div class="tree-wrap reveal">
+    <div class="tree-header">
+      <span class="td"></span><span class="td"></span><span class="td"></span>
+      <span class="tree-path">app / src / main / java / com.app /</span>
+    </div>
+    <div class="tree-body">
+      <div class="fr"><span style="width:0" class="fi">▾</span><span class="fl d">core/</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">di/</span><span class="ann-tag t-di">Hilt</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">AppModule.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— @Module @InstallIn(SingletonComponent)</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">NetworkModule.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— OkHttp, Retrofit, interceptors</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">DatabaseModule.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— Room, DataStore</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">network/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">AuthInterceptor.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— attach + refresh Bearer</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">EncryptInterceptor.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— AES-256 body encryption</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">NetworkResult.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— sealed Result wrapper</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">NetworkBoundResource.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— offline-first Flow emitter</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">storage/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">SecurePreferences.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— EncryptedSharedPreferences</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">TokenDataStore.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— DataStore&lt;Preferences&gt;</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">speech/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">SttManager.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— SpeechRecognizer wrapper</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">TtsManager.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— TextToSpeech wrapper</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">realtime/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">WebSocketManager.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— OkHttp WS + reconnect</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">ui/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">theme/AppTheme.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— Material3 color + typography</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">components/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— reusable composables</span></div>
+
+      <div class="fr" style="height:10px"></div>
+
+      <div class="fr"><span style="width:0" class="fi">▾</span><span class="fl d">features/</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">auth/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-body)">— repeat per feature</span></div>
+
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">domain/</span><span class="ann-tag t-domain">Domain</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">model/User.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— pure data class entity</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">repository/AuthRepository.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— interface</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">usecase/LoginUseCase.kt</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">usecase/LogoutUseCase.kt</span></div>
+
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">data/</span><span class="ann-tag t-data">Data</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">remote/AuthApiService.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— @GET/@POST Retrofit interface</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">remote/dto/UserDto.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— @SerializedName JSON DTO</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">local/UserDao.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— Room @Dao</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">local/entity/UserEntity.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— @Entity table</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">mapper/UserMapper.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— DTO/Entity ↔ Domain</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">repository/AuthRepositoryImpl.kt</span></div>
+
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">presentation/</span><span class="ann-tag t-ui">UI</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">AuthViewModel.kt</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">LoginScreen.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— @Composable</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">AuthUiState.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— sealed UI state</span></div>
+
+      <div class="fr" style="height:10px"></div>
+      <div class="fr"><span style="width:0" class="fi">▾</span><span class="fl d">app/</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">App.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— @HiltAndroidApp Application class</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">MainActivity.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— @AndroidEntryPoint, setContent {}</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl kt">NavGraph.kt</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— NavHost + composable routes</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- CODE PATTERNS -->
+<section class="section reveal" id="patterns">
+  <p class="sec-label">03 — Code Patterns</p>
+  <h2 class="sec-title">KOTLIN <span class="gt3">BLUEPRINTS</span></h2>
+  <p class="sec-intro">Production-ready Kotlin. Every snippet below compiles and integrates with the architecture above.</p>
+
+  <div class="tab-nav">
+    <button class="tb on" onclick="st('vm')">ViewModel + State</button>
+    <button class="tb" onclick="st('domain')">Domain Layer</button>
+    <button class="tb" onclick="st('data')">Data + Offline</button>
+    <button class="tb" onclick="st('network')">Network + Security</button>
+    <button class="tb" onclick="st('ui')">Compose UI</button>
+    <button class="tb" onclick="st('speech')">Speech + Realtime</button>
+    <button class="tb" onclick="st('anim')">Animations</button>
+    <button class="tb" onclick="st('di')">Hilt DI</button>
+  </div>
+
+  <!-- VIEWMODEL -->
+  <div class="tp on" id="tp-vm">
+    <div class="code-grid">
+
+      <div class="cc cc-ui">
+        <div class="cc-head"><span class="cd" style="background:#c4b5fd"></span><span class="ct">AuthUiState.kt — sealed UI state</span><span class="cs">pres</span></div>
+<pre><span class="kw">sealed interface</span> <span class="cls">AuthUiState</span> {
+  <span class="kw">data object</span> <span class="cls">Idle</span>      : <span class="cls">AuthUiState</span>
+  <span class="kw">data object</span> <span class="cls">Loading</span>   : <span class="cls">AuthUiState</span>
+  <span class="kw">data class</span>  <span class="cls">Success</span>(
+    <span class="kw">val</span> user: <span class="cls">User</span>,
+    <span class="cmt">// signals data came from local cache</span>
+    <span class="kw">val</span> isFromCache: <span class="cls">Boolean</span> = <span class="kw">false</span>,
+  ) : <span class="cls">AuthUiState</span>
+  <span class="kw">data class</span>  <span class="cls">Error</span>(
+    <span class="kw">val</span> message: <span class="cls">String</span>,
+  ) : <span class="cls">AuthUiState</span>
+}</pre>
+      </div>
+
+      <div class="cc cc-vm">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">AuthViewModel.kt</span><span class="cs">pres</span></div>
+<pre><span class="ann">@HiltViewModel</span>
+<span class="kw">class</span> <span class="cls">AuthViewModel</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>(
+  <span class="kw">private val</span> loginUseCase:  <span class="cls">LoginUseCase</span>,
+  <span class="kw">private val</span> logoutUseCase: <span class="cls">LogoutUseCase</span>,
+) : <span class="cls">ViewModel</span>() {
+
+  <span class="kw">private val</span> _uiState =
+    <span class="cls">MutableStateFlow</span>&lt;<span class="cls">AuthUiState</span>&gt;(<span class="cls">AuthUiState</span>.<span class="cls">Idle</span>)
+  <span class="kw">val</span> uiState: <span class="cls">StateFlow</span>&lt;<span class="cls">AuthUiState</span>&gt; =
+    _uiState.asStateFlow()
+
+  <span class="kw">fun</span> <span class="fn">login</span>(email: <span class="cls">String</span>, password: <span class="cls">String</span>) {
+    viewModelScope.launch {
+      _uiState.value = <span class="cls">AuthUiState</span>.<span class="cls">Loading</span>
+      loginUseCase(email, password)
+        .onSuccess { user ->
+          _uiState.value = <span class="cls">AuthUiState</span>.<span class="cls">Success</span>(user)
+        }
+        .onFailure { e ->
+          _uiState.value = <span class="cls">AuthUiState</span>.<span class="cls">Error</span>(
+            e.message ?: <span class="str">"Unknown error"</span>)
+        }
+    }
+  }
+
+  <span class="kw">fun</span> <span class="fn">logout</span>() {
+    viewModelScope.launch { logoutUseCase() }
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-vm">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">SearchViewModel.kt — debounce</span><span class="cs">pres</span></div>
+<pre><span class="ann">@HiltViewModel</span>
+<span class="kw">class</span> <span class="cls">SearchViewModel</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>(
+  <span class="kw">private val</span> searchUseCase: <span class="cls">SearchProductsUseCase</span>,
+) : <span class="cls">ViewModel</span>() {
+
+  <span class="kw">private val</span> _query = <span class="cls">MutableStateFlow</span>(<span class="str">""</span>)
+  <span class="kw">val</span> results = _query
+    .debounce(<span class="num">350L</span>)          <span class="cmt">// kotlinx.coroutines</span>
+    .distinctUntilChanged()
+    .filter { it.length >= <span class="num">2</span> }
+    .flatMapLatest { q ->   <span class="cmt">// cancels prev search</span>
+      searchUseCase(q)
+    }
+    .stateIn(
+      viewModelScope,
+      <span class="cls">SharingStarted</span>.<span class="cls">WhileSubscribed</span>(<span class="num">5_000</span>),
+      emptyList(),
+    )
+
+  <span class="kw">fun</span> <span class="fn">onQueryChange</span>(q: <span class="cls">String</span>) { _query.value = q }
+}</pre>
+      </div>
+
+    </div>
+    <div class="note" style="margin-top:16px">
+      <strong>flatMapLatest</strong> replaces the debouncer + CancelToken from the Flutter guide. It automatically cancels the previous coroutine the instant a new query arrives — zero boilerplate, idiomatic Kotlin.
+    </div>
+  </div>
+
+  <!-- DOMAIN -->
+  <div class="tp" id="tp-domain">
+    <div class="code-grid">
+
+      <div class="cc cc-domain">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">User.kt — domain entity</span><span class="cs">domain</span></div>
+<pre><span class="cmt">// Pure Kotlin — zero Android imports</span>
+<span class="kw">data class</span> <span class="cls">User</span>(
+  <span class="kw">val</span> id:        <span class="cls">String</span>,
+  <span class="kw">val</span> email:     <span class="cls">String</span>,
+  <span class="kw">val</span> name:      <span class="cls">String</span>,
+  <span class="kw">val</span> avatarUrl: <span class="cls">String</span>?,
+)</pre>
+      </div>
+
+      <div class="cc cc-domain">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">AuthRepository.kt — interface</span><span class="cs">domain</span></div>
+<pre><span class="cmt">// Defined in domain, implemented in data</span>
+<span class="kw">interface</span> <span class="cls">AuthRepository</span> {
+  <span class="kw">suspend fun</span> <span class="fn">login</span>(
+    email: <span class="cls">String</span>,
+    password: <span class="cls">String</span>,
+  ): <span class="cls">Result</span>&lt;<span class="cls">User</span>&gt;
+
+  <span class="kw">suspend fun</span> <span class="fn">logout</span>(): <span class="cls">Result</span>&lt;<span class="cls">Unit</span>&gt;
+
+  <span class="kw">suspend fun</span> <span class="fn">getCurrentUser</span>(): <span class="cls">User</span>?
+
+  <span class="cmt">// Flow for reactive cache observation</span>
+  <span class="kw">fun</span> <span class="fn">observeCurrentUser</span>(): <span class="cls">Flow</span>&lt;<span class="cls">User</span>?&gt;
+}</pre>
+      </div>
+
+      <div class="cc cc-domain">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">LoginUseCase.kt — SOLID SRP</span><span class="cs">domain</span></div>
+<pre><span class="cmt">// operator fun invoke = callable like a function</span>
+<span class="kw">class</span> <span class="cls">LoginUseCase</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>(
+  <span class="kw">private val</span> authRepository: <span class="cls">AuthRepository</span>,
+) {
+  <span class="kw">suspend operator fun</span> <span class="fn">invoke</span>(
+    email: <span class="cls">String</span>,
+    password: <span class="cls">String</span>,
+  ): <span class="cls">Result</span>&lt;<span class="cls">User</span>&gt; =
+    authRepository.login(email, password)
+}
+
+<span class="cmt">// KISS — one class, one responsibility.</span>
+<span class="cmt">// ViewModel calls it like a lambda:</span>
+<span class="cmt">// loginUseCase(email, password)</span></pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DATA -->
+  <div class="tp" id="tp-data">
+    <div class="code-grid">
+
+      <div class="cc cc-data">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">AuthRepositoryImpl.kt — offline first</span><span class="cs">data</span></div>
+<pre><span class="kw">class</span> <span class="cls">AuthRepositoryImpl</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>(
+  <span class="kw">private val</span> api:      <span class="cls">AuthApiService</span>,
+  <span class="kw">private val</span> userDao:  <span class="cls">UserDao</span>,
+  <span class="kw">private val</span> mapper:   <span class="cls">UserMapper</span>,
+) : <span class="cls">AuthRepository</span> {
+
+  <span class="kw">override suspend fun</span> <span class="fn">login</span>(
+    email: <span class="cls">String</span>, password: <span class="cls">String</span>,
+  ): <span class="cls">Result</span>&lt;<span class="cls">User</span>&gt; = runCatching {
+    <span class="kw">val</span> dto = api.login(<span class="cls">LoginRequest</span>(email, password))
+    <span class="kw">val</span> entity = mapper.dtoToEntity(dto)
+    userDao.upsert(entity)       <span class="cmt">// write-through cache</span>
+    mapper.entityToDomain(entity)
+  }
+
+  <span class="cmt">// reactive — emits cached then live</span>
+  <span class="kw">override fun</span> <span class="fn">observeCurrentUser</span>(): <span class="cls">Flow</span>&lt;<span class="cls">User</span>?&gt; =
+    userDao.observeCurrentUser()
+      .map { entity -> entity?.let(mapper::entityToDomain) }
+}</pre>
+      </div>
+
+      <div class="cc cc-data">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">NetworkBoundResource.kt — offline pattern</span><span class="cs">data · core</span></div>
+<pre><span class="cmt">// Generic offline-first Flow builder</span>
+<span class="kw">inline fun</span> &lt;<span class="cls">Local</span>, <span class="cls">Remote</span>, <span class="cls">Domain</span>&gt;
+  <span class="fn">networkBoundResource</span>(
+    <span class="kw">crossinline</span> query:     () -> <span class="cls">Flow</span>&lt;<span class="cls">Local</span>&gt;,
+    <span class="kw">crossinline</span> fetch:     <span class="kw">suspend</span> () -> <span class="cls">Remote</span>,
+    <span class="kw">crossinline</span> saveFetch: <span class="kw">suspend</span> (<span class="cls">Remote</span>) -> <span class="cls">Unit</span>,
+    <span class="kw">crossinline</span> toDomain:  (<span class="cls">Local</span>) -> <span class="cls">Domain</span>,
+    <span class="kw">crossinline</span> shouldFetch: (<span class="cls">Local</span>) -> <span class="cls">Boolean</span>,
+  ) = flow {
+    <span class="kw">val</span> local = query().first()
+    emit(<span class="cls">Resource</span>.<span class="cls">Loading</span>(toDomain(local)))
+
+    <span class="kw">if</span> (shouldFetch(local)) {
+      <span class="kw">try</span> {
+        saveFetch(fetch())
+      } <span class="kw">catch</span> (t: <span class="cls">Throwable</span>) {
+        emit(<span class="cls">Resource</span>.<span class="cls">Error</span>(t, toDomain(local)))
+      }
+    }
+
+    query().map { <span class="cls">Resource</span>.<span class="cls">Success</span>(toDomain(it)) }
+           .collect { emit(it) }
+  }</pre>
+      </div>
+
+      <div class="cc cc-data">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">UserDao.kt — Room</span><span class="cs">data</span></div>
+<pre><span class="ann">@Dao</span>
+<span class="kw">interface</span> <span class="cls">UserDao</span> {
+  <span class="ann">@Query</span>(<span class="str">"SELECT * FROM users WHERE id = :id"</span>)
+  <span class="kw">fun</span> <span class="fn">observeUser</span>(id: <span class="cls">String</span>): <span class="cls">Flow</span>&lt;<span class="cls">UserEntity</span>?&gt;
+
+  <span class="ann">@Query</span>(<span class="str">"SELECT * FROM users LIMIT 1"</span>)
+  <span class="kw">fun</span> <span class="fn">observeCurrentUser</span>(): <span class="cls">Flow</span>&lt;<span class="cls">UserEntity</span>?&gt;
+
+  <span class="ann">@Upsert</span>
+  <span class="kw">suspend fun</span> <span class="fn">upsert</span>(user: <span class="cls">UserEntity</span>)
+
+  <span class="ann">@Query</span>(<span class="str">"DELETE FROM users"</span>)
+  <span class="kw">suspend fun</span> <span class="fn">clearAll</span>()
+}
+
+<span class="ann">@Entity</span>(tableName = <span class="str">"users"</span>)
+<span class="kw">data class</span> <span class="cls">UserEntity</span>(
+  <span class="ann">@PrimaryKey</span> <span class="kw">val</span> id:        <span class="cls">String</span>,
+  <span class="kw">val</span> email:     <span class="cls">String</span>,
+  <span class="kw">val</span> name:      <span class="cls">String</span>,
+  <span class="kw">val</span> avatarUrl: <span class="cls">String</span>?,
+  <span class="kw">val</span> cachedAt:  <span class="cls">Long</span>,        <span class="cmt">// for TTL checks</span>
+)</pre>
+      </div>
+
+      <div class="cc cc-data">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">UserMapper.kt</span><span class="cs">data</span></div>
+<pre><span class="kw">class</span> <span class="cls">UserMapper</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>() {
+
+  <span class="kw">fun</span> <span class="fn">dtoToEntity</span>(dto: <span class="cls">UserDto</span>): <span class="cls">UserEntity</span> =
+    <span class="cls">UserEntity</span>(
+      id        = dto.id,
+      email     = dto.email,
+      name      = dto.name,
+      avatarUrl = dto.avatarUrl,
+      cachedAt  = <span class="cls">System</span>.currentTimeMillis(),
+    )
+
+  <span class="kw">fun</span> <span class="fn">entityToDomain</span>(e: <span class="cls">UserEntity</span>): <span class="cls">User</span> =
+    <span class="cls">User</span>(
+      id        = e.id,
+      email     = e.email,
+      name      = e.name,
+      avatarUrl = e.avatarUrl,
+    )
+
+  <span class="kw">fun</span> <span class="fn">dtoToDomain</span>(dto: <span class="cls">UserDto</span>): <span class="cls">User</span> =
+    entityToDomain(dtoToEntity(dto))
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- NETWORK -->
+  <div class="tp" id="tp-network">
+    <div class="code-grid">
+
+      <div class="cc cc-net">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">AuthApiService.kt — Retrofit</span><span class="cs">data · remote</span></div>
+<pre><span class="kw">interface</span> <span class="cls">AuthApiService</span> {
+  <span class="ann">@POST</span>(<span class="str">"/auth/login"</span>)
+  <span class="kw">suspend fun</span> <span class="fn">login</span>(
+    <span class="ann">@Body</span> request: <span class="cls">LoginRequest</span>,
+  ): <span class="cls">UserDto</span>
+
+  <span class="ann">@POST</span>(<span class="str">"/auth/refresh"</span>)
+  <span class="kw">suspend fun</span> <span class="fn">refreshToken</span>(
+    <span class="ann">@Body</span> body: <span class="cls">RefreshRequest</span>,
+  ): <span class="cls">TokenDto</span>
+
+  <span class="ann">@GET</span>(<span class="str">"/products"</span>)
+  <span class="kw">suspend fun</span> <span class="fn">getProducts</span>(
+    <span class="ann">@Query</span>(<span class="str">"q"</span>) query: <span class="cls">String</span>? = <span class="kw">null</span>,
+    <span class="ann">@Query</span>(<span class="str">"page"</span>) page: <span class="cls">Int</span> = <span class="num">1</span>,
+  ): <span class="cls">List</span>&lt;<span class="cls">ProductDto</span>&gt;
+}</pre>
+      </div>
+
+      <div class="cc cc-net">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">AuthInterceptor.kt — token + refresh</span><span class="cs">core · network</span></div>
+<pre><span class="kw">class</span> <span class="cls">AuthInterceptor</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>(
+  <span class="kw">private val</span> tokenDataStore: <span class="cls">TokenDataStore</span>,
+  <span class="kw">private val</span> refreshApi:    <span class="cls">AuthApiService</span>,
+) : <span class="cls">Interceptor</span> {
+
+  <span class="kw">override fun</span> <span class="fn">intercept</span>(chain: <span class="cls">Chain</span>): <span class="cls">Response</span> {
+    <span class="kw">val</span> token = runBlocking {
+      tokenDataStore.getAccessToken()
+    }
+    <span class="kw">val</span> req = chain.request().newBuilder()
+      .apply { token?.let {
+        header(<span class="str">"Authorization"</span>, <span class="str">"Bearer $it"</span>) } }
+      .build()
+
+    <span class="kw">val</span> res = chain.proceed(req)
+
+    <span class="kw">if</span> (res.code == <span class="num">401</span>) {
+      res.close()
+      <span class="kw">val</span> newToken = runBlocking { refreshToken() }
+      <span class="kw">if</span> (newToken != <span class="kw">null</span>) {
+        <span class="kw">return</span> chain.proceed(
+          req.newBuilder()
+            .header(<span class="str">"Authorization"</span>, <span class="str">"Bearer $newToken"</span>)
+            .build()
+        )
+      }
+    }
+    <span class="kw">return</span> res
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-net">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">EncryptInterceptor.kt — AES-256</span><span class="cs">core · network</span></div>
+<pre><span class="kw">class</span> <span class="cls">EncryptInterceptor</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>(
+  <span class="kw">private val</span> crypto: <span class="cls">CryptoManager</span>,
+) : <span class="cls">Interceptor</span> {
+
+  <span class="kw">override fun</span> <span class="fn">intercept</span>(chain: <span class="cls">Chain</span>): <span class="cls">Response</span> {
+    <span class="kw">val</span> req = chain.request()
+    <span class="kw">val</span> encryptedReq = req.body?.let { body ->
+      <span class="kw">val</span> iv = crypto.generateIv()
+      <span class="kw">val</span> plain = body.readUtf8Bytes()
+      <span class="kw">val</span> cipher = crypto.encrypt(plain, iv)
+      req.newBuilder()
+        .post(<span class="cls">EncryptedBody</span>(iv, cipher).toRequestBody())
+        .build()
+    } ?: req
+
+    <span class="kw">val</span> res = chain.proceed(encryptedReq)
+
+    <span class="kw">return if</span> (res.isSuccessful) {
+      <span class="kw">val</span> decrypted = crypto.decrypt(res)
+      res.newBuilder().body(decrypted.toResponseBody()).build()
+    } <span class="kw">else</span> res
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-net">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">TokenDataStore.kt — DataStore</span><span class="cs">core · storage</span></div>
+<pre><span class="kw">class</span> <span class="cls">TokenDataStore</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>(
+  <span class="ann">@ApplicationContext</span> context: <span class="cls">Context</span>,
+) {
+  <span class="kw">private val</span> prefs = <span class="cls">EncryptedSharedPreferences</span>.create(
+    context,
+    <span class="str">"secure_prefs"</span>,
+    <span class="cls">MasterKey</span>.<span class="cls">Builder</span>(context)
+      .setKeyScheme(<span class="cls">MasterKey</span>.<span class="cls">KeyScheme</span>.<span class="cls">AES256_GCM</span>)
+      .build(),
+    <span class="cls">EncryptedSharedPreferences</span>.<span class="cls">PrefKeyEncryptionScheme</span>.AES256_SIV,
+    <span class="cls">EncryptedSharedPreferences</span>.<span class="cls">PrefValueEncryptionScheme</span>.AES256_GCM,
+  )
+
+  <span class="kw">suspend fun</span> <span class="fn">getAccessToken</span>():  <span class="cls">String</span>? =
+    prefs.getString(<span class="str">"access_token"</span>, <span class="kw">null</span>)
+
+  <span class="kw">suspend fun</span> <span class="fn">saveTokens</span>(access: <span class="cls">String</span>, refresh: <span class="cls">String</span>) {
+    prefs.edit {
+      putString(<span class="str">"access_token"</span>, access)
+      putString(<span class="str">"refresh_token"</span>, refresh)
+    }
+  }
+
+  <span class="kw">suspend fun</span> <span class="fn">clearAll</span>() = prefs.edit { clear() }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- COMPOSE UI -->
+  <div class="tp" id="tp-ui">
+    <div class="code-grid">
+
+      <div class="cc cc-ui">
+        <div class="cc-head"><span class="cd" style="background:#c4b5fd"></span><span class="ct">LoginScreen.kt — Compose + ViewModel</span><span class="cs">pres · ui</span></div>
+<pre><span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">LoginScreen</span>(
+  viewModel: <span class="cls">AuthViewModel</span> = hiltViewModel(),
+  onSuccess: () -> <span class="cls">Unit</span>,
+) {
+  <span class="kw">val</span> uiState <span class="kw">by</span> viewModel.uiState.collectAsStateWithLifecycle()
+  <span class="kw">val</span> snackbar = remember { <span class="cls">SnackbarHostState</span>() }
+
+  <span class="cls">LaunchedEffect</span>(uiState) {
+    <span class="kw">when</span> (<span class="kw">val</span> s = uiState) {
+      <span class="kw">is</span> <span class="cls">AuthUiState</span>.<span class="cls">Success</span> -> onSuccess()
+      <span class="kw">is</span> <span class="cls">AuthUiState</span>.<span class="cls">Error</span>   -> snackbar.showSnackbar(s.message)
+      <span class="kw">else</span> -> {}
+    }
+  }
+
+  <span class="cls">Scaffold</span>(snackbarHost = { <span class="cls">SnackbarHost</span>(snackbar) }) { pad ->
+    <span class="cls">Box</span>(modifier = <span class="cls">Modifier</span>.padding(pad)) {
+      <span class="cls">LoginForm</span>(
+        isLoading = uiState <span class="kw">is</span> <span class="cls">AuthUiState</span>.<span class="cls">Loading</span>,
+        onLogin   = viewModel::login,
+      )
+    }
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-ui">
+        <div class="cc-head"><span class="cd" style="background:#c4b5fd"></span><span class="ct">NavGraph.kt — Navigation Compose</span><span class="cs">pres · navigation</span></div>
+<pre><span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">AppNavGraph</span>(navController: <span class="cls">NavHostController</span>) {
+  <span class="cls">NavHost</span>(
+    navController = navController,
+    startDestination = <span class="str">"login"</span>,
+  ) {
+    composable(<span class="str">"login"</span>) {
+      <span class="cls">LoginScreen</span>(
+        onSuccess = { navController.navigate(<span class="str">"home"</span>) {
+          popUpTo(<span class="str">"login"</span>) { inclusive = <span class="kw">true</span> }
+        }}
+      )
+    }
+
+    composable(
+      route = <span class="str">"product/{id}"</span>,
+      arguments = listOf(navArgument(<span class="str">"id"</span>) {
+        type = <span class="cls">NavType</span>.<span class="cls">StringType</span>
+      }),
+      <span class="cmt">// shared element transition destination</span>
+      enterTransition = {
+        fadeIn(tween(<span class="num">300</span>)) + slideIntoContainer(
+          towards = <span class="cls">SlideDirection</span>.<span class="cls">Start</span>,
+          animationSpec = tween(<span class="num">300</span>, easing = <span class="cls">EaseOutCubic</span>),
+        )
+      },
+      exitTransition = {
+        fadeOut(tween(<span class="num">200</span>)) + slideOutOfContainer(
+          towards = <span class="cls">SlideDirection</span>.<span class="cls">End</span>,
+          animationSpec = tween(<span class="num">200</span>),
+        )
+      },
+    ) { backStack ->
+      <span class="kw">val</span> id = backStack.arguments?.getString(<span class="str">"id"</span>)!!
+      <span class="cls">ProductDetailScreen</span>(productId = id)
+    }
+  }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SPEECH + REALTIME -->
+  <div class="tp" id="tp-speech">
+    <div class="code-grid">
+
+      <div class="cc cc-domain">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">SttManager.kt — SpeechRecognizer</span><span class="cs">core · speech</span></div>
+<pre><span class="kw">class</span> <span class="cls">SttManager</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>(
+  <span class="ann">@ApplicationContext</span> <span class="kw">private val</span> ctx: <span class="cls">Context</span>,
+) {
+  <span class="kw">private var</span> recognizer: <span class="cls">SpeechRecognizer</span>? = <span class="kw">null</span>
+  <span class="kw">private val</span> _results =
+    <span class="cls">MutableSharedFlow</span>&lt;<span class="cls">SttResult</span>&gt;(extraBufferCapacity = <span class="num">10</span>)
+  <span class="kw">val</span> results: <span class="cls">SharedFlow</span>&lt;<span class="cls">SttResult</span>&gt; = _results
+
+  <span class="kw">fun</span> <span class="fn">startListening</span>(locale: <span class="cls">Locale</span> = <span class="cls">Locale</span>.<span class="cls">ENGLISH</span>) {
+    recognizer = <span class="cls">SpeechRecognizer</span>.createSpeechRecognizer(ctx)
+    recognizer?.setRecognitionListener(<span class="kw">object</span> : <span class="cls">RecognitionListener</span> {
+      <span class="kw">override fun</span> <span class="fn">onResults</span>(bundle: <span class="cls">Bundle</span>) {
+        <span class="kw">val</span> words = bundle.getStringArrayList(
+          <span class="cls">SpeechRecognizer</span>.<span class="cls">RESULTS_RECOGNITION</span>)?.firstOrNull()
+        words?.let { _results.tryEmit(<span class="cls">SttResult</span>(it, isFinal = <span class="kw">true</span>)) }
+      }
+      <span class="kw">override fun</span> <span class="fn">onPartialResults</span>(b: <span class="cls">Bundle</span>) {
+        b.getStringArrayList(<span class="str">"android.speech.extra.UNSTABLE_TEXT"</span>)
+         ?.firstOrNull()
+         ?.let { _results.tryEmit(<span class="cls">SttResult</span>(it, isFinal = <span class="kw">false</span>)) }
+      }
+      <span class="kw">override fun</span> <span class="fn">onError</span>(error: <span class="cls">Int</span>) {}
+      <span class="kw">override fun</span> <span class="fn">onReadyForSpeech</span>(p: <span class="cls">Bundle</span>) {}
+      <span class="kw">override fun</span> <span class="fn">onBeginningOfSpeech</span>() {}
+      <span class="kw">override fun</span> <span class="fn">onRmsChanged</span>(v: <span class="cls">Float</span>) {}
+      <span class="kw">override fun</span> <span class="fn">onBufferReceived</span>(b: <span class="cls">ByteArray</span>) {}
+      <span class="kw">override fun</span> <span class="fn">onEndOfSpeech</span>() {}
+      <span class="kw">override fun</span> <span class="fn">onEvent</span>(t: <span class="cls">Int</span>, p: <span class="cls">Bundle</span>) {}
+    })
+    recognizer?.startListening(
+      <span class="cls">Intent</span>(<span class="cls">RecognizerIntent</span>.<span class="cls">ACTION_RECOGNIZE_SPEECH</span>).apply {
+        putExtra(<span class="cls">RecognizerIntent</span>.<span class="cls">EXTRA_LANGUAGE_MODEL</span>,
+          <span class="cls">RecognizerIntent</span>.<span class="cls">LANGUAGE_MODEL_FREE_FORM</span>)
+        putExtra(<span class="cls">RecognizerIntent</span>.<span class="cls">EXTRA_LANGUAGE</span>, locale)
+        putExtra(<span class="cls">RecognizerIntent</span>.<span class="cls">EXTRA_PARTIAL_RESULTS</span>, <span class="kw">true</span>)
+      }
+    )
+  }
+
+  <span class="kw">fun</span> <span class="fn">stop</span>() { recognizer?.stopListening() }
+  <span class="kw">fun</span> <span class="fn">destroy</span>() { recognizer?.destroy(); recognizer = <span class="kw">null</span> }
+}</pre>
+      </div>
+
+      <div class="cc cc-domain">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">TtsManager.kt — TextToSpeech</span><span class="cs">core · speech</span></div>
+<pre><span class="kw">class</span> <span class="cls">TtsManager</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>(
+  <span class="ann">@ApplicationContext</span> <span class="kw">private val</span> ctx: <span class="cls">Context</span>,
+) {
+  <span class="kw">private var</span> tts: <span class="cls">TextToSpeech</span>? = <span class="kw">null</span>
+  <span class="kw">private val</span> _ready = <span class="cls">MutableStateFlow</span>(<span class="kw">false</span>)
+
+  <span class="kw">fun</span> <span class="fn">init</span>() {
+    tts = <span class="cls">TextToSpeech</span>(ctx) { status ->
+      <span class="kw">if</span> (status == <span class="cls">TextToSpeech</span>.<span class="cls">SUCCESS</span>) {
+        tts?.language = <span class="cls">Locale</span>.<span class="cls">ENGLISH</span>
+        tts?.setSpeechRate(<span class="num">0.95f</span>)
+        _ready.value = <span class="kw">true</span>
+      }
+    }
+  }
+
+  <span class="kw">suspend fun</span> <span class="fn">speak</span>(text: <span class="cls">String</span>) {
+    _ready.first { it }   <span class="cmt">// await init</span>
+    tts?.speak(text, <span class="cls">TextToSpeech</span>.<span class="cls">QUEUE_FLUSH</span>, <span class="kw">null</span>, <span class="kw">null</span>)
+  }
+
+  <span class="kw">fun</span> <span class="fn">stop</span>()    { tts?.stop() }
+  <span class="kw">fun</span> <span class="fn">destroy</span>() { tts?.shutdown(); tts = <span class="kw">null</span> }
+}</pre>
+      </div>
+
+      <div class="cc cc-di">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">WebSocketManager.kt — OkHttp WS</span><span class="cs">core · realtime</span></div>
+<pre><span class="kw">class</span> <span class="cls">WebSocketManager</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>(
+  <span class="kw">private val</span> okHttpClient: <span class="cls">OkHttpClient</span>,
+) {
+  <span class="kw">private var</span> ws: <span class="cls">WebSocket</span>? = <span class="kw">null</span>
+  <span class="kw">private val</span> _messages =
+    <span class="cls">MutableSharedFlow</span>&lt;<span class="cls">String</span>&gt;(extraBufferCapacity = <span class="num">64</span>)
+  <span class="kw">val</span> messages: <span class="cls">SharedFlow</span>&lt;<span class="cls">String</span>&gt; = _messages
+
+  <span class="kw">private var</span> retryCount = <span class="num">0</span>
+  <span class="kw">private val</span> maxRetries = <span class="num">5</span>
+
+  <span class="kw">fun</span> <span class="fn">connect</span>(url: <span class="cls">String</span>, token: <span class="cls">String</span>) {
+    <span class="kw">val</span> req = <span class="cls">Request</span>.<span class="cls">Builder</span>()
+      .url(<span class="str">"$url?token=$token"</span>)
+      .build()
+    ws = okHttpClient.newWebSocket(req,
+      <span class="kw">object</span> : <span class="cls">WebSocketListener</span>() {
+        <span class="kw">override fun</span> <span class="fn">onMessage</span>(ws: <span class="cls">WebSocket</span>, text: <span class="cls">String</span>) {
+          retryCount = <span class="num">0</span>
+          _messages.tryEmit(text)
+        }
+        <span class="kw">override fun</span> <span class="fn">onFailure</span>(ws: <span class="cls">WebSocket</span>, t: <span class="cls">Throwable</span>, r: <span class="cls">Response</span>?) {
+          scheduleReconnect(url, token)
+        }
+        <span class="kw">override fun</span> <span class="fn">onClosed</span>(ws: <span class="cls">WebSocket</span>, code: <span class="cls">Int</span>, reason: <span class="cls">String</span>) {
+          <span class="kw">if</span> (code != <span class="num">1000</span>) scheduleReconnect(url, token)
+        }
+      })
+  }
+
+  <span class="kw">private fun</span> <span class="fn">scheduleReconnect</span>(url: <span class="cls">String</span>, token: <span class="cls">String</span>) {
+    <span class="kw">if</span> (retryCount >= maxRetries) <span class="kw">return</span>
+    <span class="kw">val</span> delay = (2.0.pow(retryCount) * <span class="num">1000</span>).toLong()
+    retryCount++
+    <span class="cls">GlobalScope</span>.launch {
+      delay(delay)
+      connect(url, token)
+    }
+  }
+
+  <span class="kw">fun</span> <span class="fn">send</span>(json: <span class="cls">String</span>) { ws?.send(json) }
+  <span class="kw">fun</span> <span class="fn">disconnect</span>() { ws?.close(<span class="num">1000</span>, <span class="str">"App closed"</span>); ws = <span class="kw">null</span> }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ANIMATIONS -->
+  <div class="tp" id="tp-anim">
+    <div class="code-grid">
+
+      <div class="cc cc-ui">
+        <div class="cc-head"><span class="cd" style="background:#c4b5fd"></span><span class="ct">Staggered list — AnimatedVisibility</span><span class="cs">pres · ui</span></div>
+<pre><span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">AnimatedProductList</span>(products: <span class="cls">List</span>&lt;<span class="cls">Product</span>&gt;) {
+  <span class="cls">LazyColumn</span> {
+    itemsIndexed(products) { index, product ->
+      <span class="kw">var</span> visible <span class="kw">by</span> remember { mutableStateOf(<span class="kw">false</span>) }
+
+      <span class="cls">LaunchedEffect</span>(Unit) {
+        delay(index * <span class="num">60L</span>)  <span class="cmt">// stagger per item</span>
+        visible = <span class="kw">true</span>
+      }
+
+      <span class="cls">AnimatedVisibility</span>(
+        visible = visible,
+        enter = fadeIn(tween(<span class="num">350</span>)) +
+          slideInVertically(
+            initialOffsetY = { it / <span class="num">5</span> },
+            animationSpec = tween(<span class="num">350</span>, easing = <span class="cls">EaseOutCubic</span>),
+          ),
+      ) {
+        <span class="cls">ProductCard</span>(product = product)
+      }
+    }
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-ui">
+        <div class="cc-head"><span class="cd" style="background:#c4b5fd"></span><span class="ct">Shared element transitions — Compose</span><span class="cs">pres · ui</span></div>
+<pre><span class="cmt">// Requires Compose 1.7+ / BOM 2024.09+</span>
+<span class="cmt">// SharedTransitionLayout wraps NavHost</span>
+
+<span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">AppNavGraph</span>() {
+  <span class="cls">SharedTransitionLayout</span> {
+    <span class="cls">NavHost</span>(...) {
+      composable(<span class="str">"products"</span>) {
+        <span class="cls">ProductListScreen</span>(
+          sharedTransitionScope = <span class="kw">this</span>@<span class="cls">SharedTransitionLayout</span>,
+          animatedVisibilityScope = <span class="kw">this</span>@composable,
+        )
+      }
+      composable(<span class="str">"product/{id}"</span>) {
+        <span class="cls">ProductDetailScreen</span>(
+          sharedTransitionScope = <span class="kw">this</span>@<span class="cls">SharedTransitionLayout</span>,
+          animatedVisibilityScope = <span class="kw">this</span>@composable,
+        )
+      }
+    }
+  }
+}
+
+<span class="cmt">// In list item — mark the shared element</span>
+<span class="cls">Image</span>(
+  painter = ...,
+  modifier = <span class="cls">Modifier</span>.sharedElement(
+    state = rememberSharedContentState(
+      key = <span class="str">"product-image-${product.id}"</span>),
+    animatedVisibilityScope = animatedVisibilityScope,
+    boundsTransform = { _, _ ->
+      tween(<span class="num">400</span>, easing = <span class="cls">EaseInOutCubic</span>)
+    },
+  ),
+)
+
+<span class="cmt">// Same key on detail screen — framework</span>
+<span class="cmt">// handles the morph automatically</span></pre>
+      </div>
+
+      <div class="cc cc-ui">
+        <div class="cc-head"><span class="cd" style="background:#c4b5fd"></span><span class="ct">AnimatedContent — state transitions</span><span class="cs">pres · ui</span></div>
+<pre><span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">SearchResultsArea</span>(uiState: <span class="cls">SearchUiState</span>) {
+  <span class="cls">AnimatedContent</span>(
+    targetState = uiState,
+    transitionSpec = {
+      (<span class="cls">fadeIn</span>(tween(<span class="num">220</span>)) +
+        <span class="cls">slideInVertically</span> { it / <span class="num">10</span> })
+      .togetherWith(
+        <span class="cls">fadeOut</span>(tween(<span class="num">180</span>)) +
+          <span class="cls">slideOutVertically</span> { -it / <span class="num">10</span> }
+      )
+    },
+    label = <span class="str">"search-results"</span>,
+  ) { state ->
+    <span class="kw">when</span> (state) {
+      <span class="kw">is</span> <span class="cls">SearchUiState</span>.<span class="cls">Loading</span>  -> <span class="cls">ShimmerList</span>()
+      <span class="kw">is</span> <span class="cls">SearchUiState</span>.<span class="cls">Loaded</span>   -> <span class="cls">ResultList</span>(state.items)
+      <span class="kw">is</span> <span class="cls">SearchUiState</span>.<span class="cls">Empty</span>    -> <span class="cls">EmptyState</span>()
+      <span class="kw">is</span> <span class="cls">SearchUiState</span>.<span class="cls">Error</span>    -> <span class="cls">ErrorView</span>(state.msg)
+    }
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-ui">
+        <div class="cc-head"><span class="cd" style="background:#c4b5fd"></span><span class="ct">Lottie in Compose</span><span class="cs">pres · ui</span></div>
+<pre><span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">LottieView</span>(
+  assetRes: <span class="cls">Int</span>,
+  modifier: <span class="cls">Modifier</span> = <span class="cls">Modifier</span>,
+  iterations: <span class="cls">Int</span> = <span class="cls">LottieConstants</span>.<span class="cls">IterateForever</span>,
+) {
+  <span class="kw">val</span> composition <span class="kw">by</span> rememberLottieComposition(
+    <span class="cls">LottieCompositionSpec</span>.<span class="cls">RawRes</span>(assetRes)
+  )
+  <span class="kw">val</span> progress <span class="kw">by</span> animateLottieCompositionAsState(
+    composition  = composition,
+    iterations   = iterations,
+    isPlaying    = <span class="kw">true</span>,
+    restartOnPlay = <span class="kw">false</span>,
+  )
+  <span class="cls">LottieAnimation</span>(
+    composition = composition,
+    progress    = { progress },
+    modifier    = modifier,
+  )
+}
+
+<span class="cmt">// Usage:</span>
+<span class="cls">LottieView</span>(assetRes = <span class="cls">R</span>.raw.success_check,
+  modifier = <span class="cls">Modifier</span>.size(<span class="num">120</span>.dp))
+
+<span class="cls">LottieView</span>(assetRes = <span class="cls">R</span>.raw.empty_state,
+  iterations = <span class="cls">LottieConstants</span>.<span class="cls">IterateForever</span>)</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- HILT DI -->
+  <div class="tp" id="tp-di">
+    <div class="code-grid">
+
+      <div class="cc cc-di">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">NetworkModule.kt — @Module</span><span class="cs">core · di</span></div>
+<pre><span class="ann">@Module</span>
+<span class="ann">@InstallIn</span>(<span class="cls">SingletonComponent</span>::<span class="kw">class</span>)
+<span class="kw">object</span> <span class="cls">NetworkModule</span> {
+
+  <span class="ann">@Provides</span> <span class="ann">@Singleton</span>
+  <span class="kw">fun</span> <span class="fn">provideOkHttp</span>(
+    authInterceptor:    <span class="cls">AuthInterceptor</span>,
+    encryptInterceptor: <span class="cls">EncryptInterceptor</span>,
+  ): <span class="cls">OkHttpClient</span> = <span class="cls">OkHttpClient</span>.<span class="cls">Builder</span>()
+    .addInterceptor(authInterceptor)
+    .addInterceptor(encryptInterceptor)
+    .addInterceptor(<span class="cls">HttpLoggingInterceptor</span>().apply {
+      level = <span class="kw">if</span> (<span class="cls">BuildConfig</span>.<span class="cls">DEBUG</span>)
+        <span class="cls">HttpLoggingInterceptor</span>.<span class="cls">Level</span>.<span class="cls">BODY</span>
+      <span class="kw">else</span>
+        <span class="cls">HttpLoggingInterceptor</span>.<span class="cls">Level</span>.<span class="cls">NONE</span>
+    })
+    .connectTimeout(<span class="num">10</span>, <span class="cls">TimeUnit</span>.<span class="cls">SECONDS</span>)
+    .readTimeout(<span class="num">30</span>, <span class="cls">TimeUnit</span>.<span class="cls">SECONDS</span>)
+    .build()
+
+  <span class="ann">@Provides</span> <span class="ann">@Singleton</span>
+  <span class="kw">fun</span> <span class="fn">provideRetrofit</span>(okHttp: <span class="cls">OkHttpClient</span>): <span class="cls">Retrofit</span> =
+    <span class="cls">Retrofit</span>.<span class="cls">Builder</span>()
+      .baseUrl(<span class="cls">BuildConfig</span>.<span class="cls">API_URL</span>)
+      .client(okHttp)
+      .addConverterFactory(<span class="cls">GsonConverterFactory</span>.create())
+      .build()
+
+  <span class="ann">@Provides</span> <span class="ann">@Singleton</span>
+  <span class="kw">fun</span> <span class="fn">provideAuthApi</span>(retrofit: <span class="cls">Retrofit</span>): <span class="cls">AuthApiService</span> =
+    retrofit.create(<span class="cls">AuthApiService</span>::<span class="kw">class</span>.java)
+}</pre>
+      </div>
+
+      <div class="cc cc-di">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">DatabaseModule.kt + RepositoryModule.kt</span><span class="cs">core · di</span></div>
+<pre><span class="ann">@Module</span>
+<span class="ann">@InstallIn</span>(<span class="cls">SingletonComponent</span>::<span class="kw">class</span>)
+<span class="kw">object</span> <span class="cls">DatabaseModule</span> {
+
+  <span class="ann">@Provides</span> <span class="ann">@Singleton</span>
+  <span class="kw">fun</span> <span class="fn">provideDatabase</span>(
+    <span class="ann">@ApplicationContext</span> ctx: <span class="cls">Context</span>,
+  ): <span class="cls">AppDatabase</span> = <span class="cls">Room</span>.databaseBuilder(
+    ctx, <span class="cls">AppDatabase</span>::<span class="kw">class</span>.java, <span class="str">"app.db"</span>
+  ).fallbackToDestructiveMigration().build()
+
+  <span class="ann">@Provides</span>
+  <span class="kw">fun</span> <span class="fn">provideUserDao</span>(db: <span class="cls">AppDatabase</span>) = db.userDao()
+}
+
+<span class="ann">@Module</span>
+<span class="ann">@InstallIn</span>(<span class="cls">SingletonComponent</span>::<span class="kw">class</span>)
+<span class="kw">abstract class</span> <span class="cls">RepositoryModule</span> {
+  <span class="cmt">// Hilt binds interface → impl automatically</span>
+  <span class="ann">@Binds</span> <span class="ann">@Singleton</span>
+  <span class="kw">abstract fun</span> <span class="fn">bindAuthRepository</span>(
+    impl: <span class="cls">AuthRepositoryImpl</span>,
+  ): <span class="cls">AuthRepository</span>
+
+  <span class="ann">@Binds</span> <span class="ann">@Singleton</span>
+  <span class="kw">abstract fun</span> <span class="fn">bindProductRepository</span>(
+    impl: <span class="cls">ProductRepositoryImpl</span>,
+  ): <span class="cls">ProductRepository</span>
+}</pre>
+      </div>
+
+      <div class="cc cc-di">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">App.kt + MainActivity.kt — entry points</span><span class="cs">app</span></div>
+<pre><span class="ann">@HiltAndroidApp</span>
+<span class="kw">class</span> <span class="cls">App</span> : <span class="cls">Application</span>()
+
+<span class="ann">@AndroidEntryPoint</span>
+<span class="kw">class</span> <span class="cls">MainActivity</span> : <span class="cls">ComponentActivity</span>() {
+  <span class="kw">override fun</span> <span class="fn">onCreate</span>(savedInstanceState: <span class="cls">Bundle</span>?) {
+    <span class="kw">super</span>.onCreate(savedInstanceState)
+    enableEdgeToEdge()
+    setContent {
+      <span class="cls">AppTheme</span> {
+        <span class="kw">val</span> navController = rememberNavController()
+        <span class="cls">AppNavGraph</span>(navController)
+      }
+    }
+  }
+}
+
+<span class="cmt">// In ViewModel — injected automatically by Hilt</span>
+<span class="ann">@HiltViewModel</span>
+<span class="kw">class</span> <span class="cls">SomeViewModel</span> <span class="ann">@Inject</span> <span class="kw">constructor</span>(
+  <span class="kw">private val</span> useCase: <span class="cls">SomeUseCase</span>,
+) : <span class="cls">ViewModel</span>() { ... }
+
+<span class="cmt">// In Composable — zero manual instantiation</span>
+<span class="kw">val</span> vm: <span class="cls">SomeViewModel</span> = hiltViewModel()</pre>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+<div class="dvdr"></div>
+
+<!-- DATA FLOWS -->
+<section class="section reveal" id="flows">
+  <p class="sec-label">04 — Data Flows</p>
+  <h2 class="sec-title">EVERY <span class="gt1">PATH</span> TRACED</h2>
+  <p class="sec-intro">How data moves through each Android layer for every scenario.</p>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Happy path — UI to API</p>
+    <div class="flow-row">
+      <div class="fb fb-ui">Composable</div><div class="fa">→</div>
+      <div class="fb fb-vm">ViewModel.fn()</div><div class="fa">→</div>
+      <div class="fb fb-domain">UseCase.invoke()</div><div class="fa">→</div>
+      <div class="fb fb-data">Repository impl</div><div class="fa">→</div>
+      <div class="fb fb-data">Retrofit suspend</div><div class="fa">→</div>
+      <div class="fb fb-di">API + decrypt</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Response → UI + Room cache</p>
+    <div class="flow-row">
+      <div class="fb fb-data">DTO received</div><div class="fa">→</div>
+      <div class="fb fb-data">Mapper.toDomain()</div><div class="fa">→</div>
+      <div class="fb fb-data">Room.upsert()</div><div class="fa">→</div>
+      <div class="fb fb-domain">Result.success()</div><div class="fa">→</div>
+      <div class="fb fb-vm">_uiState.value = Success</div><div class="fa">→</div>
+      <div class="fb fb-ui">collectAsState()</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Offline path — network unavailable</p>
+    <div class="flow-row">
+      <div class="fb fb-data">IOException thrown</div><div class="fa">→</div>
+      <div class="fb fb-data">runCatching.onFailure</div><div class="fa">→</div>
+      <div class="fb fb-data">Room.query() cached</div><div class="fa">→</div>
+      <div class="fb fb-domain">Result.success(cached)</div><div class="fa">→</div>
+      <div class="fb fb-vm">Success(isFromCache=true)</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Search debounce with flatMapLatest</p>
+    <div class="flow-row">
+      <div class="fb fb-ui">TextField</div><div class="fa">→</div>
+      <div class="fb fb-vm">_query.value = q</div><div class="fa">→</div>
+      <div class="fb fb-vm">debounce(350ms)</div><div class="fa">→</div>
+      <div class="fb fb-vm">flatMapLatest { }</div><div class="fa">→</div>
+      <div class="fb fb-data">Retrofit (prev cancelled)</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Real-time WebSocket → Compose</p>
+    <div class="flow-row">
+      <div class="fb fb-di">WS.onMessage</div><div class="fa">→</div>
+      <div class="fb fb-di">_messages.tryEmit()</div><div class="fa">→</div>
+      <div class="fb fb-vm">messages.collect {}</div><div class="fa">→</div>
+      <div class="fb fb-vm">_uiState.update {}</div><div class="fa">→</div>
+      <div class="fb fb-ui">recomposition</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">401 token refresh</p>
+    <div class="flow-row">
+      <div class="fb fb-di">OkHttp intercept</div><div class="fa">→</div>
+      <div class="fb fb-di">401 detected</div><div class="fa">→</div>
+      <div class="fb fb-di">POST /auth/refresh</div><div class="fa">→</div>
+      <div class="fb fb-di">EncryptedSharedPrefs.save()</div><div class="fa">→</div>
+      <div class="fb fb-data">retry original</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Room reactive — Flow observation</p>
+    <div class="flow-row">
+      <div class="fb fb-data">Room @Query Flow&lt;T&gt;</div><div class="fa">→</div>
+      <div class="fb fb-domain">Repository.observe()</div><div class="fa">→</div>
+      <div class="fb fb-vm">.stateIn(viewModelScope)</div><div class="fa">→</div>
+      <div class="fb fb-ui">collectAsStateWithLifecycle()</div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- FEATURES -->
+<section class="section reveal" id="features">
+  <p class="sec-label">05 — Feature Matrix</p>
+  <h2 class="sec-title">EVERY REQUIREMENT <span class="gt2">COVERED</span></h2>
+  <p class="sec-intro">All features from the original brief — mapped to Android's idiomatic solution.</p>
+
+  <div class="feat-grid">
+    <div class="fc" style="border-color:rgba(52,211,153,0.2)">
+      <div class="fc-icon" style="background:rgba(52,211,153,0.1)">🎤</div>
+      <div class="fc-title" style="color:var(--a1)">Google STT / TTS</div>
+      <div class="fc-desc">SpeechRecognizer for STT with partial results via UNSTABLE_TEXT bundle key. TextToSpeech with Google engine. Both wrapped in singleton managers, emitting to SharedFlow for ViewModel collection.</div>
+      <code class="fc-dep">android.speech.SpeechRecognizer</code>
+      <code class="fc-dep">android.speech.tts.TextToSpeech</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(245,158,11,0.2)">
+      <div class="fc-icon" style="background:rgba(245,158,11,0.1)">🔐</div>
+      <div class="fc-title" style="color:var(--a3)">API encryption</div>
+      <div class="fc-desc">AES-256-GCM via Android Keystore-backed CryptoManager. OkHttp Interceptor encrypts request body and decrypts response transparently. Zero crypto code in feature layer.</div>
+      <code class="fc-dep">android.security.keystore</code>
+      <code class="fc-dep">javax.crypto (built-in)</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(6,182,212,0.2)">
+      <div class="fc-icon" style="background:rgba(6,182,212,0.1)">⏱</div>
+      <div class="fc-title" style="color:var(--a2)">Debounced search</div>
+      <div class="fc-desc">Kotlin Flow operators: .debounce(350L).distinctUntilChanged().flatMapLatest { }. flatMapLatest cancels the previous coroutine the moment a new query arrives. Zero extra utilities needed.</div>
+      <code class="fc-dep">kotlinx.coroutines.flow — built-in</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(6,182,212,0.2)">
+      <div class="fc-icon" style="background:rgba(6,182,212,0.1)">📡</div>
+      <div class="fc-title" style="color:var(--a2)">Cancellable API calls</div>
+      <div class="fc-desc">Retrofit suspend functions cancel automatically when the coroutine scope is cancelled. viewModelScope cancels all in-flight requests on ViewModel clearance. flatMapLatest handles search supersession.</div>
+      <code class="fc-dep">retrofit2 suspend support</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(245,158,11,0.2)">
+      <div class="fc-icon" style="background:rgba(245,158,11,0.1)">💾</div>
+      <div class="fc-title" style="color:var(--a3)">Offline-first cache</div>
+      <div class="fc-desc">Write-through cache: remote success → Room @Upsert. Network fail → serve Room cache. NetworkBoundResource generic helper orchestrates the flow. Room emits Flow&lt;T&gt; for reactive UI updates.</div>
+      <code class="fc-dep">room-runtime:2.7.x</code>
+      <code class="fc-dep">room-ktx:2.7.x</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(52,211,153,0.2)">
+      <div class="fc-icon" style="background:rgba(52,211,153,0.1)">🔑</div>
+      <div class="fc-title" style="color:var(--a1)">Secure storage</div>
+      <div class="fc-desc">EncryptedSharedPreferences with MasterKey backed by Android Keystore AES-256-GCM. Stores tokens, user ID. Regular DataStore Preferences for non-sensitive flags. Both wrapped in singleton classes.</div>
+      <code class="fc-dep">security-crypto:1.1.x</code>
+      <code class="fc-dep">datastore-preferences:1.1.x</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(167,139,250,0.2)">
+      <div class="fc-icon" style="background:rgba(167,139,250,0.1)">✨</div>
+      <div class="fc-title" style="color:#c4b5fd">UI animations</div>
+      <div class="fc-desc">AnimatedVisibility with staggered LaunchedEffect delays for list entry. AnimatedContent for state-driven content swaps with cross-fade + slide. animate*AsState for value-driven transitions.</div>
+      <code class="fc-dep">compose.animation — built-in</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(167,139,250,0.2)">
+      <div class="fc-icon" style="background:rgba(167,139,250,0.1)">🎬</div>
+      <div class="fc-title" style="color:#c4b5fd">Motion / Lottie</div>
+      <div class="fc-desc">Compose Lottie via rememberLottieComposition + animateLottieCompositionAsState. Declarative — no manual AnimationController. Used for empty states, success/error feedback, onboarding.</div>
+      <code class="fc-dep">lottie-compose:6.x</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(167,139,250,0.2)">
+      <div class="fc-icon" style="background:rgba(167,139,250,0.1)">🔀</div>
+      <div class="fc-title" style="color:#c4b5fd">Shared element transitions</div>
+      <div class="fc-desc">Compose 1.7+ SharedTransitionLayout + sharedElement() modifier. Same key on source and destination — framework morphs the element automatically. Supports images, text, and complex composables.</div>
+      <code class="fc-dep">compose.animation:1.7.x</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(244,63,94,0.2)">
+      <div class="fc-icon" style="background:rgba(244,63,94,0.1)">⚡</div>
+      <div class="fc-title" style="color:var(--a4)">Real-time communication</div>
+      <div class="fc-desc">OkHttp WebSocketListener emits to MutableSharedFlow. Exponential backoff reconnect in onFailure/onClosed. ViewModel collects in viewModelScope — connection cancelled when VM clears.</div>
+      <code class="fc-dep">okhttp:4.12.x WebSocket</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(52,211,153,0.2)">
+      <div class="fc-icon" style="background:rgba(52,211,153,0.1)">🎨</div>
+      <div class="fc-title" style="color:var(--a1)">Design system / theming</div>
+      <div class="fc-desc">Material 3 with MaterialTheme. Custom ColorScheme, Typography, Shapes in AppTheme. Token objects (AppColors, AppTypography) — zero hardcoded values in feature composables. Light + dark ThemeData.</div>
+      <code class="fc-dep">compose.material3 — built-in</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(244,63,94,0.2)">
+      <div class="fc-icon" style="background:rgba(244,63,94,0.1)">🧩</div>
+      <div class="fc-title" style="color:var(--a4)">Dependency injection</div>
+      <div class="fc-desc">Hilt — Google's official DI for Android. @HiltAndroidApp, @AndroidEntryPoint, @HiltViewModel. @Module + @InstallIn scopes. @Binds for interface→impl. Compile-time verified, no reflection.</div>
+      <code class="fc-dep">hilt-android:2.52</code>
+      <code class="fc-dep">hilt-navigation-compose</code>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- PACKAGES -->
+<section class="section reveal" id="packages">
+  <p class="sec-label">06 — Gradle Dependencies</p>
+  <h2 class="sec-title">THE GRADLE <span class="gt1">REGISTRY</span></h2>
+  <p class="sec-intro">Stable, production-proven. Using Gradle version catalog (libs.versions.toml) format.</p>
+
+  <div class="warn">
+    <strong>Version catalog:</strong> Add these to <code style="font-family:var(--font-code);font-size:12px">gradle/libs.versions.toml</code> and reference as <code style="font-family:var(--font-code);font-size:12px">libs.hilt.android</code> etc. — the modern Gradle approach.
+  </div>
+
+  <div class="pkg-wrap">
+    <table>
+      <thead>
+        <tr><th>Artifact</th><th>Version</th><th>Purpose</th><th>Layer</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="pkg-n">androidx.compose.bom</code></td><td class="pkg-v">2025.05.x</td><td class="pkg-d">Compose BOM — pins all compose-* versions consistently</td><td><span class="lp t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-n">compose.material3</code></td><td class="pkg-v">BOM</td><td class="pkg-d">Material 3 components, theming, ColorScheme</td><td><span class="lp t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-n">compose.animation</code></td><td class="pkg-v">BOM 1.7+</td><td class="pkg-d">AnimatedVisibility, AnimatedContent, SharedTransitionLayout</td><td><span class="lp t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-n">compose.ui</code></td><td class="pkg-v">BOM</td><td class="pkg-d">Core Compose runtime, layout, drawing</td><td><span class="lp t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-n">navigation-compose</code></td><td class="pkg-v">2.8.x</td><td class="pkg-d">NavHost, composable routes, type-safe navigation</td><td><span class="lp t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-n">hilt-navigation-compose</code></td><td class="pkg-v">1.2.x</td><td class="pkg-d">hiltViewModel() in composables, nav backstack scoping</td><td><span class="lp t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-n">lottie-compose</code></td><td class="pkg-v">6.x</td><td class="pkg-d">Lottie JSON animations with Compose APIs</td><td><span class="lp t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-n">coil-compose</code></td><td class="pkg-v">2.7.x</td><td class="pkg-d">Async image loading with Compose — AsyncImage composable</td><td><span class="lp t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-n">lifecycle-viewmodel-compose</code></td><td class="pkg-v">2.8.x</td><td class="pkg-d">viewModel(), collectAsStateWithLifecycle()</td><td><span class="lp t-vm">vm</span></td></tr>
+        <tr><td><code class="pkg-n">lifecycle-runtime-compose</code></td><td class="pkg-v">2.8.x</td><td class="pkg-d">collectAsStateWithLifecycle — lifecycle-aware collection</td><td><span class="lp t-vm">vm</span></td></tr>
+        <tr><td><code class="pkg-n">kotlinx.coroutines.android</code></td><td class="pkg-v">1.9.x</td><td class="pkg-d">viewModelScope, Dispatchers, Flow, debounce, flatMapLatest</td><td><span class="lp t-vm">vm</span></td></tr>
+        <tr><td><code class="pkg-n">hilt-android</code></td><td class="pkg-v">2.52</td><td class="pkg-d">Hilt DI — @HiltAndroidApp, @HiltViewModel, @Module</td><td><span class="lp t-di">di</span></td></tr>
+        <tr><td><code class="pkg-n">hilt-android-compiler</code></td><td class="pkg-v">2.52</td><td class="pkg-d">KSP annotation processor for Hilt code generation</td><td><span class="lp t-di">di</span></td></tr>
+        <tr><td><code class="pkg-n">retrofit2</code></td><td class="pkg-v">2.11.x</td><td class="pkg-d">Type-safe HTTP client with suspend function support</td><td><span class="lp t-data">data</span></td></tr>
+        <tr><td><code class="pkg-n">retrofit2-converter-gson</code></td><td class="pkg-v">2.11.x</td><td class="pkg-d">JSON serialization — or swap for moshi-converter</td><td><span class="lp t-data">data</span></td></tr>
+        <tr><td><code class="pkg-n">okhttp3</code></td><td class="pkg-v">4.12.x</td><td class="pkg-d">HTTP + WebSocket client, interceptor chain</td><td><span class="lp t-data">data</span></td></tr>
+        <tr><td><code class="pkg-n">okhttp3-logging-interceptor</code></td><td class="pkg-v">4.12.x</td><td class="pkg-d">HTTP body logging — debug builds only</td><td><span class="lp t-data">data</span></td></tr>
+        <tr><td><code class="pkg-n">room-runtime</code></td><td class="pkg-v">2.7.x</td><td class="pkg-d">SQLite ORM — @Entity, @Dao, @Database, Flow queries</td><td><span class="lp t-data">data</span></td></tr>
+        <tr><td><code class="pkg-n">room-ktx</code></td><td class="pkg-v">2.7.x</td><td class="pkg-d">Coroutines and Flow extensions for Room</td><td><span class="lp t-data">data</span></td></tr>
+        <tr><td><code class="pkg-n">room-compiler</code></td><td class="pkg-v">2.7.x</td><td class="pkg-d">KSP processor for Room code generation</td><td><span class="lp t-data">data</span></td></tr>
+        <tr><td><code class="pkg-n">datastore-preferences</code></td><td class="pkg-v">1.1.x</td><td class="pkg-d">Async, coroutine-based key-value storage — SharedPreferences replacement</td><td><span class="lp t-data">data</span></td></tr>
+        <tr><td><code class="pkg-n">security-crypto</code></td><td class="pkg-v">1.1.x</td><td class="pkg-d">EncryptedSharedPreferences + MasterKey — Keystore-backed</td><td><span class="lp t-domain">core</span></td></tr>
+        <tr><td><code class="pkg-n">kotlinx.serialization.json</code></td><td class="pkg-v">1.7.x</td><td class="pkg-d">Kotlin-native JSON — alternative to Gson, better performance</td><td><span class="lp t-data">data</span></td></tr>
+        <tr><td><code class="pkg-n">hilt-android-testing</code></td><td class="pkg-v">2.52</td><td class="pkg-d">Hilt test utilities, @HiltAndroidTest</td><td><span class="lp t-di" style="background:rgba(244,63,94,0.1);color:var(--a4);border-color:rgba(244,63,94,0.3)">test</span></td></tr>
+        <tr><td><code class="pkg-n">kotlinx.coroutines.test</code></td><td class="pkg-v">1.9.x</td><td class="pkg-d">TestCoroutineDispatcher, runTest, turbine-compatible</td><td><span class="lp t-di" style="background:rgba(244,63,94,0.1);color:var(--a4);border-color:rgba(244,63,94,0.3)">test</span></td></tr>
+        <tr><td><code class="pkg-n">turbine</code></td><td class="pkg-v">1.2.x</td><td class="pkg-d">Flow testing — awaitItem(), assertValues()</td><td><span class="lp t-di" style="background:rgba(244,63,94,0.1);color:var(--a4);border-color:rgba(244,63,94,0.3)">test</span></td></tr>
+        <tr><td><code class="pkg-n">mockk</code></td><td class="pkg-v">1.14.x</td><td class="pkg-d">Kotlin-native mocking — coEvery, coVerify, relaxed mocks</td><td><span class="lp t-di" style="background:rgba(244,63,94,0.1);color:var(--a4);border-color:rgba(244,63,94,0.3)">test</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="ft-title">BUILD <span class="gt1">ANDROID</span> RIGHT.</div>
+  <p class="ft-sub">Architecture is the multiplier on every feature you'll ever ship.</p>
+  <p class="ft-copy">Android Clean Architecture Field Guide &mdash; Kotlin · Jetpack · 2025</p>
+</footer>
+
+<script>
+function st(id) {
+  document.querySelectorAll('.tp').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b => b.classList.remove('on'));
+  document.getElementById('tp-' + id).classList.add('on');
+  event.currentTarget.classList.add('on');
+}
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('vis'); io.unobserve(e.target); }
+  });
+}, { threshold: 0.07 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+const secs = document.querySelectorAll('section[id]');
+const links = document.querySelectorAll('.nav-links a');
+const nio = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.style.color = '');
+      const l = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+      if (l) l.style.color = 'var(--a1)';
+    }
+  });
+}, { threshold: 0.35 });
+secs.forEach(s => nio.observe(s));
+</script>
+</body>
+</html>

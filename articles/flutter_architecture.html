@@ -1,0 +1,2183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Flutter Clean Architecture — The Definitive Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #080c10;
+  --bg2: #0d1219;
+  --bg3: #111820;
+  --surface: #161e28;
+  --surface2: #1c2734;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --accent: #00e5ff;
+  --accent2: #7c4dff;
+  --accent3: #00e676;
+  --accent4: #ff6d00;
+  --accent5: #ea4c89;
+  --text: #e8edf3;
+  --text2: #8a9ab0;
+  --text3: #4a5a6a;
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'Instrument Serif', serif;
+  --font-code: 'JetBrains Mono', monospace;
+  --radius: 12px;
+  --radius-lg: 20px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--accent2); border-radius: 2px; }
+
+/* GRID BACKGROUND */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* NAV */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  background: rgba(8,12,16,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.nav-links {
+  display: flex;
+  gap: 28px;
+  list-style: none;
+}
+
+.nav-links a {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  text-decoration: none;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: color .2s;
+}
+.nav-links a:hover { color: var(--accent); }
+
+/* HERO */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 120px 40px 80px;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+.orb1 { width: 600px; height: 600px; background: rgba(0,229,255,0.06); top: -100px; left: -200px; animation: drift1 18s ease-in-out infinite; }
+.orb2 { width: 400px; height: 400px; background: rgba(124,77,255,0.08); bottom: -100px; right: -100px; animation: drift2 14s ease-in-out infinite; }
+.orb3 { width: 300px; height: 300px; background: rgba(0,230,118,0.05); top: 50%; left: 50%; transform: translate(-50%,-50%); animation: drift3 20s ease-in-out infinite; }
+
+@keyframes drift1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,40px)} }
+@keyframes drift2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-40px,-60px)} }
+@keyframes drift3 { 0%,100%{transform:translate(-50%,-50%) scale(1)} 50%{transform:translate(-50%,-50%) scale(1.3)} }
+
+.hero-eyebrow {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: fadeUp .8s .2s forwards;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(42px, 7vw, 96px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  margin-bottom: 24px;
+  opacity: 0;
+  animation: fadeUp .9s .35s forwards;
+}
+
+.hero-title .line1 { display: block; color: var(--text); }
+.hero-title .line2 {
+  display: block;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent5) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 20px;
+  color: var(--text2);
+  max-width: 620px;
+  line-height: 1.6;
+  margin-bottom: 48px;
+  opacity: 0;
+  animation: fadeUp .9s .5s forwards;
+}
+
+.hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 60px;
+  opacity: 0;
+  animation: fadeUp .9s .65s forwards;
+}
+
+.badge {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 100px;
+  border: 1px solid;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badge-cyan { border-color: rgba(0,229,255,0.4); color: var(--accent); background: rgba(0,229,255,0.06); }
+.badge-purple { border-color: rgba(124,77,255,0.4); color: #a78bfa; background: rgba(124,77,255,0.06); }
+.badge-green { border-color: rgba(0,230,118,0.4); color: var(--accent3); background: rgba(0,230,118,0.06); }
+.badge-orange { border-color: rgba(255,109,0,0.4); color: var(--accent4); background: rgba(255,109,0,0.06); }
+.badge-pink { border-color: rgba(234,76,137,0.4); color: var(--accent5); background: rgba(234,76,137,0.06); }
+
+/* LAYER DIAGRAM */
+.layer-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-width: 560px;
+  opacity: 0;
+  animation: fadeUp .9s .8s forwards;
+}
+
+.layer-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 1px solid;
+  cursor: default;
+  transition: transform .2s, border-color .2s;
+  position: relative;
+  overflow: hidden;
+}
+.layer-bar::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.layer-bar:hover { transform: translateX(6px); }
+
+.lb-pres { border-color: rgba(124,77,255,0.3); background: rgba(124,77,255,0.06); }
+.lb-pres::before { background: var(--accent2); }
+.lb-domain { border-color: rgba(0,230,118,0.3); background: rgba(0,230,118,0.05); }
+.lb-domain::before { background: var(--accent3); }
+.lb-data { border-color: rgba(255,109,0,0.3); background: rgba(255,109,0,0.05); }
+.lb-data::before { background: var(--accent4); }
+.lb-core { border-color: rgba(0,229,255,0.3); background: rgba(0,229,255,0.05); }
+.lb-core::before { background: var(--accent); }
+
+.lb-name {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.lb-desc {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--text2);
+  margin-left: auto;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* MAIN CONTENT */
+main { position: relative; z-index: 1; }
+
+.section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 80px 40px;
+  border-top: 1px solid var(--border);
+}
+
+.section-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  opacity: 0.3;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 16px;
+}
+
+.section-intro {
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--text2);
+  font-size: 18px;
+  max-width: 600px;
+  margin-bottom: 48px;
+  line-height: 1.6;
+}
+
+/* FILE TREE */
+.filetree-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  font-family: var(--font-code);
+}
+
+.filetree-header {
+  background: var(--surface);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.ft-dot { width: 10px; height: 10px; border-radius: 50%; }
+.ft-dot:nth-child(1) { background: #ff5f57; }
+.ft-dot:nth-child(2) { background: #ffbd2e; }
+.ft-dot:nth-child(3) { background: #28c840; }
+.ft-title {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--text2);
+  margin-left: 8px;
+  letter-spacing: 0.05em;
+}
+
+.filetree-body { padding: 20px; overflow-x: auto; }
+
+.ft-row {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  border-radius: 6px;
+  padding: 0 6px;
+  transition: background .15s;
+  cursor: default;
+}
+.ft-row:hover { background: rgba(255,255,255,0.04); }
+.ft-row.clickable { cursor: pointer; }
+.ft-row.clickable:hover { background: rgba(0,229,255,0.06); }
+
+.ft-icon { font-size: 12px; margin-right: 5px; flex-shrink: 0; }
+.ft-label { font-size: 12px; }
+.ft-label.dir { color: #79c0ff; }
+.ft-label.dart-file { color: #cdd9e5; }
+.ft-label.config { color: #8b949e; }
+.ft-tag {
+  margin-left: 8px;
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.tag-pres { background: rgba(124,77,255,0.2); color: #c9a8ff; border: 1px solid rgba(124,77,255,0.3); }
+.tag-domain { background: rgba(0,230,118,0.15); color: #56d364; border: 1px solid rgba(0,230,118,0.3); }
+.tag-data { background: rgba(255,109,0,0.15); color: #f0883e; border: 1px solid rgba(255,109,0,0.3); }
+.tag-core { background: rgba(0,229,255,0.1); color: var(--accent); border: 1px solid rgba(0,229,255,0.25); }
+
+/* CODE CARDS GRID */
+.code-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.code-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color .2s, transform .2s;
+  position: relative;
+}
+.code-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.code-card:hover { border-color: rgba(255,255,255,0.18); transform: translateY(-2px); }
+.code-card:hover::before { opacity: 1; }
+
+.cc-pres::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+.cc-data::before { background: linear-gradient(90deg, var(--accent4), transparent); }
+.cc-core::before { background: linear-gradient(90deg, var(--accent), transparent); }
+.cc-domain::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+.cc-anim::before { background: linear-gradient(90deg, var(--accent5), transparent); }
+
+.cc-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+}
+.cc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cc-title { font-family: var(--font-display); font-size: 12px; font-weight: 600; color: var(--text); letter-spacing: 0.03em; }
+.cc-sub { font-family: var(--font-display); font-size: 10px; color: var(--text3); margin-left: auto; letter-spacing: 0.05em; text-transform: uppercase; }
+
+pre {
+  padding: 16px;
+  font-family: var(--font-code);
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-x: auto;
+  color: #cdd9e5;
+  white-space: pre;
+  background: transparent;
+}
+
+/* SYNTAX COLORS */
+.kw { color: #ff7b72; }
+.cls { color: #79c0ff; }
+.str { color: #a5d6ff; }
+.fn { color: #d2a8ff; }
+.cmt { color: #8b949e; font-style: italic; }
+.ann { color: #f0c274; }
+.typ { color: #56d364; }
+.num { color: #f0883e; }
+.op  { color: #cdd9e5; }
+
+/* FEATURE MATRIX */
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.feat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  transition: border-color .2s, background .2s;
+  position: relative;
+  overflow: hidden;
+}
+.feat-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  opacity: 0.04;
+  transition: opacity .2s;
+}
+.feat-card:hover { border-color: var(--border2); }
+.feat-card:hover::after { opacity: 0.08; }
+
+.fc-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  margin-bottom: 14px;
+}
+.fc-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.fc-desc {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.fc-pkg {
+  font-family: var(--font-code);
+  font-size: 10px;
+  color: var(--text3);
+  padding: 3px 8px;
+  background: var(--surface);
+  border-radius: 5px;
+  display: inline-block;
+  border: 1px solid var(--border);
+}
+
+/* FLOW DIAGRAM */
+.flow-section {
+  margin-bottom: 28px;
+}
+.flow-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+.flow-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.flow-box {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  min-width: 80px;
+  position: relative;
+}
+.flow-arr {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--text3);
+  font-size: 14px;
+}
+.fb-pres { background: rgba(124,77,255,0.12); border-color: rgba(124,77,255,0.4); color: #c9a8ff; }
+.fb-domain { background: rgba(0,230,118,0.08); border-color: rgba(0,230,118,0.35); color: #56d364; }
+.fb-data { background: rgba(255,109,0,0.1); border-color: rgba(255,109,0,0.35); color: #f0883e; }
+.fb-core { background: rgba(0,229,255,0.08); border-color: rgba(0,229,255,0.3); color: var(--accent); }
+
+/* TABS */
+.tab-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.tab-btn {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 100px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all .2s;
+}
+.tab-btn:hover { background: var(--surface); color: var(--text); }
+.tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* PRINCIPLE CARDS */
+.principle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.p-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: border-color .2s;
+}
+.p-card:hover { border-color: var(--border2); }
+.p-letter {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 8px;
+  opacity: 0.15;
+}
+.p-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.p-desc {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.7;
+}
+
+/* PACKAGE TABLE */
+.pkg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+.pkg-table th {
+  text-align: left;
+  padding: 10px 14px;
+  color: var(--text3);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.pkg-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.pkg-table tr:last-child td { border-bottom: none; }
+.pkg-table tr:hover td { background: rgba(255,255,255,0.02); }
+.pkg-name { font-family: var(--font-code); font-size: 12px; color: var(--accent); }
+.pkg-version { font-family: var(--font-code); font-size: 11px; color: var(--text3); }
+.pkg-desc { color: var(--text2); font-size: 12px; }
+.layer-pill {
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+/* SECTION DIVIDER */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border2), transparent);
+  margin: 0;
+}
+
+/* SCROLL REVEAL */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity .7s ease, transform .7s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* INLINE NOTE */
+.note-box {
+  background: rgba(0,229,255,0.06);
+  border: 1px solid rgba(0,229,255,0.2);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  padding: 14px 18px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--text2);
+  margin: 20px 0;
+  line-height: 1.6;
+}
+.note-box strong { color: var(--accent); font-weight: 600; }
+
+/* FOOTER */
+footer {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 60px 40px;
+  border-top: 1px solid var(--border);
+}
+.footer-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 12px;
+}
+.footer-sub {
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--text2);
+  font-size: 16px;
+  margin-bottom: 32px;
+}
+.footer-copy {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* HIGHLIGHT GRADIENT TEXT */
+.grad-text {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.grad-text-green {
+  background: linear-gradient(135deg, var(--accent3), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.grad-text-orange {
+  background: linear-gradient(135deg, var(--accent4), var(--accent5));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* RESPONSIVE */
+@media (max-width: 700px) {
+  nav { padding: 0 16px; }
+  .nav-links { display: none; }
+  .hero { padding: 100px 20px 60px; }
+  .section { padding: 60px 20px; }
+  .code-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Flutter Architecture</div>
+  <ul class="nav-links">
+    <li><a href="#architecture">Layers</a></li>
+    <li><a href="#structure">Structure</a></li>
+    <li><a href="#patterns">Patterns</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#flows">Flows</a></li>
+    <li><a href="#packages">Packages</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-orb orb1"></div>
+  <div class="hero-orb orb2"></div>
+  <div class="hero-orb orb3"></div>
+
+  <p class="hero-eyebrow">Production Flutter Engineering</p>
+  <h1 class="hero-title">
+    <span class="line1">Clean Architecture</span>
+    <span class="line2">Field Guide</span>
+  </h1>
+  <p class="hero-sub">A complete, opinionated reference for building scalable, offline-first, secure, and beautiful Flutter applications — from first principles to production.</p>
+
+  <div class="hero-badges">
+    <span class="badge badge-cyan">Offline First</span>
+    <span class="badge badge-purple">BLoC State</span>
+    <span class="badge badge-green">SOLID + KISS</span>
+    <span class="badge badge-orange">AES-256 Encrypted</span>
+    <span class="badge badge-pink">Google STT / TTS</span>
+    <span class="badge badge-cyan">Real-time WS</span>
+    <span class="badge badge-purple">Shared Elements</span>
+    <span class="badge badge-green">Cancellable Calls</span>
+    <span class="badge badge-orange">Design System</span>
+  </div>
+
+  <div class="layer-diagram">
+    <div class="layer-bar lb-pres">
+      <span class="lb-name" style="color:#c9a8ff">Presentation</span>
+      <span class="lb-desc">BLoC · Screens · Widgets · Router · Animations</span>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--text3);padding:2px 0;font-family:var(--font-display)">↓ depends on ↓</div>
+    <div class="layer-bar lb-domain">
+      <span class="lb-name" style="color:#56d364">Domain</span>
+      <span class="lb-desc">Use cases · Entities · Repository contracts</span>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--text3);padding:2px 0;font-family:var(--font-display)">↓ depends on ↓</div>
+    <div class="layer-bar lb-data">
+      <span class="lb-name" style="color:#f0883e">Data</span>
+      <span class="lb-desc">Repositories · Remote DS · Local cache · DTOs</span>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--text3);padding:2px 0;font-family:var(--font-display)">↓ depends on ↓</div>
+    <div class="layer-bar lb-core">
+      <span class="lb-name" style="color:var(--accent)">Core</span>
+      <span class="lb-desc">DI · Network · Storage · Speech · Realtime · Theme</span>
+    </div>
+  </div>
+</section>
+
+<main>
+
+<!-- ARCHITECTURE -->
+<section class="section reveal" id="architecture">
+  <p class="section-label">01 — Foundation</p>
+  <h2 class="section-title"><span class="grad-text">The Four Layers</span></h2>
+  <p class="section-intro">Dependencies flow strictly inward. The domain layer has zero Flutter imports — pure Dart, fully unit-testable on any machine.</p>
+
+  <div class="note-box">
+    <strong>The golden rule:</strong> Dependency arrows point inward only. Presentation → Domain ← Data. Core is a horizontal dependency available to all layers. No layer imports anything from a layer above it.
+  </div>
+
+  <div class="principle-grid reveal" style="margin-top: 32px;">
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--accent2)">P</div>
+      <div class="p-title" style="color:#c9a8ff">Presentation</div>
+      <div class="p-desc">Everything Flutter sees. BLoC/Cubit for state. Screens consume state and dispatch events. Zero business logic here — only UI decisions like "is the button enabled?"</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--accent3)">D</div>
+      <div class="p-title" style="color:#56d364">Domain</div>
+      <div class="p-desc">Pure Dart. Entities, use cases, and abstract repository interfaces. This is the heart of your app. If you can run this as a CLI, your architecture is sound.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--accent4)">D</div>
+      <div class="p-title" style="color:#f0883e">Data</div>
+      <div class="p-desc">Implements the domain contracts. Remote datasources use Dio. Local datasources use Drift (SQLite) or Isar. DTOs map to/from domain entities.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--accent)">C</div>
+      <div class="p-title" style="color:var(--accent)">Core</div>
+      <div class="p-desc">Cross-cutting infrastructure: DI container, network client factory, secure storage, interceptors, speech services, WebSocket client, theme tokens.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FILE STRUCTURE -->
+<section class="section reveal" id="structure">
+  <p class="section-label">02 — File Structure</p>
+  <h2 class="section-title">Feature-first <span class="grad-text-green">Organisation</span></h2>
+  <p class="section-intro">Features own their slice of each layer. Core infrastructure is shared. Scale by adding feature folders, not by reshaping the architecture.</p>
+
+  <div class="filetree-wrap reveal">
+    <div class="filetree-header">
+      <span class="ft-dot"></span><span class="ft-dot"></span><span class="ft-dot"></span>
+      <span class="ft-title">root_app / lib /</span>
+    </div>
+    <div class="filetree-body">
+
+      <div class="ft-row"><span style="width:0px;display:inline-block"></span><span class="ft-icon" style="color:#79c0ff">▾</span><span class="ft-label dir">core/</span></div>
+
+      <div class="ft-row"><span style="width:16px;display:inline-block"></span><span class="ft-icon" style="color:#79c0ff">▾</span><span class="ft-label dir">di/</span><span class="ft-tag tag-core">DI</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">injection.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— get_it + injectable bootstrap</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">injection.config.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— generated, never edit</span></div>
+
+      <div class="ft-row"><span style="width:16px;display:inline-block"></span><span class="ft-icon" style="color:#79c0ff">▾</span><span class="ft-label dir">network/</span><span class="ft-tag tag-core">Network</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">dio_client.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— factory with base options</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">auth_interceptor.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— attach + refresh Bearer token</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">encrypt_interceptor.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— AES-256-GCM body encryption</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">logger_interceptor.dart</span></div>
+
+      <div class="ft-row"><span style="width:16px;display:inline-block"></span><span class="ft-icon" style="color:#79c0ff">▾</span><span class="ft-label dir">storage/</span><span class="ft-tag tag-core">Storage</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">secure_storage.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— Keystore/Keychain wrapper</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">app_prefs.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— shared_preferences for flags</span></div>
+
+      <div class="ft-row"><span style="width:16px;display:inline-block"></span><span class="ft-icon" style="color:#79c0ff">▾</span><span class="ft-label dir">speech/</span><span class="ft-tag tag-core">Speech</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">stt_service.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— Google STT stream</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">tts_service.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— Google TTS playback</span></div>
+
+      <div class="ft-row"><span style="width:16px;display:inline-block"></span><span class="ft-icon" style="color:#79c0ff">▾</span><span class="ft-label dir">realtime/</span><span class="ft-tag tag-core">WS</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">ws_client.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— WebSocket + auto-reconnect</span></div>
+
+      <div class="ft-row"><span style="width:16px;display:inline-block"></span><span class="ft-icon" style="color:#79c0ff">▾</span><span class="ft-label dir">theme/</span><span class="ft-tag tag-core">Theme</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">app_theme.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— M3 ThemeData light + dark</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">app_colors.dart</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">app_typography.dart</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">app_spacing.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— 4-pt grid constants</span></div>
+
+      <div class="ft-row"><span style="width:16px;display:inline-block"></span><span class="ft-icon" style="color:#79c0ff">▾</span><span class="ft-label dir">error/</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">failure.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— sealed Failure hierarchy</span></div>
+
+      <div class="ft-row"><span style="width:16px;display:inline-block"></span><span class="ft-icon" style="color:#79c0ff">▾</span><span class="ft-label dir">utils/</span></div>
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">debouncer.dart</span></div>
+
+      <div style="height:10px"></div>
+
+      <div class="ft-row"><span style="width:0px;display:inline-block"></span><span class="ft-icon" style="color:#79c0ff">▾</span><span class="ft-label dir">features/</span></div>
+      <div class="ft-row"><span style="width:16px;display:inline-block"></span><span class="ft-icon" style="color:#f0883e">▾</span><span class="ft-label dir">auth/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-display)">— repeat this pattern per feature</span></div>
+
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon" style="color:#56d364">▾</span><span class="ft-label dir">domain/</span><span class="ft-tag tag-domain">Domain</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">entities/user.dart</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">repositories/auth_repository.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">abstract</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">usecases/login_usecase.dart</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">usecases/logout_usecase.dart</span></div>
+
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon" style="color:#f0883e">▾</span><span class="ft-label dir">data/</span><span class="ft-tag tag-data">Data</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">datasources/auth_remote_ds.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">Dio + CancelToken + encrypt</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">datasources/auth_local_ds.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">Isar / Drift cache</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">models/user_dto.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">DTO + toEntity() mapper</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">auth_repository_impl.dart</span></div>
+
+      <div class="ft-row"><span style="width:32px;display:inline-block"></span><span class="ft-icon" style="color:#c9a8ff">▾</span><span class="ft-label dir">presentation/</span><span class="ft-tag tag-pres">UI</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">bloc/auth_bloc.dart</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">bloc/auth_event.dart</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">bloc/auth_state.dart</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">pages/login_page.dart</span></div>
+      <div class="ft-row"><span style="width:48px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">widgets/login_form.dart</span></div>
+
+      <div style="height:10px"></div>
+      <div class="ft-row"><span style="width:0px;display:inline-block"></span><span class="ft-icon" style="color:#79c0ff">▾</span><span class="ft-label dir">app/</span></div>
+      <div class="ft-row"><span style="width:16px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">app.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— MaterialApp.router root</span></div>
+      <div class="ft-row"><span style="width:16px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">router.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— go_router with guards + transitions</span></div>
+      <div class="ft-row"><span style="width:0px;display:inline-block"></span><span class="ft-icon">◦</span><span class="ft-label dart-file">main.dart</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--font-code)">— bootstrap DI, run app</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CODE PATTERNS -->
+<section class="section reveal" id="patterns">
+  <p class="section-label">03 — Code Patterns</p>
+  <h2 class="section-title">Implementation <span class="grad-text-orange">Blueprints</span></h2>
+  <p class="section-intro">Every pattern below is production-ready and wired to a real package. No prototypes.</p>
+
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="showTab('bloc')">BLoC / State</button>
+    <button class="tab-btn" onclick="showTab('network')">Network + Encrypt</button>
+    <button class="tab-btn" onclick="showTab('offline')">Offline First</button>
+    <button class="tab-btn" onclick="showTab('speech')">Speech + Realtime</button>
+    <button class="tab-btn" onclick="showTab('anim')">Animations</button>
+    <button class="tab-btn" onclick="showTab('theme')">Design System</button>
+  </div>
+
+  <!-- BLoC TAB -->
+  <div class="tab-panel active" id="tab-bloc">
+    <div class="code-grid">
+
+      <div class="code-card cc-pres">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:#c9a8ff"></span>
+          <span class="cc-title">auth_event.dart — sealed events</span>
+          <span class="cc-sub">domain · pres</span>
+        </div>
+        <pre><span class="kw">sealed class</span> <span class="cls">AuthEvent</span> {}
+
+<span class="kw">final class</span> <span class="cls">LoginRequested</span> <span class="kw">extends</span> <span class="cls">AuthEvent</span> {
+  <span class="kw">final</span> <span class="typ">String</span> email;
+  <span class="kw">final</span> <span class="typ">String</span> password;
+  <span class="kw">const</span> <span class="cls">LoginRequested</span>({
+    <span class="kw">required this</span>.email,
+    <span class="kw">required this</span>.password,
+  });
+}
+
+<span class="kw">final class</span> <span class="cls">LogoutRequested</span> <span class="kw">extends</span> <span class="cls">AuthEvent</span> {}
+<span class="kw">final class</span> <span class="cls">SessionRestored</span> <span class="kw">extends</span> <span class="cls">AuthEvent</span> {}</pre>
+      </div>
+
+      <div class="code-card cc-pres">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:#c9a8ff"></span>
+          <span class="cc-title">auth_state.dart — sealed states</span>
+          <span class="cc-sub">pres</span>
+        </div>
+        <pre><span class="kw">sealed class</span> <span class="cls">AuthState</span> <span class="kw">extends</span> <span class="cls">Equatable</span> {
+  <span class="kw">const</span> <span class="cls">AuthState</span>();
+}
+
+<span class="kw">final class</span> <span class="cls">AuthInitial</span> <span class="kw">extends</span> <span class="cls">AuthState</span> {
+  <span class="ann">@override</span> <span class="cls">List</span> <span class="kw">get</span> props =&gt; [];
+}
+<span class="kw">final class</span> <span class="cls">AuthLoading</span> <span class="kw">extends</span> <span class="cls">AuthState</span> {
+  <span class="ann">@override</span> <span class="cls">List</span> <span class="kw">get</span> props =&gt; [];
+}
+<span class="kw">final class</span> <span class="cls">Authenticated</span> <span class="kw">extends</span> <span class="cls">AuthState</span> {
+  <span class="kw">final</span> <span class="cls">User</span> user;
+  <span class="cmt">// signals offline-first cache source</span>
+  <span class="kw">final bool</span> isFromCache;
+  <span class="kw">const</span> <span class="cls">Authenticated</span>(<span class="kw">this</span>.user,
+    {<span class="kw">this</span>.isFromCache = <span class="kw">false</span>});
+  <span class="ann">@override</span> <span class="cls">List</span> <span class="kw">get</span> props =&gt; [user, isFromCache];
+}
+<span class="kw">final class</span> <span class="cls">AuthFailure</span> <span class="kw">extends</span> <span class="cls">AuthState</span> {
+  <span class="kw">final</span> <span class="cls">Failure</span> failure;
+  <span class="kw">const</span> <span class="cls">AuthFailure</span>(<span class="kw">this</span>.failure);
+  <span class="ann">@override</span> <span class="cls">List</span> <span class="kw">get</span> props =&gt; [failure];
+}</pre>
+      </div>
+
+      <div class="code-card cc-pres">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:#c9a8ff"></span>
+          <span class="cc-title">auth_bloc.dart</span>
+          <span class="cc-sub">pres</span>
+        </div>
+        <pre><span class="ann">@injectable</span>
+<span class="kw">class</span> <span class="cls">AuthBloc</span> <span class="kw">extends</span> <span class="cls">Bloc</span>&lt;<span class="cls">AuthEvent</span>, <span class="cls">AuthState</span>&gt; {
+  <span class="kw">final</span> <span class="cls">LoginUseCase</span> _login;
+  <span class="kw">final</span> <span class="cls">LogoutUseCase</span> _logout;
+
+  <span class="cls">AuthBloc</span>(<span class="kw">this</span>._login, <span class="kw">this</span>._logout)
+      : <span class="kw">super</span>(<span class="cls">AuthInitial</span>()) {
+    <span class="kw">on</span>&lt;<span class="cls">LoginRequested</span>&gt;(_onLogin);
+    <span class="kw">on</span>&lt;<span class="cls">LogoutRequested</span>&gt;(_onLogout);
+    <span class="kw">on</span>&lt;<span class="cls">SessionRestored</span>&gt;(_onRestore);
+  }
+
+  <span class="kw">Future</span>&lt;<span class="kw">void</span>&gt; _onLogin(
+    <span class="cls">LoginRequested</span> e, <span class="cls">Emitter</span>&lt;<span class="cls">AuthState</span>&gt; emit,
+  ) <span class="kw">async</span> {
+    emit(<span class="cls">AuthLoading</span>());
+    <span class="kw">final</span> result = <span class="kw">await</span> _login(
+      <span class="cls">LoginParams</span>(email: e.email, password: e.password));
+    <span class="cmt">// fpdart Either — no try/catch needed</span>
+    result.fold(
+      (f) =&gt; emit(<span class="cls">AuthFailure</span>(f)),
+      (u) =&gt; emit(<span class="cls">Authenticated</span>(u)),
+    );
+  }
+}</pre>
+      </div>
+
+      <div class="code-card cc-pres">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:#c9a8ff"></span>
+          <span class="cc-title">login_page.dart — BlocConsumer</span>
+          <span class="cc-sub">pres</span>
+        </div>
+        <pre><span class="kw">class</span> <span class="cls">LoginPage</span> <span class="kw">extends</span> <span class="cls">StatelessWidget</span> {
+  <span class="ann">@override</span>
+  <span class="cls">Widget</span> build(<span class="cls">BuildContext</span> context) =&gt;
+    <span class="cls">BlocConsumer</span>&lt;<span class="cls">AuthBloc</span>, <span class="cls">AuthState</span>&gt;(
+      listener: (ctx, state) {
+        <span class="kw">if</span> (state <span class="kw">is</span> <span class="cls">Authenticated</span>) context.go(<span class="str">'/home'</span>);
+        <span class="kw">if</span> (state <span class="kw">is</span> <span class="cls">AuthFailure</span>)
+          _showError(ctx, state.failure);
+      },
+      <span class="cmt">// Exhaustive switch — Dart compiler</span>
+      <span class="cmt">// warns if a state case is missing</span>
+      builder: (ctx, state) =&gt; <span class="kw">switch</span> (state) {
+        <span class="cls">AuthLoading</span>()    =&gt; <span class="kw">const</span> <span class="cls">LoadingView</span>(),
+        <span class="cls">AuthFailure</span>(:final failure) =&gt;
+                           <span class="cls">LoginForm</span>(error: failure),
+        _                =&gt; <span class="kw">const</span> <span class="cls">LoginForm</span>(),
+      },
+    );
+}</pre>
+      </div>
+
+      <div class="code-card cc-domain">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:#56d364"></span>
+          <span class="cc-title">login_usecase.dart — SOLID SRP</span>
+          <span class="cc-sub">domain</span>
+        </div>
+        <pre><span class="cmt">// Single Responsibility: one purpose per class</span>
+<span class="cmt">// Dependency Inversion: depends on abstract repo</span>
+<span class="ann">@injectable</span>
+<span class="kw">class</span> <span class="cls">LoginUseCase</span> {
+  <span class="kw">final</span> <span class="cls">AuthRepository</span> _repo;
+  <span class="cls">LoginUseCase</span>(<span class="kw">this</span>._repo);
+
+  <span class="cmt">// callable — KISS single entry point</span>
+  <span class="cls">Future</span>&lt;<span class="cls">Either</span>&lt;<span class="cls">Failure</span>, <span class="cls">User</span>&gt;&gt; <span class="kw">call</span>(
+    <span class="cls">LoginParams</span> p,
+  ) =>
+    _repo.login(p.email, p.password);
+}
+
+<span class="cmt">// Domain contract — no Dio, no Drift</span>
+<span class="kw">abstract class</span> <span class="cls">AuthRepository</span> {
+  <span class="cls">Future</span>&lt;<span class="cls">Either</span>&lt;<span class="cls">Failure</span>, <span class="cls">User</span>&gt;&gt; login(
+    <span class="typ">String</span> email, <span class="typ">String</span> password);
+  <span class="cls">Future</span>&lt;<span class="cls">Either</span>&lt;<span class="cls">Failure</span>, <span class="cls">Unit</span>&gt;&gt; logout();
+}</pre>
+      </div>
+
+      <div class="code-card cc-pres">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:#c9a8ff"></span>
+          <span class="cc-title">search_bloc.dart — debounce pattern</span>
+          <span class="cc-sub">pres</span>
+        </div>
+        <pre><span class="ann">@injectable</span>
+<span class="kw">class</span> <span class="cls">SearchBloc</span> <span class="kw">extends</span> <span class="cls">Bloc</span>&lt;<span class="cls">SearchEvent</span>, <span class="cls">SearchState</span>&gt; {
+  <span class="kw">final</span> <span class="cls">SearchUseCase</span> _search;
+  <span class="kw">final</span> _debouncer = <span class="cls">Debouncer</span>(
+    delay: <span class="kw">const</span> <span class="cls">Duration</span>(milliseconds: <span class="num">350</span>),
+  );
+
+  <span class="cls">SearchBloc</span>(<span class="kw">this</span>._search) : <span class="kw">super</span>(<span class="cls">SearchInitial</span>()) {
+    <span class="kw">on</span>&lt;<span class="cls">QueryChanged</span>&gt;((e, _) {
+      _debouncer.run(() =&gt; add(<span class="cls">ExecuteSearch</span>(e.q)));
+    });
+    <span class="kw">on</span>&lt;<span class="cls">ExecuteSearch</span>&gt;((e, emit) <span class="kw">async</span> {
+      emit(<span class="cls">SearchLoading</span>());
+      <span class="kw">final</span> r = <span class="kw">await</span> _search(<span class="cls">SearchParams</span>(e.q));
+      emit(r.fold(<span class="cls">SearchError</span>.new, <span class="cls">SearchLoaded</span>.new));
+    });
+  }
+  <span class="ann">@override</span>
+  <span class="kw">Future</span>&lt;<span class="kw">void</span>&gt; close() {
+    _debouncer.dispose(); <span class="kw">return super</span>.close();
+  }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- NETWORK TAB -->
+  <div class="tab-panel" id="tab-network">
+    <div class="code-grid">
+
+      <div class="code-card cc-core">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent)"></span>
+          <span class="cc-title">dio_client.dart — factory</span>
+          <span class="cc-sub">core</span>
+        </div>
+        <pre><span class="ann">@module</span>
+<span class="kw">abstract class</span> <span class="cls">NetworkModule</span> {
+  <span class="ann">@lazySingleton</span>
+  <span class="cls">Dio</span> <span class="fn">dio</span>(
+    <span class="cls">AuthInterceptor</span> auth,
+    <span class="cls">EncryptInterceptor</span> encrypt,
+    <span class="cls">LoggerInterceptor</span> logger,
+  ) {
+    <span class="kw">final</span> dio = <span class="cls">Dio</span>(<span class="cls">BaseOptions</span>(
+      baseUrl: <span class="cls">Env</span>.apiUrl,
+      connectTimeout: <span class="kw">const</span> <span class="cls">Duration</span>(seconds: <span class="num">10</span>),
+      receiveTimeout: <span class="kw">const</span> <span class="cls">Duration</span>(seconds: <span class="num">30</span>),
+      headers: {<span class="str">'Accept'</span>: <span class="str">'application/json'</span>},
+    ));
+    dio.interceptors.addAll([auth, encrypt, logger]);
+    <span class="kw">return</span> dio;
+  }
+}</pre>
+      </div>
+
+      <div class="code-card cc-core">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent)"></span>
+          <span class="cc-title">encrypt_interceptor.dart — AES-256-GCM</span>
+          <span class="cc-sub">core</span>
+        </div>
+        <pre><span class="ann">@lazySingleton</span>
+<span class="kw">class</span> <span class="cls">EncryptInterceptor</span> <span class="kw">extends</span> <span class="cls">Interceptor</span> {
+  <span class="kw">final</span> <span class="cls">EncryptionService</span> _enc;
+  <span class="cls">EncryptInterceptor</span>(<span class="kw">this</span>._enc);
+
+  <span class="ann">@override</span>
+  <span class="kw">void</span> <span class="fn">onRequest</span>(<span class="cls">RequestOptions</span> o,
+      <span class="cls">RequestInterceptorHandler</span> h) {
+    <span class="kw">if</span> (o.data != <span class="kw">null</span>) {
+      <span class="kw">final</span> iv = <span class="cls">IV</span>.fromSecureRandom(<span class="num">16</span>);
+      o.data = {
+        <span class="str">'iv'</span>: iv.base64,
+        <span class="str">'payload'</span>: _enc.encrypt(
+          jsonEncode(o.data), iv: iv).base64,
+      };
+    }
+    h.next(o);
+  }
+
+  <span class="ann">@override</span>
+  <span class="kw">void</span> <span class="fn">onResponse</span>(<span class="cls">Response</span> r,
+      <span class="cls">ResponseInterceptorHandler</span> h) {
+    <span class="kw">final</span> d = r.data;
+    <span class="kw">if</span> (d <span class="kw">is</span> <span class="cls">Map</span> && d.containsKey(<span class="str">'payload'</span>)) {
+      r.data = jsonDecode(_enc.decrypt(
+        <span class="cls">Encrypted</span>.fromBase64(d[<span class="str">'payload'</span>]),
+        iv: <span class="cls">IV</span>.fromBase64(d[<span class="str">'iv'</span>]),
+      ));
+    }
+    h.next(r);
+  }
+}</pre>
+      </div>
+
+      <div class="code-card cc-data">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent4)"></span>
+          <span class="cc-title">auth_remote_ds.dart — cancellable calls</span>
+          <span class="cc-sub">data</span>
+        </div>
+        <pre><span class="ann">@lazySingleton</span>
+<span class="kw">class</span> <span class="cls">AuthRemoteDs</span> {
+  <span class="kw">final</span> <span class="cls">Dio</span> _dio;
+  <span class="cls">CancelToken</span>? _activeToken;
+  <span class="cls">AuthRemoteDs</span>(<span class="kw">this</span>._dio);
+
+  <span class="cls">Future</span>&lt;<span class="cls">UserDto</span>&gt; <span class="fn">login</span>(
+      <span class="typ">String</span> email, <span class="typ">String</span> password) <span class="kw">async</span> {
+    <span class="cmt">// Cancel any in-flight request first</span>
+    _activeToken?.cancel(<span class="str">'superseded'</span>);
+    _activeToken = <span class="cls">CancelToken</span>();
+
+    <span class="kw">final</span> res = <span class="kw">await</span> _dio.post(
+      <span class="str">'/auth/login'</span>,
+      data: {<span class="str">'email'</span>: email, <span class="str">'password'</span>: password},
+      cancelToken: _activeToken,
+    );
+    <span class="kw">return</span> <span class="cls">UserDto</span>.fromJson(res.data);
+  }
+
+  <span class="kw">void</span> <span class="fn">dispose</span>() => _activeToken?.cancel();
+}</pre>
+      </div>
+
+      <div class="code-card cc-core">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent)"></span>
+          <span class="cc-title">auth_interceptor.dart — token refresh</span>
+          <span class="cc-sub">core</span>
+        </div>
+        <pre><span class="ann">@lazySingleton</span>
+<span class="kw">class</span> <span class="cls">AuthInterceptor</span> <span class="kw">extends</span> <span class="cls">QueuedInterceptorsWrapper</span> {
+  <span class="kw">final</span> <span class="cls">SecureStorage</span> _storage;
+  <span class="kw">final</span> <span class="cls">Dio</span> _refreshDio; <span class="cmt">// separate, no interceptors</span>
+
+  <span class="ann">@override</span>
+  <span class="kw">void</span> <span class="fn">onRequest</span>(<span class="cls">RequestOptions</span> o,
+      <span class="cls">RequestInterceptorHandler</span> h) <span class="kw">async</span> {
+    <span class="kw">final</span> token = <span class="kw">await</span> _storage.getAccessToken();
+    <span class="kw">if</span> (token != <span class="kw">null</span>)
+      o.headers[<span class="str">'Authorization'</span>] = <span class="str">'Bearer </span><span class="kw">$token</span><span class="str">'</span>;
+    h.next(o);
+  }
+
+  <span class="ann">@override</span>
+  <span class="kw">void</span> <span class="fn">onError</span>(<span class="cls">DioException</span> e, <span class="cls">ErrorInterceptorHandler</span> h)
+      <span class="kw">async</span> {
+    <span class="kw">if</span> (e.response?.statusCode == <span class="num">401</span>) {
+      <span class="kw">final</span> newToken = <span class="kw">await</span> _refresh();
+      <span class="kw">if</span> (newToken != <span class="kw">null</span>) {
+        e.requestOptions.headers[<span class="str">'Authorization'</span>] =
+          <span class="str">'Bearer </span><span class="kw">$newToken</span><span class="str">'</span>;
+        <span class="kw">return</span> h.resolve(<span class="kw">await</span> _retry(e.requestOptions));
+      }
+    }
+    h.next(e);
+  }
+}</pre>
+      </div>
+
+      <div class="code-card cc-core">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent)"></span>
+          <span class="cc-title">secure_storage.dart — Keystore/Keychain</span>
+          <span class="cc-sub">core</span>
+        </div>
+        <pre><span class="ann">@lazySingleton</span>
+<span class="kw">class</span> <span class="cls">SecureStorage</span> {
+  <span class="kw">final</span> _s = <span class="kw">const</span> <span class="cls">FlutterSecureStorage</span>(
+    aOptions: <span class="cls">AndroidOptions</span>(
+      encryptedSharedPreferences: <span class="kw">true</span>,
+      keyCipherAlgorithm: <span class="cls">KeyCipherAlgorithm</span>.RSA_ECB_OAEPwithSHA_256_and_MGF1Padding,
+    ),
+    iOptions: <span class="cls">IOSOptions</span>(
+      accessibility: <span class="cls">KeychainAccessibility</span>.first_unlock,
+    ),
+  );
+
+  <span class="kw">static const</span> _kToken  = <span class="str">'access_token'</span>;
+  <span class="kw">static const</span> _kRefresh = <span class="str">'refresh_token'</span>;
+  <span class="kw">static const</span> _kUserId = <span class="str">'user_id'</span>;
+
+  <span class="cls">Future</span>&lt;<span class="kw">void</span>&gt; <span class="fn">saveTokens</span>(<span class="typ">String</span> access, <span class="typ">String</span> refresh) =>
+    <span class="cls">Future</span>.wait([
+      _s.write(key: _kToken,   value: access),
+      _s.write(key: _kRefresh, value: refresh),
+    ]);
+
+  <span class="cls">Future</span>&lt;<span class="typ">String</span>?&gt; <span class="fn">getAccessToken</span>() => _s.read(key: _kToken);
+  <span class="cls">Future</span>&lt;<span class="kw">void</span>&gt; <span class="fn">clearAll</span>() => _s.deleteAll();
+}</pre>
+      </div>
+
+      <div class="code-card cc-core">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent)"></span>
+          <span class="cc-title">debouncer.dart</span>
+          <span class="cc-sub">core · utils</span>
+        </div>
+        <pre><span class="kw">class</span> <span class="cls">Debouncer</span> {
+  <span class="kw">final</span> <span class="cls">Duration</span> delay;
+  <span class="cls">Timer</span>? _timer;
+
+  <span class="cls">Debouncer</span>({<span class="kw">required this</span>.delay});
+
+  <span class="kw">void</span> <span class="fn">run</span>(<span class="cls">VoidCallback</span> fn) {
+    _timer?.cancel();
+    _timer = <span class="cls">Timer</span>(delay, fn);
+  }
+
+  <span class="kw">void</span> <span class="fn">dispose</span>() => _timer?.cancel();
+}
+
+<span class="cmt">// In BLoC.on&lt;QueryChanged&gt;:</span>
+<span class="cmt">// _debouncer.run(() => add(ExecuteSearch(e.q)));</span>
+<span class="cmt">// On BLoC.close(): _debouncer.dispose();</span></pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- OFFLINE FIRST TAB -->
+  <div class="tab-panel" id="tab-offline">
+    <div class="code-grid">
+
+      <div class="code-card cc-data">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent4)"></span>
+          <span class="cc-title">product_repository_impl.dart — offline first</span>
+          <span class="cc-sub">data</span>
+        </div>
+        <pre><span class="ann">@LazySingleton</span>(as: <span class="cls">ProductRepository</span>)
+<span class="kw">class</span> <span class="cls">ProductRepositoryImpl</span> <span class="kw">implements</span> <span class="cls">ProductRepository</span> {
+  <span class="kw">final</span> <span class="cls">ProductRemoteDs</span> _remote;
+  <span class="kw">final</span> <span class="cls">ProductLocalDs</span>  _local;  <span class="cmt">// Isar</span>
+  <span class="cls">ProductRepositoryImpl</span>(<span class="kw">this</span>._remote, <span class="kw">this</span>._local);
+
+  <span class="ann">@override</span>
+  <span class="cls">Future</span>&lt;<span class="cls">Either</span>&lt;<span class="cls">Failure</span>, <span class="cls">List</span>&lt;<span class="cls">Product</span>&gt;&gt;&gt;
+      <span class="fn">getProducts</span>() <span class="kw">async</span> {
+    <span class="kw">try</span> {
+      <span class="kw">final</span> dtos = <span class="kw">await</span> _remote.fetchProducts();
+      <span class="cmt">// write-through: always update local cache</span>
+      <span class="kw">await</span> _local.upsertAll(dtos);
+      <span class="kw">return</span> <span class="cls">Right</span>(dtos.map((d) => d.toDomain()).toList());
+    } <span class="kw">on</span> <span class="cls">DioException</span> {
+      <span class="cmt">// network unavailable — serve cache</span>
+      <span class="kw">final</span> cached = <span class="kw">await</span> _local.getAll();
+      <span class="kw">if</span> (cached.isNotEmpty)
+        <span class="kw">return</span> <span class="cls">Right</span>(cached.map((d) => d.toDomain()).toList());
+      <span class="kw">return const</span> <span class="cls">Left</span>(<span class="cls">NetworkFailure</span>());
+    } <span class="kw">on</span> <span class="cls">Exception</span> <span class="kw">catch</span> (e) {
+      <span class="kw">return</span> <span class="cls">Left</span>(<span class="cls">UnknownFailure</span>(e.toString()));
+    }
+  }
+}</pre>
+      </div>
+
+      <div class="code-card cc-data">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent4)"></span>
+          <span class="cc-title">product_local_ds.dart — Isar schema</span>
+          <span class="cc-sub">data</span>
+        </div>
+        <pre><span class="ann">@collection</span>
+<span class="kw">class</span> <span class="cls">ProductDto</span> {
+  <span class="cls">Id</span>? isarId;
+  <span class="ann">@Index</span>(unique: <span class="kw">true</span>)
+  <span class="kw">late</span> <span class="typ">String</span> id;
+  <span class="kw">late</span> <span class="typ">String</span> name;
+  <span class="kw">late</span> <span class="typ">double</span> price;
+  <span class="kw">late</span> <span class="typ">String</span> imageUrl;
+  <span class="kw">late</span> <span class="typ">int</span> cachedAt; <span class="cmt">// unix ms — for TTL</span>
+
+  <span class="cls">Product</span> <span class="fn">toDomain</span>() =>
+    <span class="cls">Product</span>(id: id, name: name, price: price,
+             imageUrl: imageUrl);
+}
+
+<span class="ann">@lazySingleton</span>
+<span class="kw">class</span> <span class="cls">ProductLocalDs</span> {
+  <span class="kw">final</span> <span class="cls">Isar</span> _isar;
+  <span class="cls">ProductLocalDs</span>(<span class="kw">this</span>._isar);
+
+  <span class="cls">Future</span>&lt;<span class="kw">void</span>&gt; <span class="fn">upsertAll</span>(<span class="cls">List</span>&lt;<span class="cls">ProductDto</span>&gt; dtos) =>
+    _isar.writeTxn(() => _isar.productDtos.putAll(dtos));
+
+  <span class="cls">Future</span>&lt;<span class="cls">List</span>&lt;<span class="cls">ProductDto</span>&gt;&gt; <span class="fn">getAll</span>() =>
+    _isar.productDtos.where().findAll();
+}</pre>
+      </div>
+
+      <div class="code-card cc-domain">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:#56d364"></span>
+          <span class="cc-title">failure.dart — sealed failure hierarchy</span>
+          <span class="cc-sub">core · domain</span>
+        </div>
+        <pre><span class="kw">sealed class</span> <span class="cls">Failure</span> {
+  <span class="kw">const</span> <span class="cls">Failure</span>();
+}
+
+<span class="kw">final class</span> <span class="cls">NetworkFailure</span> <span class="kw">extends</span> <span class="cls">Failure</span> {
+  <span class="kw">const</span> <span class="cls">NetworkFailure</span>();
+}
+<span class="kw">final class</span> <span class="cls">UnauthorizedFailure</span> <span class="kw">extends</span> <span class="cls">Failure</span> {
+  <span class="kw">const</span> <span class="cls">UnauthorizedFailure</span>();
+}
+<span class="kw">final class</span> <span class="cls">ServerFailure</span> <span class="kw">extends</span> <span class="cls">Failure</span> {
+  <span class="kw">final</span> <span class="typ">int</span> statusCode;
+  <span class="kw">final</span> <span class="typ">String</span> message;
+  <span class="kw">const</span> <span class="cls">ServerFailure</span>({<span class="kw">required this</span>.statusCode,
+                         <span class="kw">required this</span>.message});
+}
+<span class="kw">final class</span> <span class="cls">CacheFailure</span> <span class="kw">extends</span> <span class="cls">Failure</span> {
+  <span class="kw">const</span> <span class="cls">CacheFailure</span>();
+}
+<span class="kw">final class</span> <span class="cls">UnknownFailure</span> <span class="kw">extends</span> <span class="cls">Failure</span> {
+  <span class="kw">final</span> <span class="typ">String</span> message;
+  <span class="kw">const</span> <span class="cls">UnknownFailure</span>(<span class="kw">this</span>.message);
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SPEECH + REALTIME TAB -->
+  <div class="tab-panel" id="tab-speech">
+    <div class="code-grid">
+
+      <div class="code-card cc-core">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent)"></span>
+          <span class="cc-title">stt_service.dart — Google Speech-to-Text</span>
+          <span class="cc-sub">core</span>
+        </div>
+        <pre><span class="ann">@lazySingleton</span>
+<span class="kw">class</span> <span class="cls">SttService</span> {
+  <span class="kw">final</span> _stt = <span class="cls">SpeechToText</span>();
+  <span class="kw">final</span> _words =
+    <span class="cls">StreamController</span>&lt;<span class="cls">SttResult</span>&gt;.broadcast();
+
+  <span class="cls">Stream</span>&lt;<span class="cls">SttResult</span>&gt; <span class="kw">get</span> results =&gt; _words.stream;
+  <span class="kw">bool</span> <span class="kw">get</span> isListening =&gt; _stt.isListening;
+
+  <span class="cls">Future</span>&lt;<span class="kw">bool</span>&gt; <span class="fn">initialize</span>() =>
+    _stt.initialize(onError: _onError);
+
+  <span class="cls">Future</span>&lt;<span class="kw">void</span>&gt; <span class="fn">startListening</span>({
+    <span class="typ">String</span> localeId = <span class="str">'en-US'</span>,
+  }) <span class="kw">async</span> {
+    <span class="kw">if</span> (!<span class="kw">await</span> initialize()) <span class="kw">return</span>;
+    _stt.listen(
+      onResult: (r) =&gt; _words.add(<span class="cls">SttResult</span>(
+        text: r.recognizedWords,
+        isFinal: r.finalResult,
+        confidence: r.confidence,
+      )),
+      localeId: localeId,
+      listenOptions: <span class="cls">SpeechListenOptions</span>(
+        partialResults: <span class="kw">true</span>,
+        cancelOnError: <span class="kw">false</span>,
+      ),
+    );
+  }
+
+  <span class="cls">Future</span>&lt;<span class="kw">void</span>&gt; <span class="fn">stop</span>() => _stt.stop();
+  <span class="kw">void</span> <span class="fn">dispose</span>() { _stt.cancel(); _words.close(); }
+}</pre>
+      </div>
+
+      <div class="code-card cc-core">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent)"></span>
+          <span class="cc-title">tts_service.dart — Google Text-to-Speech</span>
+          <span class="cc-sub">core</span>
+        </div>
+        <pre><span class="ann">@lazySingleton</span>
+<span class="kw">class</span> <span class="cls">TtsService</span> {
+  <span class="kw">final</span> _tts = <span class="cls">FlutterTts</span>();
+
+  <span class="cls">Future</span>&lt;<span class="kw">void</span>&gt; <span class="fn">init</span>() <span class="kw">async</span> {
+    <span class="kw">await</span> _tts.setLanguage(<span class="str">'en-US'</span>);
+    <span class="kw">await</span> _tts.setSpeechRate(<span class="num">0.95</span>);
+    <span class="kw">await</span> _tts.setVolume(<span class="num">1.0</span>);
+    <span class="kw">await</span> _tts.setPitch(<span class="num">1.0</span>);
+    <span class="cmt">// On Android: use Google TTS engine</span>
+    <span class="kw">if</span> (<span class="cls">Platform</span>.isAndroid) {
+      <span class="kw">await</span> _tts.setEngine(<span class="str">'com.google.android.tts'</span>);
+    }
+  }
+
+  <span class="cls">Future</span>&lt;<span class="kw">void</span>&gt; <span class="fn">speak</span>(<span class="typ">String</span> text) <span class="kw">async</span> {
+    <span class="kw">await</span> _tts.stop();
+    <span class="kw">await</span> _tts.speak(text);
+  }
+
+  <span class="cls">Future</span>&lt;<span class="kw">void</span>&gt; <span class="fn">stop</span>() => _tts.stop();
+  <span class="cls">Future</span>&lt;<span class="kw">void</span>&gt; <span class="fn">dispose</span>() => _tts.stop();
+}</pre>
+      </div>
+
+      <div class="code-card cc-core">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent)"></span>
+          <span class="cc-title">ws_client.dart — WebSocket + auto-reconnect</span>
+          <span class="cc-sub">core</span>
+        </div>
+        <pre><span class="ann">@lazySingleton</span>
+<span class="kw">class</span> <span class="cls">WsClient</span> {
+  <span class="cls">WebSocketChannel</span>? _channel;
+  <span class="kw">final</span> _messages =
+    <span class="cls">StreamController</span>&lt;<span class="cls">Map</span>&lt;<span class="typ">String</span>, <span class="kw">dynamic</span>&gt;&gt;.broadcast();
+  <span class="typ">int</span> _retryCount = <span class="num">0</span>;
+  <span class="kw">bool</span> _disposed = <span class="kw">false</span>;
+
+  <span class="cls">Stream</span>&lt;<span class="cls">Map</span>&lt;<span class="typ">String</span>, <span class="kw">dynamic</span>&gt;&gt; <span class="kw">get</span> messages =&gt;
+    _messages.stream;
+
+  <span class="kw">void</span> <span class="fn">connect</span>(<span class="typ">String</span> url, <span class="typ">String</span> token) {
+    _channel = <span class="cls">WebSocketChannel</span>.connect(
+      <span class="cls">Uri</span>.parse(<span class="str">'</span><span class="kw">$url</span><span class="str">?token=</span><span class="kw">$token</span><span class="str">'</span>),
+    );
+    _channel!.stream.listen(
+      (d) {
+        _retryCount = <span class="num">0</span>;
+        _messages.add(jsonDecode(d <span class="kw">as</span> <span class="typ">String</span>));
+      },
+      onDone: () => _reconnect(url, token),
+      onError: (_) => _reconnect(url, token),
+    );
+  }
+
+  <span class="kw">void</span> <span class="fn">_reconnect</span>(<span class="typ">String</span> url, <span class="typ">String</span> token) {
+    <span class="kw">if</span> (_disposed || _retryCount >= <span class="num">5</span>) <span class="kw">return</span>;
+    <span class="kw">final</span> delay = <span class="cls">Duration</span>(
+      seconds: <span class="cls">pow</span>(<span class="num">2</span>, _retryCount).toInt());
+    _retryCount++;
+    <span class="cls">Future</span>.delayed(delay, () => connect(url, token));
+  }
+
+  <span class="kw">void</span> <span class="fn">send</span>(<span class="cls">Map</span> payload) =>
+    _channel?.sink.add(jsonEncode(payload));
+
+  <span class="kw">void</span> <span class="fn">dispose</span>() {
+    _disposed = <span class="kw">true</span>;
+    _channel?.sink.close();
+    _messages.close();
+  }
+}</pre>
+      </div>
+
+      <div class="code-card cc-pres">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:#c9a8ff"></span>
+          <span class="cc-title">chat_bloc.dart — WebSocket BLoC</span>
+          <span class="cc-sub">pres</span>
+        </div>
+        <pre><span class="ann">@injectable</span>
+<span class="kw">class</span> <span class="cls">ChatBloc</span> <span class="kw">extends</span> <span class="cls">Bloc</span>&lt;<span class="cls">ChatEvent</span>, <span class="cls">ChatState</span>&gt; {
+  <span class="kw">final</span> <span class="cls">WsClient</span> _ws;
+  <span class="cls">StreamSubscription</span>? _sub;
+
+  <span class="cls">ChatBloc</span>(<span class="kw">this</span>._ws) : <span class="kw">super</span>(<span class="cls">ChatInitial</span>()) {
+    <span class="kw">on</span>&lt;<span class="cls">ChatStarted</span>&gt;((_, __) {
+      _sub = _ws.messages.listen(
+        (msg) =&gt; add(<span class="cls">MessageReceived</span>(msg)),
+        onError: (_) =&gt; add(<span class="cls">ChatErrored</span>()),
+      );
+    });
+
+    <span class="kw">on</span>&lt;<span class="cls">MessageReceived</span>&gt;((e, emit) {
+      <span class="kw">if</span> (state <span class="kw">is</span> <span class="cls">ChatLoaded</span>) {
+        <span class="kw">final</span> msgs = [...(state <span class="kw">as</span> <span class="cls">ChatLoaded</span>).messages,
+                      e.message];
+        emit(<span class="cls">ChatLoaded</span>(msgs));
+      }
+    });
+
+    <span class="kw">on</span>&lt;<span class="cls">MessageSent</span>&gt;((e, _) =>
+      _ws.send({<span class="str">'type'</span>: <span class="str">'message'</span>, <span class="str">'text'</span>: e.text}));
+  }
+
+  <span class="ann">@override</span>
+  <span class="kw">Future</span>&lt;<span class="kw">void</span>&gt; close() {
+    _sub?.cancel(); <span class="kw">return super</span>.close();
+  }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ANIMATIONS TAB -->
+  <div class="tab-panel" id="tab-anim">
+    <div class="code-grid">
+
+      <div class="code-card cc-anim">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent5)"></span>
+          <span class="cc-title">animated_list_item.dart — stagger entry</span>
+          <span class="cc-sub">pres · widgets</span>
+        </div>
+        <pre><span class="kw">class</span> <span class="cls">AnimatedListItem</span> <span class="kw">extends</span> <span class="cls">StatefulWidget</span> {
+  <span class="kw">final</span> <span class="cls">Widget</span> child;
+  <span class="kw">final</span> <span class="typ">int</span>    index; <span class="cmt">// drives stagger delay</span>
+  <span class="kw">const</span> <span class="cls">AnimatedListItem</span>({
+    <span class="kw">required this</span>.child,
+    <span class="kw">required this</span>.index, <span class="kw">super</span>.key });
+}
+
+<span class="kw">class</span> _State <span class="kw">extends</span> <span class="cls">State</span>&lt;<span class="cls">AnimatedListItem</span>&gt;
+    <span class="kw">with</span> <span class="cls">SingleTickerProviderStateMixin</span> {
+  <span class="kw">late final</span> _ctrl = <span class="cls">AnimationController</span>(
+    vsync: <span class="kw">this</span>,
+    duration: <span class="kw">const</span> <span class="cls">Duration</span>(milliseconds: <span class="num">420</span>));
+  <span class="kw">late final</span> _curve = <span class="cls">CurvedAnimation</span>(
+    parent: _ctrl, curve: <span class="cls">Curves</span>.easeOutCubic);
+  <span class="kw">late final</span> _slide = <span class="cls">Tween</span>(
+    begin: <span class="kw">const</span> <span class="cls">Offset</span>(<span class="num">0</span>, <span class="num">.18</span>), end: <span class="cls">Offset</span>.zero)
+    .animate(_curve);
+
+  <span class="ann">@override</span>
+  <span class="kw">void</span> initState() {
+    <span class="kw">super</span>.initState();
+    <span class="cls">Future</span>.delayed(
+      <span class="cls">Duration</span>(milliseconds: widget.index * <span class="num">55</span>),
+      () { <span class="kw">if</span> (mounted) _ctrl.forward(); });
+  }
+
+  <span class="ann">@override</span>
+  <span class="kw">void</span> dispose() { _ctrl.dispose(); <span class="kw">super</span>.dispose(); }
+
+  <span class="ann">@override</span>
+  <span class="cls">Widget</span> build(<span class="cls">BuildContext</span> _) =&gt;
+    <span class="cls">FadeTransition</span>(opacity: _curve,
+      child: <span class="cls">SlideTransition</span>(
+        position: _slide, child: widget.child));
+}</pre>
+      </div>
+
+      <div class="code-card cc-anim">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent5)"></span>
+          <span class="cc-title">shared element transition — Hero</span>
+          <span class="cc-sub">pres</span>
+        </div>
+        <pre><span class="cmt">// Source: product list card</span>
+<span class="cls">Hero</span>(
+  tag: <span class="str">'product-img-</span><span class="kw">${product.id}</span><span class="str">'</span>,
+  child: <span class="cls">ClipRRect</span>(
+    borderRadius: <span class="cls">BorderRadius</span>.circular(<span class="num">12</span>),
+    child: <span class="cls">Image</span>.network(product.imageUrl,
+      fit: <span class="cls">BoxFit</span>.cover),
+  ),
+)
+
+<span class="cmt">// Destination: product detail SliverAppBar</span>
+<span class="cls">SliverAppBar</span>(
+  expandedHeight: <span class="num">340</span>,
+  pinned: <span class="kw">true</span>,
+  flexibleSpace: <span class="cls">FlexibleSpaceBar</span>(
+    background: <span class="cls">Hero</span>(
+      tag: <span class="str">'product-img-</span><span class="kw">$id</span><span class="str">'</span>,
+      child: <span class="cls">Image</span>.network(imageUrl,
+        fit: <span class="cls">BoxFit</span>.cover),
+    ),
+  ),
+)
+
+<span class="cmt">// app.dart — required for go_router + Hero</span>
+<span class="cls">builder</span>: (ctx, child) =&gt; <span class="cls">HeroControllerScope</span>(
+  controller: <span class="cls">MaterialApp</span>
+    .createMaterialHeroController(),
+  child: child!,
+),</pre>
+      </div>
+
+      <div class="code-card cc-anim">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent5)"></span>
+          <span class="cc-title">page transition — go_router custom</span>
+          <span class="cc-sub">pres · routing</span>
+        </div>
+        <pre><span class="cmt">// Fade + subtle upward slide on push</span>
+<span class="cls">GoRoute</span>(
+  path: <span class="str">'/product/:id'</span>,
+  pageBuilder: (ctx, state) =&gt;
+    <span class="cls">CustomTransitionPage</span>(
+      key: state.pageKey,
+      child: <span class="cls">ProductDetailPage</span>(
+        id: state.pathParameters[<span class="str">'id'</span>]!),
+      transitionsBuilder: (_, anim, __, child) {
+        <span class="kw">final</span> tween = <span class="cls">Tween</span>(
+          begin: <span class="kw">const</span> <span class="cls">Offset</span>(<span class="num">0</span>, <span class="num">0.04</span>),
+          end: <span class="cls">Offset</span>.zero,
+        ).animate(<span class="cls">CurvedAnimation</span>(
+          parent: anim,
+          curve: <span class="cls">Curves</span>.easeOutCubic));
+        <span class="kw">return</span> <span class="cls">FadeTransition</span>(
+          opacity: anim,
+          child: <span class="cls">SlideTransition</span>(
+            position: tween, child: child));
+      },
+    ),
+),</pre>
+      </div>
+
+      <div class="code-card cc-anim">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent5)"></span>
+          <span class="cc-title">lottie_view.dart — motion animations</span>
+          <span class="cc-sub">pres · widgets</span>
+        </div>
+        <pre><span class="kw">class</span> <span class="cls">LottieView</span> <span class="kw">extends</span> <span class="cls">StatefulWidget</span> {
+  <span class="kw">final</span> <span class="typ">String</span> assetPath;
+  <span class="kw">final</span> <span class="typ">bool</span>   repeat;
+  <span class="kw">final</span> <span class="typ">double</span>? width;
+  <span class="kw">const</span> <span class="cls">LottieView</span>({
+    <span class="kw">required this</span>.assetPath,
+    <span class="kw">this</span>.repeat = <span class="kw">false</span>,
+    <span class="kw">this</span>.width, <span class="kw">super</span>.key });
+}
+<span class="kw">class</span> _S <span class="kw">extends</span> <span class="cls">State</span>&lt;<span class="cls">LottieView</span>&gt;
+    <span class="kw">with</span> <span class="cls">SingleTickerProviderStateMixin</span> {
+  <span class="kw">late final</span> _ctrl = <span class="cls">AnimationController</span>(vsync: <span class="kw">this</span>);
+  <span class="ann">@override</span>
+  <span class="kw">void</span> dispose() { _ctrl.dispose(); <span class="kw">super</span>.dispose(); }
+  <span class="ann">@override</span>
+  <span class="cls">Widget</span> build(_) =&gt; <span class="cls">Lottie</span>.asset(
+    widget.assetPath,
+    width: widget.width,
+    controller: _ctrl,
+    onLoaded: (c) {
+      _ctrl.duration = c.duration;
+      widget.repeat ? _ctrl.repeat() : _ctrl.forward();
+    },
+    errorBuilder: (_, __, ___) =>
+      <span class="kw">const</span> <span class="cls">SizedBox</span>.shrink(),
+  );
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- THEME TAB -->
+  <div class="tab-panel" id="tab-theme">
+    <div class="code-grid">
+
+      <div class="code-card cc-core">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent)"></span>
+          <span class="cc-title">app_colors.dart — token system</span>
+          <span class="cc-sub">core · theme</span>
+        </div>
+        <pre><span class="kw">abstract final class</span> <span class="cls">AppColors</span> {
+  <span class="cmt">// ── Brand ──────────────────────────────</span>
+  <span class="kw">static const</span> primary       = <span class="cls">Color</span>(<span class="num">0xFF6750A4</span>);
+  <span class="kw">static const</span> secondary     = <span class="cls">Color</span>(<span class="num">0xFF625B71</span>);
+  <span class="kw">static const</span> tertiary      = <span class="cls">Color</span>(<span class="num">0xFF7D5260</span>);
+  <span class="kw">static const</span> error         = <span class="cls">Color</span>(<span class="num">0xFFB3261E</span>);
+
+  <span class="cmt">// ── Semantic ───────────────────────────</span>
+  <span class="kw">static const</span> success       = <span class="cls">Color</span>(<span class="num">0xFF1B5E20</span>);
+  <span class="kw">static const</span> warning       = <span class="cls">Color</span>(<span class="num">0xFFF57F17</span>);
+  <span class="kw">static const</span> info          = <span class="cls">Color</span>(<span class="num">0xFF01579B</span>);
+
+  <span class="cmt">// ── Surfaces ───────────────────────────</span>
+  <span class="kw">static const</span> surfaceLight  = <span class="cls">Color</span>(<span class="num">0xFFFEF7FF</span>);
+  <span class="kw">static const</span> surfaceDark   = <span class="cls">Color</span>(<span class="num">0xFF141218</span>);
+
+  <span class="cmt">// Zero hardcoded colors outside this file</span>
+}</pre>
+      </div>
+
+      <div class="code-card cc-core">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent)"></span>
+          <span class="cc-title">app_spacing.dart — 4-pt grid</span>
+          <span class="cc-sub">core · theme</span>
+        </div>
+        <pre><span class="cmt">// Enforce 4-pt grid. Zero magic numbers</span>
+<span class="cmt">// anywhere outside this file.</span>
+<span class="kw">abstract final class</span> <span class="cls">Sp</span> {
+  <span class="kw">static const double</span> xs  = <span class="num">4</span>;
+  <span class="kw">static const double</span> sm  = <span class="num">8</span>;
+  <span class="kw">static const double</span> md  = <span class="num">16</span>;
+  <span class="kw">static const double</span> lg  = <span class="num">24</span>;
+  <span class="kw">static const double</span> xl  = <span class="num">32</span>;
+  <span class="kw">static const double</span> xxl = <span class="num">48</span>;
+
+  <span class="kw">static const</span> h4  = <span class="cls">SizedBox</span>(height: xs);
+  <span class="kw">static const</span> h8  = <span class="cls">SizedBox</span>(height: sm);
+  <span class="kw">static const</span> h16 = <span class="cls">SizedBox</span>(height: md);
+  <span class="kw">static const</span> h24 = <span class="cls">SizedBox</span>(height: lg);
+  <span class="kw">static const</span> w8  = <span class="cls">SizedBox</span>(width: sm);
+  <span class="kw">static const</span> w16 = <span class="cls">SizedBox</span>(width: md);
+
+  <span class="kw">static const</span> p16 = <span class="cls">EdgeInsets</span>.all(md);
+  <span class="kw">static const</span> p24 = <span class="cls">EdgeInsets</span>.all(lg);
+  <span class="kw">static const</span> ph16 = <span class="cls">EdgeInsets</span>.symmetric(horizontal: md);
+}
+
+<span class="cmt">// Usage:</span>
+<span class="cls">Column</span>(children: [card1, <span class="cls">Sp</span>.h16, card2])
+<span class="cls">Padding</span>(padding: <span class="cls">Sp</span>.p24, child: content)</pre>
+      </div>
+
+      <div class="code-card cc-core">
+        <div class="cc-head">
+          <span class="cc-dot" style="background:var(--accent)"></span>
+          <span class="cc-title">app_theme.dart — M3 ThemeData</span>
+          <span class="cc-sub">core · theme</span>
+        </div>
+        <pre><span class="kw">abstract final class</span> <span class="cls">AppTheme</span> {
+  <span class="kw">static final</span> light = <span class="cls">ThemeData</span>(
+    useMaterial3: <span class="kw">true</span>,
+    colorScheme: <span class="cls">ColorScheme</span>.fromSeed(
+      seedColor: <span class="cls">AppColors</span>.primary,
+      brightness: <span class="cls">Brightness</span>.light,
+    ),
+    textTheme: <span class="cls">AppTypography</span>.textTheme,
+    scaffoldBackgroundColor: <span class="cls">AppColors</span>.surfaceLight,
+    cardTheme: <span class="cls">CardTheme</span>(
+      elevation: <span class="num">0</span>,
+      shape: <span class="cls">RoundedRectangleBorder</span>(
+        borderRadius: <span class="cls">BorderRadius</span>.circular(<span class="num">12</span>),
+        side: <span class="cls">BorderSide</span>(
+          color: <span class="cls">Colors</span>.grey.withOpacity(<span class="num">0.15</span>)),
+      ),
+    ),
+    appBarTheme: <span class="kw">const</span> <span class="cls">AppBarTheme</span>(
+      elevation: <span class="num">0</span>,
+      scrolledUnderElevation: <span class="num">0.5</span>,
+    ),
+  );
+
+  <span class="kw">static final</span> dark = <span class="cls">ThemeData</span>(
+    useMaterial3: <span class="kw">true</span>,
+    colorScheme: <span class="cls">ColorScheme</span>.fromSeed(
+      seedColor: <span class="cls">AppColors</span>.primary,
+      brightness: <span class="cls">Brightness</span>.dark,
+    ),
+    textTheme: <span class="cls">AppTypography</span>.textTheme,
+    scaffoldBackgroundColor: <span class="cls">AppColors</span>.surfaceDark,
+  );
+}</pre>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- DATA FLOWS -->
+<section class="section reveal" id="flows">
+  <p class="section-label">04 — Data Flows</p>
+  <h2 class="section-title">Every <span class="grad-text">Path</span> Traced</h2>
+  <p class="section-intro">See exactly how data moves through each layer for every scenario.</p>
+
+  <div class="flow-section">
+    <p class="flow-label">Happy path — UI to API and back</p>
+    <div class="flow-row">
+      <div class="flow-box fb-pres">Widget tap</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-pres">BLoC.add(Event)</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-domain">UseCase.call()</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-domain">Repo contract</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-data">Repo impl</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-data">Dio + encrypt</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-core">API response</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-label">Response → UI + write-through cache</p>
+    <div class="flow-row">
+      <div class="flow-box fb-core">DTO received</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-data">DTO.toDomain()</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-data">Isar.writeTxn()</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-domain">Right(entity)</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-pres">emit(Loaded)</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-pres">BlocBuilder</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-label">Offline path — network unavailable</p>
+    <div class="flow-row">
+      <div class="flow-box fb-data">DioException</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-data">catch block</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-data">Isar.getAll()</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-domain">Right(cached)</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-pres">emit(Loaded, isFromCache: true)</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-label">Search with debounce + cancel</p>
+    <div class="flow-row">
+      <div class="flow-box fb-pres">TextField</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-pres">QueryChanged</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-core">Debouncer.run()</div>
+      <div class="flow-arr">— 350 ms →</div>
+      <div class="flow-box fb-data">cancel prev token</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-data">new Dio request</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-label">Real-time WebSocket message</p>
+    <div class="flow-row">
+      <div class="flow-box fb-core">WsClient.stream</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-core">jsonDecode</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-pres">add(MessageReceived)</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-pres">emit(ChatLoaded)</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-pres">UI rebuilds</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-label">Token lifecycle — 401 auto-refresh</p>
+    <div class="flow-row">
+      <div class="flow-box fb-core">401 response</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-core">QueuedInterceptor</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-core">POST /auth/refresh</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-core">SecureStorage.save()</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box fb-data">retry original</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FEATURES MATRIX -->
+<section class="section reveal" id="features">
+  <p class="section-label">05 — Feature Matrix</p>
+  <h2 class="section-title">Every Requirement <span class="grad-text-green">Mapped</span></h2>
+  <p class="section-intro">All 10 features from the original brief — each with the right package, the right layer, the right pattern.</p>
+
+  <div class="feat-grid">
+
+    <div class="feat-card" style="border-color:rgba(0,229,255,0.2)">
+      <div class="fc-icon" style="background:rgba(0,229,255,0.1)">🎤</div>
+      <div class="fc-title" style="color:var(--accent)">Google STT / TTS</div>
+      <div class="fc-desc">On-device + cloud Speech-to-Text via streaming listener. Google TTS engine on Android. Both wrapped in singleton services, streamed to BLoC as events. Language-switchable at runtime.</div>
+      <code class="fc-pkg">speech_to_text ^7.x</code>
+      <code class="fc-pkg" style="margin-left:4px">flutter_tts ^4.x</code>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(255,109,0,0.2)">
+      <div class="fc-icon" style="background:rgba(255,109,0,0.1)">🔐</div>
+      <div class="fc-title" style="color:var(--accent4)">API transmission encryption</div>
+      <div class="fc-desc">AES-256-GCM with random IV per request. Shared secret negotiated at app init. Dio interceptor handles transparently — zero encryption code in feature layer. Response decrypted automatically.</div>
+      <code class="fc-pkg">encrypt ^5.x</code>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(0,230,118,0.2)">
+      <div class="fc-icon" style="background:rgba(0,230,118,0.1)">📡</div>
+      <div class="fc-title" style="color:var(--accent3)">Cancellable API calls</div>
+      <div class="fc-desc">Dio CancelToken per datasource method. Previous token cancelled before each new call. BLoC.close() cancels all pending tokens. Handles rapid navigation and search supersession cleanly.</div>
+      <code class="fc-pkg">dio ^5.x</code>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(124,77,255,0.2)">
+      <div class="fc-icon" style="background:rgba(124,77,255,0.1)">⏱</div>
+      <div class="fc-title" style="color:#c9a8ff">Debounced search</div>
+      <div class="fc-desc">Timer-based Debouncer utility in core/utils. 350 ms default delay. QueryChanged event resets the timer; ExecuteSearch fires the API call. Works with CancelToken to discard stale results.</div>
+      <code class="fc-pkg">dart:async — zero deps</code>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(255,109,0,0.2)">
+      <div class="fc-icon" style="background:rgba(255,109,0,0.1)">💾</div>
+      <div class="fc-title" style="color:var(--accent4)">Offline-first database cache</div>
+      <div class="fc-desc">Write-through cache: remote success → upsert to Isar. Network failure → serve Isar cache. Isar is pure Dart, NoSQL, extremely fast. Collection schemas mirror domain entities. TTL field for staleness.</div>
+      <code class="fc-pkg">isar ^4.x</code>
+      <code class="fc-pkg" style="margin-left:4px">isar_flutter_libs</code>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(0,229,255,0.2)">
+      <div class="fc-icon" style="background:rgba(0,229,255,0.1)">🔑</div>
+      <div class="fc-title" style="color:var(--accent)">Secure token storage</div>
+      <div class="fc-desc">flutter_secure_storage backed by Android Keystore with EncryptedSharedPreferences, and iOS Keychain. Stores access token, refresh token, user ID. Regular SharedPreferences only for non-sensitive UI flags.</div>
+      <code class="fc-pkg">flutter_secure_storage ^9.x</code>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(234,76,137,0.2)">
+      <div class="fc-icon" style="background:rgba(234,76,137,0.1)">✨</div>
+      <div class="fc-title" style="color:var(--accent5)">Smooth UI animations</div>
+      <div class="fc-desc">Staggered list entry with per-item 55 ms delay. AnimatedContainer for layout morphing. AnimatedSwitcher between states. Shimmer skeleton loading. All driven by AnimationController + CurvedAnimation.</div>
+      <code class="fc-pkg">shimmer ^3.x</code>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(234,76,137,0.2)">
+      <div class="fc-icon" style="background:rgba(234,76,137,0.1)">🎬</div>
+      <div class="fc-title" style="color:var(--accent5)">Motion / Lottie animations</div>
+      <div class="fc-desc">Lottie JSON for empty states, success/error feedback, onboarding. AnimationController drives play/pause/loop. Fallback static widget if load fails. Assets ship in assets/lottie/ folder.</div>
+      <code class="fc-pkg">lottie ^3.x</code>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(234,76,137,0.2)">
+      <div class="fc-icon" style="background:rgba(234,76,137,0.1)">🔀</div>
+      <div class="fc-title" style="color:var(--accent5)">Shared element transitions</div>
+      <div class="fc-desc">Hero widget on image + title in list cards, same tag on detail page. go_router requires HeroControllerScope in MaterialApp.router builder. Custom HeroFlightShuttleBuilder for eased morph curve.</div>
+      <code class="fc-pkg">go_router ^14.x</code>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(0,230,118,0.2)">
+      <div class="fc-icon" style="background:rgba(0,230,118,0.1)">⚡</div>
+      <div class="fc-title" style="color:var(--accent3)">Real-time communication</div>
+      <div class="fc-desc">WebSocketChannel with exponential backoff auto-reconnect (max 5 retries). Messages dispatched as BLoC events. StreamSubscription cancelled on BLoC.close(). SSE fallback via Dio's ResponseBody stream.</div>
+      <code class="fc-pkg">web_socket_channel ^3.x</code>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(0,229,255,0.2)">
+      <div class="fc-icon" style="background:rgba(0,229,255,0.1)">🎨</div>
+      <div class="fc-title" style="color:var(--accent)">Design system / theming</div>
+      <div class="fc-desc">Material 3 ColorScheme.fromSeed. AppColors token class — zero hardcoded hex in features. AppTypography with full M3 text scale. Sp spacing constants enforce 4-pt grid. Light + dark ThemeData in AppTheme.</div>
+      <code class="fc-pkg">flutter/material.dart — built-in</code>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(0,229,255,0.2)">
+      <div class="fc-icon" style="background:rgba(0,229,255,0.1)">🧩</div>
+      <div class="fc-title" style="color:var(--accent)">Dependency injection</div>
+      <div class="fc-desc">get_it service locator with injectable code generation. @lazySingleton, @injectable, @factoryMethod annotations. Zero constructor calls in feature code — getIt&lt;T&gt;() everywhere. Test override via getIt.reset().</div>
+      <code class="fc-pkg">get_it ^8.x</code>
+      <code class="fc-pkg" style="margin-left:4px">injectable ^2.x</code>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PRINCIPLES -->
+<section class="section reveal" id="principles">
+  <p class="section-label">06 — Principles</p>
+  <h2 class="section-title">SOLID + KISS <span class="grad-text">Applied</span></h2>
+  <p class="section-intro">Not abstract rules — concrete decisions this architecture makes because of these principles.</p>
+
+  <div class="principle-grid">
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--accent2)">S</div>
+      <div class="p-title">Single Responsibility</div>
+      <div class="p-desc">LoginUseCase does one thing: call auth repo. AuthBloc handles one domain: auth state. EncryptInterceptor only encrypts. No class has two reasons to change.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--accent3)">O</div>
+      <div class="p-title">Open / Closed</div>
+      <div class="p-desc">Add a new feature by adding a new feature folder. The domain layer is closed for modification — open for extension via new use cases. Interceptors are open to addition, never edited.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--accent4)">L</div>
+      <div class="p-title">Liskov Substitution</div>
+      <div class="p-desc">Any AuthRepository implementation can replace another. In tests, FakeAuthRepository drops in without the BLoC knowing. The domain contracts enforce this boundary.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--accent5)">I</div>
+      <div class="p-title">Interface Segregation</div>
+      <div class="p-desc">Repositories expose only what their use cases need. ProductRepository.getProducts() — not a god-object CRUD interface. Each use case sees only the method it calls.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--accent)">D</div>
+      <div class="p-title">Dependency Inversion</div>
+      <div class="p-desc">BLoC depends on LoginUseCase (abstract). LoginUseCase depends on AuthRepository (abstract). Nothing in domain or presentation knows Dio or Isar exist.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--accent2)">K</div>
+      <div class="p-title">Keep It Simple</div>
+      <div class="p-desc">Debouncer is a Timer wrapper — 10 lines. Failure is sealed classes — no complex hierarchy. Sp is a const class — no library. The simplest solution that satisfies the constraint wins.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PACKAGES -->
+<section class="section reveal" id="packages">
+  <p class="section-label">07 — Package Registry</p>
+  <h2 class="section-title">The Right Tool <span class="grad-text-orange">Every Time</span></h2>
+  <p class="section-intro">Curated by stability, pub.dev score, and active maintenance. No trendy packages — proven production picks only.</p>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);overflow:hidden;overflow-x:auto;">
+    <table class="pkg-table">
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>Version</th>
+          <th>Purpose</th>
+          <th>Layer</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="pkg-name">flutter_bloc</code></td><td class="pkg-version">^9.0</td><td class="pkg-desc">BLoC + Cubit state management — the industry standard for Flutter</td><td><span class="layer-pill tag-pres">pres</span></td></tr>
+        <tr><td><code class="pkg-name">go_router</code></td><td class="pkg-version">^14.0</td><td class="pkg-desc">Declarative routing with auth guards, deep links, shell routes, page transitions</td><td><span class="layer-pill tag-pres">pres</span></td></tr>
+        <tr><td><code class="pkg-name">lottie</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">Motion animations from Lottie JSON — empty states, feedback, onboarding</td><td><span class="layer-pill tag-pres">pres</span></td></tr>
+        <tr><td><code class="pkg-name">shimmer</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">Skeleton loading shimmer for lists and cards</td><td><span class="layer-pill tag-pres">pres</span></td></tr>
+        <tr><td><code class="pkg-name">cached_network_image</code></td><td class="pkg-version">^3.4</td><td class="pkg-desc">Disk-cached network images with placeholder + error builders</td><td><span class="layer-pill tag-pres">pres</span></td></tr>
+        <tr><td><code class="pkg-name">equatable</code></td><td class="pkg-version">^2.0</td><td class="pkg-desc">Value equality for BLoC states and domain entities</td><td><span class="layer-pill tag-domain">domain</span></td></tr>
+        <tr><td><code class="pkg-name">fpdart</code></td><td class="pkg-version">^1.1</td><td class="pkg-desc">Either / Option / TaskEither — functional error handling, no try/catch in domain</td><td><span class="layer-pill tag-domain">domain</span></td></tr>
+        <tr><td><code class="pkg-name">freezed</code></td><td class="pkg-version">^2.5</td><td class="pkg-desc">Immutable data classes, sealed unions, copyWith — code-generated</td><td><span class="layer-pill tag-domain">domain</span></td></tr>
+        <tr><td><code class="pkg-name">dio</code></td><td class="pkg-version">^5.7</td><td class="pkg-desc">HTTP client with interceptors, CancelToken, multipart, retry</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">isar</code></td><td class="pkg-version">^4.0</td><td class="pkg-desc">Pure Dart NoSQL embedded database — offline-first cache. Faster than Drift for document workloads</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">json_serializable</code></td><td class="pkg-version">^6.8</td><td class="pkg-desc">JSON ↔ DTO code generation — fromJson / toJson</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">encrypt</code></td><td class="pkg-version">^5.0</td><td class="pkg-desc">AES-256-GCM symmetric encryption for API transmission</td><td><span class="layer-pill tag-core">core</span></td></tr>
+        <tr><td><code class="pkg-name">flutter_secure_storage</code></td><td class="pkg-version">^9.2</td><td class="pkg-desc">Android Keystore + iOS Keychain backed secure key-value store</td><td><span class="layer-pill tag-core">core</span></td></tr>
+        <tr><td><code class="pkg-name">get_it</code></td><td class="pkg-version">^8.0</td><td class="pkg-desc">Service locator / DI container — the de-facto Flutter standard</td><td><span class="layer-pill tag-core">core</span></td></tr>
+        <tr><td><code class="pkg-name">injectable</code></td><td class="pkg-version">^2.5</td><td class="pkg-desc">Annotation-driven code generation for get_it — zero boilerplate DI</td><td><span class="layer-pill tag-core">core</span></td></tr>
+        <tr><td><code class="pkg-name">speech_to_text</code></td><td class="pkg-version">^7.0</td><td class="pkg-desc">Google Speech-to-Text — on-device and cloud, streaming partial results</td><td><span class="layer-pill tag-core">core</span></td></tr>
+        <tr><td><code class="pkg-name">flutter_tts</code></td><td class="pkg-version">^4.0</td><td class="pkg-desc">Google Text-to-Speech with engine selection, rate/pitch/volume control</td><td><span class="layer-pill tag-core">core</span></td></tr>
+        <tr><td><code class="pkg-name">web_socket_channel</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">WebSocket client — real-time bidirectional communication</td><td><span class="layer-pill tag-core">core</span></td></tr>
+        <tr><td><code class="pkg-name">shared_preferences</code></td><td class="pkg-version">^2.3</td><td class="pkg-desc">Lightweight key-value for non-sensitive flags (theme mode, onboarding done)</td><td><span class="layer-pill tag-core">core</span></td></tr>
+        <tr><td><code class="pkg-name">connectivity_plus</code></td><td class="pkg-version">^6.0</td><td class="pkg-desc">Network status stream — drives ConnectivityBloc for offline banner</td><td><span class="layer-pill tag-core">core</span></td></tr>
+        <tr><td><code class="pkg-name">bloc_test</code></td><td class="pkg-version">^10.0</td><td class="pkg-desc">BLoC-aware unit testing — expect state sequences cleanly</td><td><span class="layer-pill" style="background:rgba(248,81,73,0.15);color:#f78166;border:1px solid rgba(248,81,73,0.3)">dev</span></td></tr>
+        <tr><td><code class="pkg-name">mocktail</code></td><td class="pkg-version">^1.0</td><td class="pkg-desc">Null-safe mocking for unit tests — no code generation required</td><td><span class="layer-pill" style="background:rgba(248,81,73,0.15);color:#f78166;border:1px solid rgba(248,81,73,0.3)">dev</span></td></tr>
+        <tr><td><code class="pkg-name">build_runner</code></td><td class="pkg-version">^2.4</td><td class="pkg-desc">Code generation runner for injectable, freezed, json_serializable, isar</td><td><span class="layer-pill" style="background:rgba(248,81,73,0.15);color:#f78166;border:1px solid rgba(248,81,73,0.3)">dev</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="footer-title">Build what <span class="grad-text">lasts.</span></div>
+  <p class="footer-sub">Architecture is the decisions you make before you write a single line of feature code.</p>
+  <p class="footer-copy">Flutter Clean Architecture Field Guide &mdash; 2025</p>
+</footer>
+
+<script>
+// TAB SWITCHING
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// SCROLL REVEAL
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// NAV ACTIVE STATE
+const sections = document.querySelectorAll('section[id], .section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+
+const navObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.style.color = '');
+      const link = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+      if (link) link.style.color = 'var(--accent)';
+    }
+  });
+}, { threshold: 0.4 });
+
+sections.forEach(s => navObserver.observe(s));
+</script>
+</body>
+</html>
