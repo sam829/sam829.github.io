@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Django — Backend Architecture Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=Fira+Code:wght@300;400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:     #0d1a0f;
+  --bg2:    #111f14;
+  --bg3:    #152518;
+  --surf:   #1a2e1d;
+  --surf2:  #203522;
+  --border: rgba(134,187,100,0.08);
+  --bord2:  rgba(134,187,100,0.18);
+  --a1: #86bb64;   /* django green */
+  --a2: #c8e6a0;   /* light green */
+  --a3: #f0c060;   /* gold */
+  --a4: #60b8e0;   /* sky */
+  --a5: #e08060;   /* terracotta */
+  --a6: #b090e0;   /* lavender */
+  --text:  #e8f0e2;
+  --text2: #7a9970;
+  --text3: #3d5438;
+  --fh: 'Playfair Display', serif;
+  --fb: 'DM Sans', sans-serif;
+  --fc: 'Fira Code', monospace;
+  --r: 8px;
+  --rl: 14px;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { scroll-behavior:smooth; }
+body {
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--fb);
+  font-size:16px;
+  line-height:1.75;
+  overflow-x:hidden;
+}
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--a1); border-radius:2px; }
+
+/* PAPER GRAIN + SUBTLE LINES */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(134,187,100,0.04) 40px),
+    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(134,187,100,0.025) 40px);
+  pointer-events:none; z-index:0;
+}
+
+/* NAV */
+nav {
+  position:fixed; top:0; left:0; right:0; z-index:200;
+  background:rgba(13,26,15,0.94);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--bord2);
+  height:54px;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 48px;
+}
+.nav-brand {
+  display:flex; align-items:center; gap:12px;
+}
+.nav-snake {
+  font-size:18px; line-height:1;
+  animation: slither 3s ease-in-out infinite;
+}
+@keyframes slither { 0%,100%{transform:rotate(0deg)} 25%{transform:rotate(8deg)} 75%{transform:rotate(-8deg)} }
+.nav-logo {
+  font-family:var(--fh);
+  font-size:16px; font-weight:700;
+  color:var(--a1); letter-spacing:.02em;
+}
+.nav-links { display:flex; gap:28px; list-style:none; }
+.nav-links a {
+  font-family:var(--fb); font-size:11px; font-weight:500;
+  color:var(--text2); text-decoration:none;
+  letter-spacing:.08em; text-transform:uppercase;
+  transition:color .15s;
+}
+.nav-links a:hover { color:var(--a1); }
+
+/* HERO — editorial two-column */
+.hero {
+  position:relative;
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:55% 45%;
+  padding-top:54px;
+  overflow:hidden;
+  z-index:1;
+}
+.hero-left {
+  padding:80px 60px 80px 10vw;
+  border-right:1px solid var(--bord2);
+  display:flex; flex-direction:column; justify-content:center;
+}
+.hero-right {
+  padding:80px 10vw 80px 60px;
+  display:flex; flex-direction:column; justify-content:center;
+  gap:6px;
+}
+
+.glow { position:absolute; border-radius:50%; filter:blur(100px); pointer-events:none; }
+.g1 { width:500px; height:500px; background:rgba(134,187,100,0.07); top:-80px; right:0; animation:gw 18s ease-in-out infinite; }
+.g2 { width:300px; height:300px; background:rgba(240,192,96,0.05); bottom:0; left:10%; animation:gw 14s ease-in-out infinite reverse; }
+@keyframes gw { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-40px)} }
+
+.hero-issue {
+  font-family:var(--fb); font-size:10px; font-weight:500;
+  letter-spacing:.2em; text-transform:uppercase;
+  color:var(--a1); margin-bottom:24px;
+  opacity:0; animation:reveal .7s .1s forwards;
+}
+
+.hero-title {
+  font-family:var(--fh);
+  font-size:clamp(48px,6vw,88px);
+  font-weight:900; line-height:.95;
+  letter-spacing:-.02em;
+  margin-bottom:28px;
+  opacity:0; animation:reveal .8s .25s forwards;
+}
+.ht1 { display:block; color:var(--text); }
+.ht2 { display:block; color:var(--a1); font-style:italic; }
+.ht3 {
+  display:block;
+  font-family:var(--fb);
+  font-size:.28em; font-weight:300;
+  letter-spacing:.12em; text-transform:uppercase;
+  color:var(--text2); margin-top:12px;
+}
+
+.hero-lede {
+  font-family:var(--fh); font-style:italic;
+  font-size:19px; color:var(--text2);
+  line-height:1.6; max-width:480px;
+  margin-bottom:36px;
+  opacity:0; animation:reveal .8s .4s forwards;
+}
+
+.pill-row {
+  display:flex; flex-wrap:wrap; gap:8px;
+  opacity:0; animation:reveal .8s .55s forwards;
+}
+.pill {
+  font-family:var(--fb); font-size:10px; font-weight:500;
+  padding:5px 12px; border-radius:3px;
+  letter-spacing:.06em; text-transform:uppercase;
+  border:1px solid; white-space:nowrap;
+}
+.p1{border-color:rgba(134,187,100,.5);color:var(--a1);background:rgba(134,187,100,.07)}
+.p2{border-color:rgba(240,192,96,.4);color:var(--a3);background:rgba(240,192,96,.06)}
+.p3{border-color:rgba(96,184,224,.4);color:var(--a4);background:rgba(96,184,224,.06)}
+.p4{border-color:rgba(224,128,96,.4);color:var(--a5);background:rgba(224,128,96,.06)}
+.p5{border-color:rgba(176,144,224,.4);color:var(--a6);background:rgba(176,144,224,.06)}
+
+/* RIGHT STACK */
+.layer-card {
+  display:flex; align-items:center;
+  padding:14px 18px;
+  border-radius:var(--r);
+  border:1px solid;
+  transition:transform .2s, border-color .2s;
+  cursor:default;
+  position:relative; overflow:hidden;
+  opacity:0; animation:slideIn .6s forwards;
+}
+.layer-card::before {
+  content:''; position:absolute;
+  left:0; top:0; bottom:0;
+  width:3px; border-radius:3px 0 0 3px;
+}
+.layer-card:hover { transform:translateX(-6px); }
+
+.lc1{background:rgba(134,187,100,.06);border-color:rgba(134,187,100,.25);animation-delay:.3s}
+.lc1::before{background:var(--a1)}
+.lc2{background:rgba(240,192,96,.05);border-color:rgba(240,192,96,.22);animation-delay:.4s}
+.lc2::before{background:var(--a3)}
+.lc3{background:rgba(96,184,224,.04);border-color:rgba(96,184,224,.2);animation-delay:.5s}
+.lc3::before{background:var(--a4)}
+.lc4{background:rgba(224,128,96,.04);border-color:rgba(224,128,96,.2);animation-delay:.6s}
+.lc4::before{background:var(--a5)}
+.lc5{background:rgba(176,144,224,.04);border-color:rgba(176,144,224,.2);animation-delay:.7s}
+.lc5::before{background:var(--a6)}
+
+.lc-num {
+  font-family:var(--fh); font-size:28px; font-weight:900;
+  opacity:.12; flex-shrink:0; width:36px; line-height:1;
+}
+.lc-body { flex:1; padding-left:4px; }
+.lc-name { font-family:var(--fb); font-size:13px; font-weight:600; }
+.lc-desc { font-family:var(--fb); font-size:11px; color:var(--text2); font-weight:300; }
+.lc-badge {
+  font-family:var(--fb); font-size:9px; font-weight:600;
+  padding:2px 8px; border-radius:3px;
+  letter-spacing:.06em; text-transform:uppercase; white-space:nowrap;
+}
+.dep-note {
+  font-family:var(--fb); font-size:9px; color:var(--text3);
+  text-align:right; letter-spacing:.1em; text-transform:uppercase;
+  padding:2px 0;
+}
+
+@keyframes reveal { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideIn { from{opacity:0;transform:translateX(24px)} to{opacity:1;transform:translateX(0)} }
+
+/* MAIN */
+main { position:relative; z-index:1; }
+
+.section {
+  max-width:1140px; margin:0 auto;
+  padding:80px 48px;
+  border-top:1px solid var(--border);
+}
+
+.sec-label {
+  font-family:var(--fb); font-size:10px; font-weight:500;
+  letter-spacing:.22em; text-transform:uppercase; color:var(--a1);
+  margin-bottom:10px;
+  display:flex; align-items:center; gap:10px;
+}
+.sec-label::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--a1),transparent); opacity:.2; }
+
+.sec-title {
+  font-family:var(--fh);
+  font-size:clamp(34px,4.5vw,58px);
+  font-weight:900; line-height:1.02;
+  letter-spacing:-.02em;
+  margin-bottom:14px;
+}
+.sec-intro {
+  font-family:var(--fh); font-style:italic;
+  font-size:18px; color:var(--text2);
+  max-width:620px; line-height:1.65; margin-bottom:40px;
+}
+
+/* FILE TREE */
+.tree-wrap {
+  background:var(--bg2); border:1px solid var(--bord2);
+  border-radius:var(--rl); overflow:hidden;
+}
+.tree-hdr {
+  background:var(--surf); padding:12px 18px;
+  display:flex; align-items:center; gap:7px;
+  border-bottom:1px solid var(--border);
+}
+.td { width:10px; height:10px; border-radius:50%; }
+.td:nth-child(1){background:#ff5f57} .td:nth-child(2){background:#ffbd2e} .td:nth-child(3){background:#28c840}
+.tree-path { font-family:var(--fc); font-size:11px; color:var(--text2); margin-left:10px; }
+.tree-body { padding:18px 20px; overflow-x:auto; }
+
+.fr {
+  display:flex; align-items:center; height:23px;
+  border-radius:4px; padding:0 4px; transition:background .12s; cursor:default;
+}
+.fr:hover { background:rgba(134,187,100,.05); }
+.fi { font-family:var(--fc); font-size:11px; margin-right:5px; flex-shrink:0; }
+.fl { font-family:var(--fc); font-size:11.5px; }
+.fl.d  { color:var(--a1); }
+.fl.py { color:var(--text); }
+.fl.cfg{ color:var(--text2); }
+.fl.tst{ color:var(--a4); }
+.atag {
+  margin-left:8px; font-size:9px; padding:1px 6px; border-radius:3px;
+  font-weight:600; font-family:var(--fb); letter-spacing:.06em; text-transform:uppercase;
+  border:1px solid; white-space:nowrap;
+}
+.t-view{background:rgba(134,187,100,.1);color:var(--a1);border-color:rgba(134,187,100,.3)}
+.t-svc {background:rgba(240,192,96,.08);color:var(--a3);border-color:rgba(240,192,96,.25)}
+.t-mod {background:rgba(96,184,224,.08);color:var(--a4);border-color:rgba(96,184,224,.25)}
+.t-ser {background:rgba(224,128,96,.08);color:var(--a5);border-color:rgba(224,128,96,.25)}
+.t-cel {background:rgba(176,144,224,.08);color:var(--a6);border-color:rgba(176,144,224,.25)}
+.t-tst {background:rgba(96,184,224,.06);color:var(--a4);border-color:rgba(96,184,224,.2)}
+
+/* CODE CARDS */
+.code-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:14px; }
+.cc {
+  background:var(--bg2); border:1px solid var(--bord2);
+  border-radius:var(--rl); overflow:hidden;
+  transition:border-color .2s, transform .2s; position:relative;
+}
+.cc::before {
+  content:''; position:absolute; top:0; left:0; right:0;
+  height:2px; opacity:0; transition:opacity .2s;
+}
+.cc:hover { border-color:rgba(134,187,100,.32); transform:translateY(-2px); }
+.cc:hover::before { opacity:1; }
+.cc-v::before { background:linear-gradient(90deg,var(--a1),transparent); }
+.cc-s::before { background:linear-gradient(90deg,var(--a3),transparent); }
+.cc-m::before { background:linear-gradient(90deg,var(--a4),transparent); }
+.cc-r::before { background:linear-gradient(90deg,var(--a5),transparent); }
+.cc-c::before { background:linear-gradient(90deg,var(--a6),transparent); }
+
+.cc-head {
+  background:var(--surf); padding:11px 15px;
+  display:flex; align-items:center; gap:8px;
+  border-bottom:1px solid var(--border);
+}
+.cd { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.ct { font-family:var(--fb); font-size:12px; font-weight:600; color:var(--text); letter-spacing:.01em; }
+.cs { font-family:var(--fb); font-size:9px; color:var(--text3); margin-left:auto; text-transform:uppercase; letter-spacing:.08em; }
+
+pre {
+  padding:16px; font-family:var(--fc); font-size:11.5px;
+  line-height:1.85; overflow-x:auto; color:#d8e8c8;
+  white-space:pre; background:transparent;
+}
+
+/* PYTHON SYNTAX */
+.kw  { color:#86bb64; }         /* green keywords */
+.cls { color:#60b8e0; }         /* class names */
+.fn  { color:#c8e6a0; }         /* function names */
+.str { color:#f0c060; }         /* strings */
+.dec { color:#e08060; }         /* decorators */
+.cmt { color:var(--text3); font-style:italic; }
+.typ { color:#b090e0; }         /* type hints */
+.num { color:#f0a060; }         /* numbers */
+.imp { color:#86bb64; font-style:italic; }
+
+/* TABS */
+.tab-nav { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:22px; }
+.tb {
+  font-family:var(--fb); font-size:10px; font-weight:600;
+  padding:7px 16px; border-radius:3px;
+  border:1px solid var(--bord2); background:transparent;
+  color:var(--text2); cursor:pointer;
+  letter-spacing:.06em; text-transform:uppercase; transition:all .15s;
+}
+.tb:hover { background:var(--surf); color:var(--text); }
+.tb.on { background:var(--a1); color:#0a1a0b; border-color:var(--a1); }
+.tp { display:none; } .tp.on { display:block; }
+
+/* FLOW */
+.flow-section { margin-bottom:24px; }
+.flow-lbl { font-family:var(--fb); font-size:10px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--text3); margin-bottom:8px; }
+.flow-row { display:flex; align-items:center; overflow-x:auto; padding-bottom:6px; gap:0; }
+.fb {
+  flex-shrink:0; padding:9px 13px; border-radius:6px; border:1px solid;
+  font-family:var(--fb); font-size:10px; font-weight:600;
+  text-align:center; white-space:nowrap; min-width:80px;
+}
+.fa { flex-shrink:0; color:var(--text3); padding:0 6px; font-size:12px; }
+.fb-v{ background:rgba(134,187,100,.1); border-color:rgba(134,187,100,.4); color:var(--a1); }
+.fb-s{ background:rgba(240,192,96,.08); border-color:rgba(240,192,96,.35); color:var(--a3); }
+.fb-m{ background:rgba(96,184,224,.07); border-color:rgba(96,184,224,.3); color:var(--a4); }
+.fb-r{ background:rgba(224,128,96,.07); border-color:rgba(224,128,96,.3); color:var(--a5); }
+.fb-c{ background:rgba(176,144,224,.07); border-color:rgba(176,144,224,.3); color:var(--a6); }
+.fb-y{ background:rgba(200,230,160,.06); border-color:rgba(200,230,160,.25); color:var(--a2); }
+
+/* FEATURE CARDS */
+.feat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:12px; }
+.fc {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:var(--rl); padding:20px; transition:border-color .18s;
+}
+.fc:hover { border-color:var(--bord2); }
+.fc-icon { width:32px; height:32px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:14px; margin-bottom:12px; }
+.fc-title { font-family:var(--fb); font-size:13px; font-weight:600; margin-bottom:6px; }
+.fc-desc { font-family:var(--fb); font-size:11px; color:var(--text2); line-height:1.65; margin-bottom:10px; font-weight:300; }
+.fc-dep { font-family:var(--fc); font-size:10px; color:var(--text3); background:var(--surf); border:1px solid var(--border); padding:3px 7px; border-radius:4px; display:inline-block; margin:2px 2px 0 0; }
+
+/* PRINCIPLE CARDS */
+.prin-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+.pc { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rl); padding:22px; transition:border-color .18s; }
+.pc:hover { border-color:var(--bord2); }
+.pc-letter { font-family:var(--fh); font-size:52px; font-weight:900; line-height:1; margin-bottom:8px; opacity:.1; }
+.pc-title { font-family:var(--fb); font-size:14px; font-weight:600; margin-bottom:6px; }
+.pc-desc { font-family:var(--fb); font-size:12px; color:var(--text2); line-height:1.65; font-weight:300; }
+
+/* PACKAGES TABLE */
+.pkg-wrap { background:var(--bg2); border:1px solid var(--bord2); border-radius:var(--rl); overflow:hidden; overflow-x:auto; }
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; padding:10px 14px; font-family:var(--fb); font-size:10px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid var(--border); }
+td { padding:10px 14px; border-bottom:1px solid var(--border); font-family:var(--fb); font-size:11px; vertical-align:top; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:rgba(134,187,100,.02); }
+.pn { font-family:var(--fc); font-size:11px; color:var(--a1); }
+.pv { font-family:var(--fc); font-size:10px; color:var(--text3); }
+.pd { color:var(--text2); font-size:11px; font-weight:300; }
+.lp { font-size:9px; padding:2px 7px; border-radius:3px; font-weight:600; font-family:var(--fb); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; border:1px solid; }
+
+/* CALLOUTS */
+.note { background:rgba(134,187,100,.05); border:1px solid rgba(134,187,100,.18); border-left:3px solid var(--a1); border-radius:0 8px 8px 0; padding:13px 17px; font-family:var(--fb); font-size:12px; color:var(--text2); margin:18px 0; line-height:1.6; font-weight:300; }
+.note strong { color:var(--a1); font-weight:600; }
+.warn { background:rgba(240,192,96,.04); border:1px solid rgba(240,192,96,.15); border-left:3px solid var(--a3); border-radius:0 8px 8px 0; padding:13px 17px; font-family:var(--fb); font-size:12px; color:var(--text2); margin:18px 0; line-height:1.6; font-weight:300; }
+.warn strong { color:var(--a3); font-weight:600; }
+
+/* DIVIDER */
+.dvdr { height:1px; background:linear-gradient(90deg,transparent,var(--bord2),transparent); }
+
+/* SCROLL REVEAL */
+.reveal { opacity:0; transform:translateY(24px); transition:opacity .65s ease,transform .65s ease; }
+.reveal.vis { opacity:1; transform:translateY(0); }
+
+/* GRAD TEXT */
+.gt1 { background:linear-gradient(120deg,var(--a1),var(--a2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.gt2 { background:linear-gradient(120deg,var(--a3),var(--a5)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.gt3 { background:linear-gradient(120deg,var(--a4),var(--a6)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+/* FOOTER */
+footer { position:relative; z-index:1; text-align:center; padding:60px 48px; border-top:1px solid var(--border); }
+.ft-title { font-family:var(--fh); font-size:clamp(32px,5vw,64px); font-weight:900; margin-bottom:10px; }
+.ft-sub { font-family:var(--fh); font-style:italic; color:var(--text2); font-size:17px; margin-bottom:28px; }
+.ft-copy { font-family:var(--fb); font-size:10px; color:var(--text3); letter-spacing:.12em; text-transform:uppercase; }
+
+@media(max-width:900px){
+  nav{padding:0 18px}
+  .nav-links{display:none}
+  .hero{grid-template-columns:1fr}
+  .hero-left{padding:90px 20px 40px}
+  .hero-right{padding:20px 20px 60px;border-top:1px solid var(--bord2)}
+  .section{padding:56px 20px}
+  .code-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <span class="nav-snake">🐍</span>
+    <span class="nav-logo">Django Architecture</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#layers">Layers</a></li>
+    <li><a href="#structure">Structure</a></li>
+    <li><a href="#patterns">Patterns</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#flows">Flows</a></li>
+    <li><a href="#packages">Packages</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+
+  <div class="hero-left">
+    <p class="hero-issue">Backend Engineering · Python · Django REST Framework</p>
+    <h1 class="hero-title">
+      <span class="ht1">Django</span>
+      <span class="ht2">Clean Architecture</span>
+      <span class="ht3">DRF · Celery · Channels · PostgreSQL · Redis</span>
+    </h1>
+    <p class="hero-lede">Batteries-included, yet disciplined. A field guide to building Django backends that scale beyond the monolith — with clean separation, async tasks, real-time WebSocket, and airtight security.</p>
+    <div class="pill-row">
+      <span class="pill p1">DRF + ViewSets</span>
+      <span class="pill p2">Celery async tasks</span>
+      <span class="pill p3">Django Channels WS</span>
+      <span class="pill p4">JWT + RBAC</span>
+      <span class="pill p5">AES-256 fields</span>
+      <span class="pill p1">Custom managers</span>
+      <span class="pill p2">Service layer</span>
+      <span class="pill p3">Repository pattern</span>
+      <span class="pill p4">Signals</span>
+      <span class="pill p5">Rate limiting</span>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="layer-card lc1">
+      <span class="lc-num">1</span>
+      <div class="lc-body">
+        <div class="lc-name" style="color:var(--a1)">Views / Serializers</div>
+        <div class="lc-desc">DRF ViewSets · APIViews · permissions · throttling</div>
+      </div>
+      <span class="lc-badge" style="background:rgba(134,187,100,.12);color:var(--a1)">HTTP</span>
+    </div>
+    <div class="dep-note">↓ calls ↓</div>
+    <div class="layer-card lc2">
+      <span class="lc-num">2</span>
+      <div class="lc-body">
+        <div class="lc-name" style="color:var(--a3)">Service Layer</div>
+        <div class="lc-desc">Business logic · orchestration · no HTTP/ORM concerns</div>
+      </div>
+      <span class="lc-badge" style="background:rgba(240,192,96,.1);color:var(--a3)">Logic</span>
+    </div>
+    <div class="dep-note">↓ calls ↓</div>
+    <div class="layer-card lc3">
+      <span class="lc-num">3</span>
+      <div class="lc-body">
+        <div class="lc-name" style="color:var(--a4)">Repository / Selectors</div>
+        <div class="lc-desc">Queryset logic · custom managers · cache · no business rules</div>
+      </div>
+      <span class="lc-badge" style="background:rgba(96,184,224,.08);color:var(--a4)">Data</span>
+    </div>
+    <div class="dep-note">↓ reads/writes ↓</div>
+    <div class="layer-card lc4">
+      <span class="lc-num">4</span>
+      <div class="lc-body">
+        <div class="lc-name" style="color:var(--a5)">Models</div>
+        <div class="lc-desc">Django ORM · abstract bases · validators · signals</div>
+      </div>
+      <span class="lc-badge" style="background:rgba(224,128,96,.08);color:var(--a5)">ORM</span>
+    </div>
+    <div class="dep-note">↓ async tasks via ↓</div>
+    <div class="layer-card lc5">
+      <span class="lc-num">5</span>
+      <div class="lc-body">
+        <div class="lc-name" style="color:var(--a6)">Celery + Channels</div>
+        <div class="lc-desc">Background tasks · WebSocket · scheduled jobs</div>
+      </div>
+      <span class="lc-badge" style="background:rgba(176,144,224,.08);color:var(--a6)">Async</span>
+    </div>
+  </div>
+</section>
+
+<main>
+
+<!-- LAYERS -->
+<section class="section reveal" id="layers">
+  <p class="sec-label">01 — Architecture</p>
+  <h2 class="sec-title">The <span class="gt1">Layer</span> Contract</h2>
+  <p class="sec-intro">Django's "fat models, thin views" advice doesn't scale. The solution: thin views, thin models, and a dedicated service layer that owns business logic.</p>
+
+  <div class="note">
+    <strong>The core rule:</strong> Views handle HTTP only — authentication, request parsing, response formatting. Services handle business logic — they are plain Python classes with no Django HTTP imports. Repositories/Selectors handle ORM queries. Models are schema + validators only, no business logic methods.
+  </div>
+
+  <div class="prin-grid reveal" style="margin-top:28px">
+    <div class="pc">
+      <div class="pc-letter" style="color:var(--a1)">V</div>
+      <div class="pc-title" style="color:var(--a1)">Views &amp; Serializers</div>
+      <div class="pc-desc">DRF ViewSets and APIViews. Validate input via serializers, call one service method, return response. Zero queryset calls in views. Permissions and throttling classes applied here.</div>
+    </div>
+    <div class="pc">
+      <div class="pc-letter" style="color:var(--a3)">S</div>
+      <div class="pc-title" style="color:var(--a3)">Service Layer</div>
+      <div class="pc-desc">Plain Python classes. All business logic lives here — password hashing, token generation, pricing rules, notification dispatch. Services call repositories. Never call request.user or HttpResponse.</div>
+    </div>
+    <div class="pc">
+      <div class="pc-letter" style="color:var(--a4)">R</div>
+      <div class="pc-title" style="color:var(--a4)">Selectors / Repositories</div>
+      <div class="pc-desc">All ORM queries centralised in selector functions or repository classes. Views and services never write raw queryset logic. Selectors are pure — no side effects, no saves, no business rules.</div>
+    </div>
+    <div class="pc">
+      <div class="pc-letter" style="color:var(--a5)">M</div>
+      <div class="pc-title" style="color:var(--a5)">Models</div>
+      <div class="pc-desc">Django ORM models with abstract base classes for audit fields (created_at, updated_at, uuid pk). Validators in clean(). Signals for cross-cutting concerns. No business logic methods on models.</div>
+    </div>
+    <div class="pc">
+      <div class="pc-letter" style="color:var(--a6)">C</div>
+      <div class="pc-title" style="color:var(--a6)">Celery + Channels</div>
+      <div class="pc-desc">Celery workers handle async tasks — emails, report generation, third-party API calls. Django Channels provides WebSocket via ASGI. Both use the same service layer — no duplication.</div>
+    </div>
+    <div class="pc">
+      <div class="pc-letter" style="color:var(--a2)">I</div>
+      <div class="pc-title" style="color:var(--a2)">Infrastructure</div>
+      <div class="pc-desc">Settings split by environment (base/dev/staging/prod). Django-environ for typed env vars. Gunicorn + Nginx for HTTP, Daphne/Uvicorn for ASGI. Sentry for error tracking. Structured logging via structlog.</div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- FILE STRUCTURE -->
+<section class="section reveal" id="structure">
+  <p class="sec-label">02 — Project Structure</p>
+  <h2 class="sec-title">App-First <span class="gt2">Organisation</span></h2>
+  <p class="sec-intro">Each Django app is a vertical slice — models, views, services, selectors, and serializers all together by feature. No horizontal layering across the whole project.</p>
+
+  <div class="tree-wrap reveal">
+    <div class="tree-hdr">
+      <span class="td"></span><span class="td"></span><span class="td"></span>
+      <span class="tree-path">project_root /</span>
+    </div>
+    <div class="tree-body">
+
+      <div class="fr"><span style="width:0" class="fi">▾</span><span class="fl d">config/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Django project package</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">settings/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">base.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— shared settings</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">development.py</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">production.py</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">urls.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— root URL conf, includes app routers</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">asgi.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— ASGI app with Channels routing</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">celery.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Celery app instance</span></div>
+
+      <div style="height:8px"></div>
+      <div class="fr"><span style="width:0" class="fi">▾</span><span class="fl d">apps/</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">common/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— shared across all apps</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">models.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— TimeStampedModel, UUIDModel abstract bases</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">exceptions.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— AppException hierarchy</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">pagination.py</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">permissions.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— IsOwner, IsAdmin DRF permissions</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">crypto.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— AES-256 field-level encryption</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">users/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fb)">— repeat this pattern per feature</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">models.py</span><span class="atag t-mod">Model</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">serializers.py</span><span class="atag t-ser">DRF</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">views.py</span><span class="atag t-view">View</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">services.py</span><span class="atag t-svc">Service</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— business logic</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">selectors.py</span><span class="atag t-svc" style="background:rgba(96,184,224,.08);color:var(--a4);border-color:rgba(96,184,224,.25)">Selector</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— ORM queries only</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">urls.py</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">admin.py</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">signals.py</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">tasks.py</span><span class="atag t-cel">Celery</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl tst">tests/</span><span class="atag t-tst">Tests</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl tst">test_views.py</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl tst">test_services.py</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl tst">factories.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— factory_boy</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">chat/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— WebSocket feature</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">consumers.py</span><span class="atag t-cel" style="background:rgba(176,144,224,.08);color:var(--a6);border-color:rgba(176,144,224,.25)">Consumer</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Django Channels</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">routing.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— WebSocket URL routing</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">services.py</span></div>
+
+      <div style="height:8px"></div>
+      <div class="fr"><span style="width:0" class="fi">▾</span><span class="fl d">infrastructure/</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">cache.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Redis cache decorators + helpers</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">logging.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— structlog configuration</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl py">storage.py</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— S3 / GCS via django-storages</span></div>
+      <div class="fr"><span style="width:0" class="fi">◦</span><span class="fl cfg">requirements/</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl cfg">base.txt</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl cfg">production.txt</span></div>
+      <div class="fr"><span style="width:0" class="fi">◦</span><span class="fl cfg">pyproject.toml</span></div>
+      <div class="fr"><span style="width:0" class="fi">◦</span><span class="fl cfg">docker-compose.yml</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- CODE PATTERNS -->
+<section class="section reveal" id="patterns">
+  <p class="sec-label">03 — Code Patterns</p>
+  <h2 class="sec-title">Python <span class="gt3">Blueprints</span></h2>
+  <p class="sec-intro">Production-ready Python. Every snippet wires cleanly into the layer above and below it — no fat views, no fat models.</p>
+
+  <div class="tab-nav">
+    <button class="tb on" onclick="st('models')">Models</button>
+    <button class="tb" onclick="st('views')">Views + Serializers</button>
+    <button class="tb" onclick="st('services')">Services + Selectors</button>
+    <button class="tb" onclick="st('auth')">Auth + JWT + RBAC</button>
+    <button class="tb" onclick="st('crypto')">Security + Crypto</button>
+    <button class="tb" onclick="st('celery')">Celery + Tasks</button>
+    <button class="tb" onclick="st('ws')">Channels + WebSocket</button>
+    <button class="tb" onclick="st('infra')">Settings + Infra</button>
+  </div>
+
+  <!-- MODELS -->
+  <div class="tp on" id="tp-models">
+    <div class="code-grid">
+
+      <div class="cc cc-m">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">common/models.py — abstract bases</span><span class="cs">model</span></div>
+<pre><span class="imp">import</span> uuid
+<span class="imp">from</span> django.db <span class="imp">import</span> models
+
+
+<span class="kw">class</span> <span class="cls">TimeStampedModel</span>(models.Model):
+    <span class="str">"""Adds created_at / updated_at to every model."""</span>
+    created_at = models.DateTimeField(auto_now_add=<span class="kw">True</span>, db_index=<span class="kw">True</span>)
+    updated_at = models.DateTimeField(auto_now=<span class="kw">True</span>)
+
+    <span class="kw">class</span> <span class="cls">Meta</span>:
+        abstract = <span class="kw">True</span>
+
+
+<span class="kw">class</span> <span class="cls">UUIDModel</span>(models.Model):
+    <span class="str">"""UUID primary key — never expose sequential int IDs."""</span>
+    id = models.UUIDField(
+        primary_key=<span class="kw">True</span>,
+        default=uuid.uuid4,
+        editable=<span class="kw">False</span>,
+    )
+
+    <span class="kw">class</span> <span class="cls">Meta</span>:
+        abstract = <span class="kw">True</span>
+
+
+<span class="kw">class</span> <span class="cls">BaseModel</span>(<span class="cls">UUIDModel</span>, <span class="cls">TimeStampedModel</span>):
+    <span class="str">"""Combine both — use this as the base for all app models."""</span>
+    <span class="kw">class</span> <span class="cls">Meta</span>:
+        abstract = <span class="kw">True</span></pre>
+      </div>
+
+      <div class="cc cc-m">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">users/models.py — custom user model</span><span class="cs">model</span></div>
+<pre><span class="imp">from</span> django.contrib.auth.models <span class="imp">import</span> AbstractBaseUser, PermissionsMixin
+<span class="imp">from</span> django.db <span class="imp">import</span> models
+<span class="imp">from</span> apps.common.models <span class="imp">import</span> BaseModel
+<span class="imp">from</span> apps.common.crypto <span class="imp">import</span> EncryptedCharField
+<span class="imp">from</span> .managers <span class="imp">import</span> UserManager
+
+
+<span class="kw">class</span> <span class="cls">User</span>(<span class="cls">BaseModel</span>, <span class="cls">AbstractBaseUser</span>, <span class="cls">PermissionsMixin</span>):
+    email = models.EmailField(unique=<span class="kw">True</span>, db_index=<span class="kw">True</span>)
+    name  = models.CharField(max_length=<span class="num">255</span>)
+    phone = <span class="cls">EncryptedCharField</span>(max_length=<span class="num">500</span>, blank=<span class="kw">True</span>)
+    role  = models.CharField(
+        max_length=<span class="num">20</span>,
+        choices=[(<span class="str">'admin'</span>, <span class="str">'Admin'</span>), (<span class="str">'user'</span>, <span class="str">'User'</span>),
+                 (<span class="str">'moderator'</span>, <span class="str">'Moderator'</span>)],
+        default=<span class="str">'user'</span>,
+    )
+    is_active = models.BooleanField(default=<span class="kw">True</span>)
+    is_staff  = models.BooleanField(default=<span class="kw">False</span>)
+
+    objects = <span class="cls">UserManager</span>()
+
+    USERNAME_FIELD  = <span class="str">'email'</span>
+    REQUIRED_FIELDS = [<span class="str">'name'</span>]
+
+    <span class="kw">class</span> <span class="cls">Meta</span>:
+        db_table = <span class="str">'users'</span>
+        indexes  = [models.Index(fields=[<span class="str">'email'</span>, <span class="str">'role'</span>])]</pre>
+      </div>
+
+      <div class="cc cc-m">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">users/managers.py — custom manager</span><span class="cs">model</span></div>
+<pre><span class="imp">from</span> django.contrib.auth.models <span class="imp">import</span> BaseUserManager
+
+
+<span class="kw">class</span> <span class="cls">UserManager</span>(<span class="cls">BaseUserManager</span>):
+    <span class="kw">def</span> <span class="fn">create_user</span>(self, email, password=<span class="kw">None</span>, **extra):
+        <span class="kw">if not</span> email:
+            <span class="kw">raise</span> <span class="cls">ValueError</span>(<span class="str">'Email is required'</span>)
+        email = self.normalize_email(email)
+        user  = self.model(email=email, **extra)
+        user.set_password(password)   <span class="cmt"># Argon2 via PASSWORD_HASHERS</span>
+        user.save(using=self._db)
+        <span class="kw">return</span> user
+
+    <span class="kw">def</span> <span class="fn">create_superuser</span>(self, email, password=<span class="kw">None</span>, **extra):
+        extra.setdefault(<span class="str">'is_staff'</span>, <span class="kw">True</span>)
+        extra.setdefault(<span class="str">'is_superuser'</span>, <span class="kw">True</span>)
+        extra.setdefault(<span class="str">'role'</span>, <span class="str">'admin'</span>)
+        <span class="kw">return</span> self.create_user(email, password, **extra)
+
+    <span class="cmt"># Custom querysets on the manager</span>
+    <span class="kw">def</span> <span class="fn">active</span>(self):
+        <span class="kw">return</span> self.filter(is_active=<span class="kw">True</span>)
+
+    <span class="kw">def</span> <span class="fn">by_role</span>(self, role: str):
+        <span class="kw">return</span> self.active().filter(role=role)</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VIEWS + SERIALIZERS -->
+  <div class="tp" id="tp-views">
+    <div class="code-grid">
+
+      <div class="cc cc-v">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">users/serializers.py — DRF</span><span class="cs">view</span></div>
+<pre><span class="imp">from</span> rest_framework <span class="imp">import</span> serializers
+<span class="imp">from</span> .models <span class="imp">import</span> User
+
+
+<span class="kw">class</span> <span class="cls">UserSerializer</span>(serializers.ModelSerializer):
+    <span class="kw">class</span> <span class="cls">Meta</span>:
+        model  = <span class="cls">User</span>
+        fields = [<span class="str">'id'</span>, <span class="str">'email'</span>, <span class="str">'name'</span>, <span class="str">'role'</span>, <span class="str">'created_at'</span>]
+        read_only_fields = [<span class="str">'id'</span>, <span class="str">'created_at'</span>]
+
+
+<span class="kw">class</span> <span class="cls">RegisterSerializer</span>(serializers.Serializer):
+    email    = serializers.EmailField()
+    name     = serializers.CharField(max_length=<span class="num">255</span>)
+    password = serializers.CharField(
+        min_length=<span class="num">8</span>, write_only=<span class="kw">True</span>,
+        style={<span class="str">'input_type'</span>: <span class="str">'password'</span>},
+    )
+
+    <span class="kw">def</span> <span class="fn">validate_email</span>(self, value):
+        <span class="kw">if</span> <span class="cls">User</span>.objects.filter(email=value).exists():
+            <span class="kw">raise</span> serializers.<span class="cls">ValidationError</span>(<span class="str">'Email already registered.'</span>)
+        <span class="kw">return</span> value.lower()
+
+
+<span class="kw">class</span> <span class="cls">LoginSerializer</span>(serializers.Serializer):
+    email    = serializers.EmailField()
+    password = serializers.CharField(write_only=<span class="kw">True</span>)</pre>
+      </div>
+
+      <div class="cc cc-v">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">users/views.py — thin ViewSets</span><span class="cs">view</span></div>
+<pre><span class="imp">from</span> rest_framework <span class="imp">import</span> viewsets, status
+<span class="imp">from</span> rest_framework.decorators <span class="imp">import</span> action
+<span class="imp">from</span> rest_framework.response <span class="imp">import</span> Response
+<span class="imp">from</span> rest_framework.permissions <span class="imp">import</span> IsAuthenticated
+<span class="imp">from</span> .services <span class="imp">import</span> UserService
+<span class="imp">from</span> .serializers <span class="imp">import</span> RegisterSerializer, UserSerializer
+
+
+<span class="kw">class</span> <span class="cls">AuthViewSet</span>(viewsets.ViewSet):
+    <span class="str">"""Thin view — call service, return response. Nothing else."""</span>
+
+    <span class="dec">@action</span>(detail=<span class="kw">False</span>, methods=[<span class="str">'post'</span>])
+    <span class="kw">def</span> <span class="fn">register</span>(self, request):
+        serializer = <span class="cls">RegisterSerializer</span>(data=request.data)
+        serializer.is_valid(raise_exception=<span class="kw">True</span>)
+
+        user = <span class="cls">UserService</span>.register(**serializer.validated_data)
+        <span class="kw">return</span> <span class="cls">Response</span>(
+            <span class="cls">UserSerializer</span>(user).data,
+            status=status.<span class="cls">HTTP_201_CREATED</span>,
+        )
+
+    <span class="dec">@action</span>(detail=<span class="kw">False</span>, methods=[<span class="str">'post'</span>])
+    <span class="kw">def</span> <span class="fn">login</span>(self, request):
+        serializer = <span class="cls">LoginSerializer</span>(data=request.data)
+        serializer.is_valid(raise_exception=<span class="kw">True</span>)
+
+        tokens = <span class="cls">UserService</span>.login(**serializer.validated_data)
+        <span class="kw">return</span> <span class="cls">Response</span>(tokens)
+
+    <span class="dec">@action</span>(detail=<span class="kw">False</span>, methods=[<span class="str">'get'</span>], permission_classes=[<span class="cls">IsAuthenticated</span>])
+    <span class="kw">def</span> <span class="fn">me</span>(self, request):
+        <span class="kw">return</span> <span class="cls">Response</span>(<span class="cls">UserSerializer</span>(request.user).data)</pre>
+      </div>
+
+      <div class="cc cc-v">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">users/urls.py — DRF Router</span><span class="cs">view</span></div>
+<pre><span class="imp">from</span> rest_framework.routers <span class="imp">import</span> DefaultRouter
+<span class="imp">from</span> .views <span class="imp">import</span> AuthViewSet, UserViewSet
+
+router = <span class="cls">DefaultRouter</span>()
+router.register(<span class="str">r'auth'</span>,  <span class="cls">AuthViewSet</span>,  basename=<span class="str">'auth'</span>)
+router.register(<span class="str">r'users'</span>, <span class="cls">UserViewSet</span>, basename=<span class="str">'user'</span>)
+
+urlpatterns = router.urls
+
+<span class="cmt"># Generates routes:</span>
+<span class="cmt"># POST /auth/register/</span>
+<span class="cmt"># POST /auth/login/</span>
+<span class="cmt"># GET  /auth/me/</span>
+<span class="cmt"># GET  /users/          (list — admin only)</span>
+<span class="cmt"># GET  /users/{id}/     (retrieve)</span>
+<span class="cmt"># PUT  /users/{id}/     (update)</span>
+<span class="cmt"># DELETE /users/{id}/   (destroy)</span></pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SERVICES + SELECTORS -->
+  <div class="tp" id="tp-services">
+    <div class="code-grid">
+
+      <div class="cc cc-s">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">users/services.py — business logic</span><span class="cs">service</span></div>
+<pre><span class="imp">from</span> django.db <span class="imp">import</span> transaction
+<span class="imp">from</span> apps.common.exceptions <span class="imp">import</span> AuthenticationError, ConflictError
+<span class="imp">from</span> .models <span class="imp">import</span> User
+<span class="imp">from</span> .selectors <span class="imp">import</span> UserSelector
+<span class="imp">from</span> .tasks <span class="imp">import</span> send_welcome_email
+<span class="imp">from</span> infrastructure.token <span class="imp">import</span> TokenService
+
+
+<span class="kw">class</span> <span class="cls">UserService</span>:
+    <span class="str">"""Pure business logic. No request/response objects here."""</span>
+
+    <span class="dec">@staticmethod</span>
+    <span class="dec">@transaction.atomic</span>
+    <span class="kw">def</span> <span class="fn">register</span>(email: <span class="typ">str</span>, name: <span class="typ">str</span>, password: <span class="typ">str</span>) -> <span class="cls">User</span>:
+        <span class="kw">if</span> <span class="cls">UserSelector</span>.email_exists(email):
+            <span class="kw">raise</span> <span class="cls">ConflictError</span>(<span class="str">'Email already registered.'</span>)
+
+        user = <span class="cls">User</span>.objects.create_user(
+            email=email, name=name, password=password,
+        )
+        <span class="cmt"># Fire async Celery task — non-blocking</span>
+        send_welcome_email.delay(str(user.id))
+        <span class="kw">return</span> user
+
+    <span class="dec">@staticmethod</span>
+    <span class="kw">def</span> <span class="fn">login</span>(email: <span class="typ">str</span>, password: <span class="typ">str</span>) -> <span class="typ">dict</span>:
+        user = <span class="cls">UserSelector</span>.by_email(email)
+        <span class="kw">if</span> <span class="kw">not</span> user <span class="kw">or not</span> user.check_password(password):
+            <span class="kw">raise</span> <span class="cls">AuthenticationError</span>(<span class="str">'Invalid credentials.'</span>)
+        <span class="kw">return</span> <span class="cls">TokenService</span>.generate_pair(user)
+
+    <span class="dec">@staticmethod</span>
+    <span class="dec">@transaction.atomic</span>
+    <span class="kw">def</span> <span class="fn">deactivate</span>(user_id: <span class="typ">str</span>, actor: <span class="cls">User</span>) -> <span class="kw">None</span>:
+        <span class="kw">if</span> str(actor.id) == user_id:
+            <span class="kw">raise</span> <span class="cls">ValidationError</span>(<span class="str">'Cannot deactivate yourself.'</span>)
+        <span class="cls">User</span>.objects.filter(id=user_id).update(is_active=<span class="kw">False</span>)</pre>
+      </div>
+
+      <div class="cc cc-s">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">users/selectors.py — ORM queries</span><span class="cs">selector</span></div>
+<pre><span class="imp">from</span> django.db.models <span class="imp">import</span> QuerySet
+<span class="imp">from</span> .models <span class="imp">import</span> User
+<span class="imp">from</span> infrastructure.cache <span class="imp">import</span> cache_result
+
+
+<span class="kw">class</span> <span class="cls">UserSelector</span>:
+    <span class="str">"""All ORM reads in one place. No saves. No business logic."""</span>
+
+    <span class="dec">@staticmethod</span>
+    <span class="kw">def</span> <span class="fn">by_email</span>(email: <span class="typ">str</span>) -> <span class="cls">User</span> | <span class="kw">None</span>:
+        <span class="kw">return</span> (<span class="cls">User</span>.objects
+                .filter(email=email.lower(), is_active=<span class="kw">True</span>)
+                .select_related()
+                .first())
+
+    <span class="dec">@staticmethod</span>
+    <span class="dec">@cache_result</span>(ttl=<span class="num">300</span>, key_prefix=<span class="str">'user'</span>)
+    <span class="kw">def</span> <span class="fn">by_id</span>(user_id: <span class="typ">str</span>) -> <span class="cls">User</span> | <span class="kw">None</span>:
+        <span class="kw">return</span> <span class="cls">User</span>.objects.filter(id=user_id).first()
+
+    <span class="dec">@staticmethod</span>
+    <span class="kw">def</span> <span class="fn">email_exists</span>(email: <span class="typ">str</span>) -> <span class="typ">bool</span>:
+        <span class="kw">return</span> <span class="cls">User</span>.objects.filter(email=email.lower()).exists()
+
+    <span class="dec">@staticmethod</span>
+    <span class="kw">def</span> <span class="fn">list_active</span>(
+        search: <span class="typ">str</span> | <span class="kw">None</span> = <span class="kw">None</span>,
+        role:   <span class="typ">str</span> | <span class="kw">None</span> = <span class="kw">None</span>,
+    ) -> <span class="cls">QuerySet</span>[<span class="cls">User</span>]:
+        qs = <span class="cls">User</span>.objects.active().order_by(<span class="str">'-created_at'</span>)
+        <span class="kw">if</span> search:
+            qs = qs.filter(name__icontains=search)
+        <span class="kw">if</span> role:
+            qs = qs.filter(role=role)
+        <span class="kw">return</span> qs</pre>
+      </div>
+
+      <div class="cc cc-s">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">common/exceptions.py — typed errors</span><span class="cs">domain</span></div>
+<pre><span class="imp">from</span> rest_framework.exceptions <span class="imp">import</span> APIException
+<span class="imp">from</span> rest_framework <span class="imp">import</span> status
+
+
+<span class="kw">class</span> <span class="cls">AppException</span>(<span class="cls">APIException</span>):
+    <span class="str">"""Base — DRF handles HTTP serialisation automatically."""</span>
+    status_code = status.<span class="cls">HTTP_400_BAD_REQUEST</span>
+    default_code = <span class="str">'error'</span>
+
+
+<span class="kw">class</span> <span class="cls">AuthenticationError</span>(<span class="cls">AppException</span>):
+    status_code = status.<span class="cls">HTTP_401_UNAUTHORIZED</span>
+    default_code = <span class="str">'authentication_failed'</span>
+
+
+<span class="kw">class</span> <span class="cls">ForbiddenError</span>(<span class="cls">AppException</span>):
+    status_code = status.<span class="cls">HTTP_403_FORBIDDEN</span>
+    default_code = <span class="str">'forbidden'</span>
+
+
+<span class="kw">class</span> <span class="cls">NotFoundError</span>(<span class="cls">AppException</span>):
+    status_code = status.<span class="cls">HTTP_404_NOT_FOUND</span>
+    default_code = <span class="str">'not_found'</span>
+
+
+<span class="kw">class</span> <span class="cls">ConflictError</span>(<span class="cls">AppException</span>):
+    status_code = status.<span class="cls">HTTP_409_CONFLICT</span>
+    default_code = <span class="str">'conflict'</span></pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- AUTH + JWT + RBAC -->
+  <div class="tp" id="tp-auth">
+    <div class="code-grid">
+
+      <div class="cc cc-r">
+        <div class="cc-head"><span class="cd" style="background:var(--a5)"></span><span class="ct">infrastructure/token.py — JWT service</span><span class="cs">infra</span></div>
+<pre><span class="imp">from</span> datetime <span class="imp">import</span> timedelta
+<span class="imp">import</span> jwt
+<span class="imp">from</span> django.conf <span class="imp">import</span> settings
+<span class="imp">from</span> django.utils <span class="imp">import</span> timezone
+
+
+<span class="kw">class</span> <span class="cls">TokenService</span>:
+
+    <span class="dec">@staticmethod</span>
+    <span class="kw">def</span> <span class="fn">generate_pair</span>(user) -> <span class="typ">dict</span>:
+        now = timezone.now()
+        access_payload = {
+            <span class="str">'sub'</span>:    str(user.id),
+            <span class="str">'email'</span>: user.email,
+            <span class="str">'role'</span>:  user.role,
+            <span class="str">'type'</span>:  <span class="str">'access'</span>,
+            <span class="str">'iat'</span>:   now,
+            <span class="str">'exp'</span>:   now + timedelta(minutes=<span class="num">15</span>),
+        }
+        refresh_payload = {
+            <span class="str">'sub'</span>:  str(user.id),
+            <span class="str">'type'</span>: <span class="str">'refresh'</span>,
+            <span class="str">'iat'</span>:  now,
+            <span class="str">'exp'</span>:  now + timedelta(days=<span class="num">7</span>),
+        }
+        <span class="kw">return</span> {
+            <span class="str">'access'</span>:  jwt.encode(access_payload,  settings.<span class="cls">JWT_SECRET</span>, algorithm=<span class="str">'HS256'</span>),
+            <span class="str">'refresh'</span>: jwt.encode(refresh_payload, settings.<span class="cls">JWT_SECRET</span>, algorithm=<span class="str">'HS256'</span>),
+        }
+
+    <span class="dec">@staticmethod</span>
+    <span class="kw">def</span> <span class="fn">decode</span>(token: <span class="typ">str</span>) -> <span class="typ">dict</span>:
+        <span class="kw">return</span> jwt.decode(
+            token, settings.<span class="cls">JWT_SECRET</span>,
+            algorithms=[<span class="str">'HS256'</span>],
+        )</pre>
+      </div>
+
+      <div class="cc cc-r">
+        <div class="cc-head"><span class="cd" style="background:var(--a5)"></span><span class="ct">common/authentication.py — DRF backend</span><span class="cs">auth</span></div>
+<pre><span class="imp">from</span> rest_framework.authentication <span class="imp">import</span> BaseAuthentication
+<span class="imp">from</span> rest_framework.exceptions <span class="imp">import</span> AuthenticationFailed
+<span class="imp">import</span> jwt
+<span class="imp">from</span> django.conf <span class="imp">import</span> settings
+<span class="imp">from</span> apps.users.models <span class="imp">import</span> User
+<span class="imp">from</span> apps.users.selectors <span class="imp">import</span> UserSelector
+
+
+<span class="kw">class</span> <span class="cls">JWTAuthentication</span>(<span class="cls">BaseAuthentication</span>):
+
+    <span class="kw">def</span> <span class="fn">authenticate</span>(self, request):
+        header = request.META.get(<span class="str">'HTTP_AUTHORIZATION'</span>, <span class="str">''</span>)
+        <span class="kw">if not</span> header.startswith(<span class="str">'Bearer '</span>):
+            <span class="kw">return None</span>
+
+        token = header.split(<span class="str">' '</span>, <span class="num">1</span>)[<span class="num">1</span>]
+        <span class="kw">try</span>:
+            payload = jwt.decode(
+                token, settings.<span class="cls">JWT_SECRET</span>,
+                algorithms=[<span class="str">'HS256'</span>],
+            )
+        <span class="kw">except</span> jwt.<span class="cls">ExpiredSignatureError</span>:
+            <span class="kw">raise</span> <span class="cls">AuthenticationFailed</span>(<span class="str">'Token expired.'</span>)
+        <span class="kw">except</span> jwt.<span class="cls">InvalidTokenError</span>:
+            <span class="kw">raise</span> <span class="cls">AuthenticationFailed</span>(<span class="str">'Invalid token.'</span>)
+
+        user = <span class="cls">UserSelector</span>.by_id(payload[<span class="str">'sub'</span>])
+        <span class="kw">if not</span> user <span class="kw">or not</span> user.is_active:
+            <span class="kw">raise</span> <span class="cls">AuthenticationFailed</span>(<span class="str">'User not found.'</span>)
+        <span class="kw">return</span> user, payload</pre>
+      </div>
+
+      <div class="cc cc-r">
+        <div class="cc-head"><span class="cd" style="background:var(--a5)"></span><span class="ct">common/permissions.py — RBAC</span><span class="cs">auth · rbac</span></div>
+<pre><span class="imp">from</span> rest_framework.permissions <span class="imp">import</span> BasePermission
+
+
+<span class="kw">class</span> <span class="cls">IsAdminUser</span>(<span class="cls">BasePermission</span>):
+    <span class="kw">def</span> <span class="fn">has_permission</span>(self, request, view) -> <span class="typ">bool</span>:
+        <span class="kw">return</span> (
+            request.user.is_authenticated
+            <span class="kw">and</span> request.user.role == <span class="str">'admin'</span>
+        )
+
+
+<span class="kw">class</span> <span class="cls">IsOwnerOrAdmin</span>(<span class="cls">BasePermission</span>):
+    <span class="str">"""Object-level — user can only access their own resources."""</span>
+    <span class="kw">def</span> <span class="fn">has_object_permission</span>(self, request, view, obj) -> <span class="typ">bool</span>:
+        <span class="kw">if</span> request.user.role == <span class="str">'admin'</span>:
+            <span class="kw">return True</span>
+        owner_id = getattr(obj, <span class="str">'user_id'</span>, getattr(obj, <span class="str">'id'</span>, <span class="kw">None</span>))
+        <span class="kw">return</span> str(owner_id) == str(request.user.id)
+
+
+<span class="cmt"># Usage in ViewSet:</span>
+<span class="kw">class</span> <span class="cls">UserViewSet</span>(viewsets.ModelViewSet):
+    permission_classes = [<span class="cls">IsOwnerOrAdmin</span>]
+
+    <span class="kw">def</span> <span class="fn">get_permissions</span>(self):
+        <span class="kw">if</span> self.action == <span class="str">'list'</span>:
+            <span class="kw">return</span> [<span class="cls">IsAdminUser</span>()]
+        <span class="kw">return super</span>().get_permissions()</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECURITY + CRYPTO -->
+  <div class="tp" id="tp-crypto">
+    <div class="code-grid">
+
+      <div class="cc cc-r">
+        <div class="cc-head"><span class="cd" style="background:var(--a5)"></span><span class="ct">common/crypto.py — AES-256 model field</span><span class="cs">infra · security</span></div>
+<pre><span class="imp">from</span> cryptography.fernet <span class="imp">import</span> Fernet
+<span class="imp">from</span> django.conf <span class="imp">import</span> settings
+<span class="imp">from</span> django.db <span class="imp">import</span> models
+<span class="imp">import</span> base64, os
+
+<span class="cmt"># Fernet = AES-128-CBC + HMAC-SHA256 (industry standard for field encryption)</span>
+<span class="kw">def</span> <span class="fn">_get_fernet</span>() -> <span class="cls">Fernet</span>:
+    key = base64.urlsafe_b64encode(
+        settings.<span class="cls">FIELD_ENCRYPTION_KEY</span>[:32].encode().ljust(<span class="num">32</span>, <span class="str">b'\0'</span>)
+    )
+    <span class="kw">return</span> <span class="cls">Fernet</span>(key)
+
+
+<span class="kw">class</span> <span class="cls">EncryptedCharField</span>(models.CharField):
+    <span class="str">"""Transparently encrypts value before save, decrypts on load."""</span>
+
+    <span class="kw">def</span> <span class="fn">from_db_value</span>(self, value, expression, connection):
+        <span class="kw">if</span> value <span class="kw">is None</span>:
+            <span class="kw">return</span> value
+        <span class="kw">try</span>:
+            <span class="kw">return</span> _get_fernet().decrypt(value.encode()).decode()
+        <span class="kw">except Exception</span>:
+            <span class="kw">return</span> value
+
+    <span class="kw">def</span> <span class="fn">get_prep_value</span>(self, value):
+        <span class="kw">if not</span> value:
+            <span class="kw">return</span> value
+        <span class="kw">return</span> _get_fernet().encrypt(value.encode()).decode()
+
+
+<span class="cmt"># settings.py — PASSWORD_HASHERS</span>
+<span class="cls">PASSWORD_HASHERS</span> = [
+    <span class="str">'django.contrib.auth.hashers.Argon2PasswordHasher'</span>,
+    <span class="str">'django.contrib.auth.hashers.BCryptSHA256PasswordHasher'</span>,
+]</pre>
+      </div>
+
+      <div class="cc cc-r">
+        <div class="cc-head"><span class="cd" style="background:var(--a5)"></span><span class="ct">common/throttling.py — rate limiting</span><span class="cs">infra</span></div>
+<pre><span class="imp">from</span> rest_framework.throttling <span class="imp">import</span> AnonRateThrottle, UserRateThrottle
+
+
+<span class="kw">class</span> <span class="cls">LoginThrottle</span>(<span class="cls">AnonRateThrottle</span>):
+    scope = <span class="str">'login'</span>      <span class="cmt"># settings: REST_FRAMEWORK.DEFAULT_THROTTLE_RATES</span>
+    rate  = <span class="str">'10/minute'</span>  <span class="cmt"># 10 attempts per minute per IP</span>
+
+
+<span class="kw">class</span> <span class="cls">BurstUserThrottle</span>(<span class="cls">UserRateThrottle</span>):
+    scope = <span class="str">'burst'</span>
+    rate  = <span class="str">'60/minute'</span>
+
+
+<span class="kw">class</span> <span class="cls">SustainedUserThrottle</span>(<span class="cls">UserRateThrottle</span>):
+    scope = <span class="str">'sustained'</span>
+    rate  = <span class="str">'1000/day'</span>
+
+<span class="cmt"># settings/base.py</span>
+<span class="cls">REST_FRAMEWORK</span> = {
+    <span class="str">'DEFAULT_THROTTLE_CLASSES'</span>: [
+        <span class="str">'apps.common.throttling.BurstUserThrottle'</span>,
+        <span class="str">'apps.common.throttling.SustainedUserThrottle'</span>,
+    ],
+    <span class="str">'DEFAULT_THROTTLE_RATES'</span>: {
+        <span class="str">'burst'</span>:     <span class="str">'60/min'</span>,
+        <span class="str">'sustained'</span>: <span class="str">'1000/day'</span>,
+        <span class="str">'login'</span>:     <span class="str">'10/min'</span>,
+    },
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CELERY -->
+  <div class="tp" id="tp-celery">
+    <div class="code-grid">
+
+      <div class="cc cc-c">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">config/celery.py — app setup</span><span class="cs">celery</span></div>
+<pre><span class="imp">import</span> os
+<span class="imp">from</span> celery <span class="imp">import</span> Celery
+
+os.environ.setdefault(<span class="str">'DJANGO_SETTINGS_MODULE'</span>, <span class="str">'config.settings.production'</span>)
+
+app = <span class="cls">Celery</span>(<span class="str">'myproject'</span>)
+app.config_from_object(<span class="str">'django.conf:settings'</span>, namespace=<span class="str">'CELERY'</span>)
+app.autodiscover_tasks()
+
+<span class="cmt"># settings/base.py — Celery config</span>
+<span class="cls">CELERY_BROKER_URL</span>      = env(<span class="str">'REDIS_URL'</span>)
+<span class="cls">CELERY_RESULT_BACKEND</span>  = env(<span class="str">'REDIS_URL'</span>)
+<span class="cls">CELERY_TASK_SERIALIZER</span> = <span class="str">'json'</span>
+<span class="cls">CELERY_ACCEPT_CONTENT</span>  = [<span class="str">'json'</span>]
+<span class="cls">CELERY_TIMEZONE</span>        = <span class="str">'UTC'</span>
+<span class="cls">CELERY_TASK_ALWAYS_EAGER</span> = <span class="cls">DEBUG</span>  <span class="cmt"># run inline in tests</span>
+
+<span class="cmt"># Beat schedule for periodic tasks</span>
+<span class="cls">CELERY_BEAT_SCHEDULE</span> = {
+    <span class="str">'clean-expired-tokens'</span>: {
+        <span class="str">'task'</span>:     <span class="str">'apps.users.tasks.clean_expired_tokens'</span>,
+        <span class="str">'schedule'</span>: <span class="num">3600</span>,  <span class="cmt"># every hour</span>
+    },
+}</pre>
+      </div>
+
+      <div class="cc cc-c">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">users/tasks.py — Celery tasks</span><span class="cs">celery</span></div>
+<pre><span class="imp">from</span> celery <span class="imp">import</span> shared_task
+<span class="imp">from</span> celery.utils.log <span class="imp">import</span> get_task_logger
+
+logger = get_task_logger(__name__)
+
+
+<span class="dec">@shared_task</span>(
+    bind=<span class="kw">True</span>,
+    max_retries=<span class="num">3</span>,
+    default_retry_delay=<span class="num">60</span>,  <span class="cmt"># 60 second retry delay</span>
+    autoretry_for=(<span class="cls">Exception</span>,),
+    acks_late=<span class="kw">True</span>,           <span class="cmt"># only ack after success</span>
+)
+<span class="kw">def</span> <span class="fn">send_welcome_email</span>(self, user_id: <span class="typ">str</span>) -> <span class="kw">None</span>:
+    <span class="imp">from</span> apps.users.selectors <span class="imp">import</span> UserSelector
+    <span class="imp">from</span> infrastructure.email <span class="imp">import</span> EmailService
+
+    user = <span class="cls">UserSelector</span>.by_id(user_id)
+    <span class="kw">if not</span> user:
+        logger.warning(<span class="str">f'User {user_id} not found for welcome email'</span>)
+        <span class="kw">return</span>
+
+    <span class="kw">try</span>:
+        <span class="cls">EmailService</span>.send_welcome(user)
+        logger.info(<span class="str">f'Welcome email sent to {user.email}'</span>)
+    <span class="kw">except Exception as</span> exc:
+        logger.error(<span class="str">f'Email failed: {exc}'</span>)
+        <span class="kw">raise</span> self.retry(exc=exc)
+
+
+<span class="dec">@shared_task</span>
+<span class="kw">def</span> <span class="fn">clean_expired_tokens</span>() -> <span class="typ">int</span>:
+    <span class="imp">from</span> django.utils <span class="imp">import</span> timezone
+    <span class="imp">from</span> apps.users.models <span class="imp">import</span> RefreshToken
+    deleted, _ = <span class="cls">RefreshToken</span>.objects.filter(
+        expires_at__lt=timezone.now()
+    ).delete()
+    logger.info(<span class="str">f'Cleaned {deleted} expired tokens'</span>)
+    <span class="kw">return</span> deleted</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CHANNELS + WEBSOCKET -->
+  <div class="tp" id="tp-ws">
+    <div class="code-grid">
+
+      <div class="cc cc-c">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">config/asgi.py — ASGI + Channels</span><span class="cs">asgi</span></div>
+<pre><span class="imp">import</span> os
+<span class="imp">from</span> django.core.asgi <span class="imp">import</span> get_asgi_application
+<span class="imp">from</span> channels.routing <span class="imp">import</span> ProtocolTypeRouter, URLRouter
+<span class="imp">from</span> channels.auth <span class="imp">import</span> AuthMiddlewareStack
+<span class="imp">from</span> channels.security.websocket <span class="imp">import</span> AllowedHostsOriginValidator
+<span class="imp">from</span> apps.chat.routing <span class="imp">import</span> websocket_urlpatterns
+
+os.environ.setdefault(<span class="str">'DJANGO_SETTINGS_MODULE'</span>, <span class="str">'config.settings.production'</span>)
+
+django_asgi = get_asgi_application()
+
+application = <span class="cls">ProtocolTypeRouter</span>({
+    <span class="str">'http'</span>:      django_asgi,
+    <span class="str">'websocket'</span>: <span class="cls">AllowedHostsOriginValidator</span>(
+        <span class="cls">AuthMiddlewareStack</span>(           <span class="cmt"># attaches request.user</span>
+            <span class="cls">URLRouter</span>(websocket_urlpatterns)
+        )
+    ),
+})</pre>
+      </div>
+
+      <div class="cc cc-c">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">chat/consumers.py — WebSocket consumer</span><span class="cs">channels</span></div>
+<pre><span class="imp">import</span> json
+<span class="imp">from</span> channels.generic.websocket <span class="imp">import</span> AsyncWebsocketConsumer
+<span class="imp">from</span> channels.db <span class="imp">import</span> database_sync_to_async
+<span class="imp">from</span> apps.common.exceptions <span class="imp">import</span> AuthenticationError
+<span class="imp">from</span> infrastructure.token <span class="imp">import</span> TokenService
+
+
+<span class="kw">class</span> <span class="cls">ChatConsumer</span>(<span class="cls">AsyncWebsocketConsumer</span>):
+
+    <span class="kw">async def</span> <span class="fn">connect</span>(self):
+        <span class="cmt"># Validate JWT from query string</span>
+        token = self.scope[<span class="str">'query_string'</span>].decode().split(<span class="str">'token='</span>)[-1]
+        <span class="kw">try</span>:
+            payload   = <span class="cls">TokenService</span>.decode(token)
+            self.user_id = payload[<span class="str">'sub'</span>]
+        <span class="kw">except Exception</span>:
+            <span class="kw">await</span> self.close(code=<span class="num">4001</span>)
+            <span class="kw">return</span>
+
+        self.room = self.scope[<span class="str">'url_route'</span>][<span class="str">'kwargs'</span>][<span class="str">'room_name'</span>]
+        self.group = <span class="str">f'chat_{self.room}'</span>
+
+        <span class="kw">await</span> self.channel_layer.group_add(self.group, self.channel_name)
+        <span class="kw">await</span> self.accept()
+
+    <span class="kw">async def</span> <span class="fn">disconnect</span>(self, code):
+        <span class="kw">await</span> self.channel_layer.group_discard(self.group, self.channel_name)
+
+    <span class="kw">async def</span> <span class="fn">receive</span>(self, text_data):
+        data = json.loads(text_data)
+        <span class="kw">await</span> self.channel_layer.group_send(
+            self.group, {
+                <span class="str">'type'</span>:    <span class="str">'chat.message'</span>,
+                <span class="str">'message'</span>: data.get(<span class="str">'message'</span>),
+                <span class="str">'from'</span>:    self.user_id,
+            }
+        )
+
+    <span class="kw">async def</span> <span class="fn">chat_message</span>(self, event):
+        <span class="kw">await</span> self.send(text_data=json.dumps({
+            <span class="str">'message'</span>: event[<span class="str">'message'</span>],
+            <span class="str">'from'</span>:    event[<span class="str">'from'</span>],
+        }))</pre>
+      </div>
+
+      <div class="cc cc-c">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">chat/routing.py + settings</span><span class="cs">channels</span></div>
+<pre><span class="imp">from</span> django.urls <span class="imp">import</span> re_path
+<span class="imp">from</span> . <span class="imp">import</span> consumers
+
+websocket_urlpatterns = [
+    re_path(<span class="str">r'ws/chat/(?P&lt;room_name&gt;\w+)/$'</span>, consumers.<span class="cls">ChatConsumer</span>.as_asgi()),
+]
+
+<span class="cmt"># settings/base.py</span>
+<span class="cls">CHANNEL_LAYERS</span> = {
+    <span class="str">'default'</span>: {
+        <span class="str">'BACKEND'</span>: <span class="str">'channels_redis.core.RedisChannelLayer'</span>,
+        <span class="str">'CONFIG'</span>:  {
+            <span class="str">'hosts'</span>: [env(<span class="str">'REDIS_URL'</span>)],
+            <span class="str">'capacity'</span>:     <span class="num">1500</span>,
+            <span class="str">'expiry'</span>:       <span class="num">10</span>,
+        },
+    },
+}
+
+<span class="cmt"># Pushing events from a service/task to WebSocket clients:</span>
+<span class="imp">from</span> asgiref.sync <span class="imp">import</span> async_to_sync
+<span class="imp">from</span> channels.layers <span class="imp">import</span> get_channel_layer
+
+channel_layer = get_channel_layer()
+async_to_sync(channel_layer.group_send)(
+    <span class="str">f'chat_{room}'</span>, {
+        <span class="str">'type'</span>:    <span class="str">'chat.message'</span>,
+        <span class="str">'message'</span>: text,
+        <span class="str">'from'</span>:    <span class="str">'system'</span>,
+    }
+)</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SETTINGS + INFRA -->
+  <div class="tp" id="tp-infra">
+    <div class="code-grid">
+
+      <div class="cc cc-v">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">settings/base.py — structured config</span><span class="cs">infra</span></div>
+<pre><span class="imp">import</span> environ
+
+env = environ.<span class="cls">Env</span>(
+    <span class="cls">DEBUG</span>=(bool, <span class="kw">False</span>),
+    <span class="cls">ALLOWED_HOSTS</span>=(list, []),
+)
+environ.<span class="cls">Env</span>.read_env()  <span class="cmt"># reads .env file</span>
+
+<span class="cls">SECRET_KEY</span>    = env(<span class="str">'SECRET_KEY'</span>)
+<span class="cls">DEBUG</span>         = env(<span class="str">'DEBUG'</span>)
+<span class="cls">ALLOWED_HOSTS</span> = env(<span class="str">'ALLOWED_HOSTS'</span>)
+
+<span class="cls">INSTALLED_APPS</span> = [
+    <span class="str">'django.contrib.admin'</span>,
+    <span class="str">'django.contrib.auth'</span>,
+    <span class="str">'rest_framework'</span>,
+    <span class="str">'corsheaders'</span>,
+    <span class="str">'channels'</span>,
+    <span class="str">'django_filters'</span>,
+    <span class="str">'apps.common'</span>,
+    <span class="str">'apps.users'</span>,
+    <span class="str">'apps.chat'</span>,
+]
+
+<span class="cls">DATABASES</span> = {<span class="str">'default'</span>: env.db(<span class="str">'DATABASE_URL'</span>)}
+<span class="cls">CACHES</span>    = {<span class="str">'default'</span>: env.cache(<span class="str">'REDIS_URL'</span>)}
+
+<span class="cls">AUTH_USER_MODEL</span>  = <span class="str">'users.User'</span>
+<span class="cls">JWT_SECRET</span>       = env(<span class="str">'JWT_SECRET'</span>)
+<span class="cls">FIELD_ENCRYPTION_KEY</span> = env(<span class="str">'FIELD_ENCRYPTION_KEY'</span>)
+
+<span class="cls">REST_FRAMEWORK</span> = {
+    <span class="str">'DEFAULT_AUTHENTICATION_CLASSES'</span>: [
+        <span class="str">'apps.common.authentication.JWTAuthentication'</span>,
+    ],
+    <span class="str">'DEFAULT_PERMISSION_CLASSES'</span>: [
+        <span class="str">'rest_framework.permissions.IsAuthenticated'</span>,
+    ],
+    <span class="str">'DEFAULT_PAGINATION_CLASS'</span>:
+        <span class="str">'apps.common.pagination.PageNumberPagination'</span>,
+    <span class="str">'PAGE_SIZE'</span>: <span class="num">20</span>,
+    <span class="str">'EXCEPTION_HANDLER'</span>:
+        <span class="str">'apps.common.exceptions.custom_exception_handler'</span>,
+}</pre>
+      </div>
+
+      <div class="cc cc-v">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">infrastructure/cache.py — decorator</span><span class="cs">infra</span></div>
+<pre><span class="imp">import</span> functools, json
+<span class="imp">from</span> django.core.cache <span class="imp">import</span> cache
+
+
+<span class="kw">def</span> <span class="fn">cache_result</span>(ttl: <span class="typ">int</span> = <span class="num">300</span>, key_prefix: <span class="typ">str</span> = <span class="str">''</span>):
+    <span class="str">"""Decorator that caches the return value in Redis."""</span>
+    <span class="kw">def</span> <span class="fn">decorator</span>(func):
+        <span class="dec">@functools.wraps</span>(func)
+        <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+            key = <span class="str">f'{key_prefix}:{":".join(str(a) for a in args)}'</span>
+            hit = cache.get(key)
+            <span class="kw">if</span> hit <span class="kw">is not None</span>:
+                <span class="kw">return</span> hit
+            result = func(*args, **kwargs)
+            cache.set(key, result, timeout=ttl)
+            <span class="kw">return</span> result
+        <span class="kw">return</span> wrapper
+    <span class="kw">return</span> decorator
+
+
+<span class="kw">def</span> <span class="fn">invalidate_cache</span>(key_prefix: <span class="typ">str</span>, *args) -> <span class="kw">None</span>:
+    key = <span class="str">f'{key_prefix}:{":".join(str(a) for a in args)}'</span>
+    cache.delete(key)
+
+<span class="cmt"># Usage in selectors.py:</span>
+<span class="dec">@cache_result</span>(ttl=<span class="num">300</span>, key_prefix=<span class="str">'user'</span>)
+<span class="kw">def</span> <span class="fn">by_id</span>(user_id: str) -> <span class="cls">User</span> | <span class="kw">None</span>:
+    <span class="kw">return</span> <span class="cls">User</span>.objects.filter(id=user_id).first()</pre>
+      </div>
+
+      <div class="cc cc-v">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">tests/factories.py — factory_boy</span><span class="cs">test</span></div>
+<pre><span class="imp">import</span> factory
+<span class="imp">from</span> factory.django <span class="imp">import</span> DjangoModelFactory
+<span class="imp">from</span> apps.users.models <span class="imp">import</span> User
+
+
+<span class="kw">class</span> <span class="cls">UserFactory</span>(<span class="cls">DjangoModelFactory</span>):
+    <span class="kw">class</span> <span class="cls">Meta</span>:
+        model = <span class="cls">User</span>
+
+    email = factory.<span class="cls">Sequence</span>(<span class="kw">lambda</span> n: <span class="str">f'user{n}@example.com'</span>)
+    name  = factory.<span class="cls">Faker</span>(<span class="str">'name'</span>)
+    role  = <span class="str">'user'</span>
+
+    <span class="dec">@classmethod</span>
+    <span class="kw">def</span> <span class="fn">_create</span>(cls, model_class, *args, **kwargs):
+        <span class="kw">return</span> model_class.objects.create_user(
+            password=<span class="str">'testpassword123'</span>, **kwargs
+        )
+
+
+<span class="kw">class</span> <span class="cls">AdminFactory</span>(<span class="cls">UserFactory</span>):
+    role     = <span class="str">'admin'</span>
+    is_staff = <span class="kw">True</span>
+
+
+<span class="cmt"># test_services.py — fast, no HTTP</span>
+<span class="kw">def</span> <span class="fn">test_register_creates_user</span>(db):
+    user = <span class="cls">UserService</span>.register(
+        email=<span class="str">'new@example.com'</span>, name=<span class="str">'New'</span>, password=<span class="str">'pass1234!'</span>
+    )
+    <span class="kw">assert</span> user.email == <span class="str">'new@example.com'</span>
+    <span class="kw">assert</span> user.check_password(<span class="str">'pass1234!'</span>)</pre>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+<div class="dvdr"></div>
+
+<!-- DATA FLOWS -->
+<section class="section reveal" id="flows">
+  <p class="sec-label">04 — Data Flows</p>
+  <h2 class="sec-title">Every <span class="gt1">Request</span> Traced</h2>
+  <p class="sec-intro">From HTTP wire to PostgreSQL row — every middleware, permission check, and cache hit in order.</p>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Authenticated REST request</p>
+    <div class="flow-row">
+      <div class="fb fb-v">HTTP request</div><div class="fa">→</div>
+      <div class="fb fb-v">Django middleware</div><div class="fa">→</div>
+      <div class="fb fb-v">JWTAuthentication</div><div class="fa">→</div>
+      <div class="fb fb-v">DRF permission check</div><div class="fa">→</div>
+      <div class="fb fb-v">Throttle check</div><div class="fa">→</div>
+      <div class="fb fb-v">ViewSet action</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">View → Service → Selector → DB</p>
+    <div class="flow-row">
+      <div class="fb fb-v">View validates input</div><div class="fa">→</div>
+      <div class="fb fb-s">Service.method()</div><div class="fa">→</div>
+      <div class="fb fb-m">Selector.query()</div><div class="fa">→</div>
+      <div class="fb fb-m">Redis cache check</div><div class="fa">→ miss →</div>
+      <div class="fb fb-r">Django ORM → PG</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Registration → Celery task</p>
+    <div class="flow-row">
+      <div class="fb fb-v">POST /auth/register/</div><div class="fa">→</div>
+      <div class="fb fb-s">UserService.register()</div><div class="fa">→</div>
+      <div class="fb fb-r">User.objects.create_user()</div><div class="fa">→</div>
+      <div class="fb fb-c">send_welcome_email.delay()</div><div class="fa">→</div>
+      <div class="fb fb-c">Celery worker → email</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">WebSocket message broadcast</p>
+    <div class="flow-row">
+      <div class="fb fb-c">ws.receive()</div><div class="fa">→</div>
+      <div class="fb fb-c">JWT validate</div><div class="fa">→</div>
+      <div class="fb fb-c">channel_layer.group_send()</div><div class="fa">→</div>
+      <div class="fb fb-c">Redis pub/sub</div><div class="fa">→</div>
+      <div class="fb fb-c">all group consumers → ws.send()</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Service → push WS event (e.g. from Celery task)</p>
+    <div class="flow-row">
+      <div class="fb fb-c">Celery task completes</div><div class="fa">→</div>
+      <div class="fb fb-c">async_to_sync(channel_layer.group_send)</div><div class="fa">→</div>
+      <div class="fb fb-c">Redis → consumer → client WS</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Error cascade — AppException → DRF response</p>
+    <div class="flow-row">
+      <div class="fb fb-s">Service raises ConflictError</div><div class="fa">→</div>
+      <div class="fb fb-v">DRF exception handler</div><div class="fa">→</div>
+      <div class="fb fb-v">custom_exception_handler()</div><div class="fa">→</div>
+      <div class="fb fb-v">{ detail, code } JSON 409</div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- FEATURES -->
+<section class="section reveal" id="features">
+  <p class="sec-label">05 — Feature Matrix</p>
+  <h2 class="sec-title">Every Requirement <span class="gt2">Covered</span></h2>
+  <p class="sec-intro">All requirements mapped to Django's idiomatic solutions — using the framework's batteries where they shine, and bypassing them where they don't.</p>
+
+  <div class="feat-grid">
+    <div class="fc" style="border-color:rgba(134,187,100,.2)">
+      <div class="fc-icon" style="background:rgba(134,187,100,.1)">🏗️</div>
+      <div class="fc-title" style="color:var(--a1)">Service layer pattern</div>
+      <div class="fc-desc">Plain Python classes with @staticmethod or @classmethod methods. No Django HTTP imports. All business logic here — validates business rules, orchestrates repositories, dispatches tasks.</div>
+      <code class="fc-dep">Pure Python — zero deps</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(96,184,224,.2)">
+      <div class="fc-icon" style="background:rgba(96,184,224,.1)">🔍</div>
+      <div class="fc-title" style="color:var(--a4)">Selectors / repository pattern</div>
+      <div class="fc-desc">All ORM queries isolated in selector classes. Services never write querysets. Selectors are pure read functions — no saves, no side effects. Enables easy mocking in unit tests.</div>
+      <code class="fc-dep">Django ORM — built-in</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(224,128,96,.2)">
+      <div class="fc-icon" style="background:rgba(224,128,96,.1)">🔐</div>
+      <div class="fc-title" style="color:var(--a5)">JWT authentication</div>
+      <div class="fc-desc">Custom DRF authentication backend — no SimpleJWT dependency. Access token (15m) + refresh token (7d). JWTAuthentication class reads Authorization header, decodes, fetches user via selector.</div>
+      <code class="fc-dep">PyJWT ^2.x</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(240,192,96,.2)">
+      <div class="fc-icon" style="background:rgba(240,192,96,.1)">🛡️</div>
+      <div class="fc-title" style="color:var(--a3)">RBAC permissions</div>
+      <div class="fc-desc">Custom DRF BasePermission classes — IsAdminUser, IsOwnerOrAdmin. get_permissions() on ViewSets returns different classes per action. Object-level permissions for row-level security.</div>
+      <code class="fc-dep">djangorestframework — built-in</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(176,144,224,.2)">
+      <div class="fc-icon" style="background:rgba(176,144,224,.1)">🔒</div>
+      <div class="fc-title" style="color:var(--a6)">Field-level AES encryption</div>
+      <div class="fc-desc">Custom Django model field (EncryptedCharField) using Fernet (AES-128-CBC + HMAC-SHA256). Encrypts on get_prep_value, decrypts on from_db_value. Transparent to the rest of the app.</div>
+      <code class="fc-dep">cryptography ^42.x</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(134,187,100,.2)">
+      <div class="fc-icon" style="background:rgba(134,187,100,.1)">🔑</div>
+      <div class="fc-title" style="color:var(--a1)">Argon2 password hashing</div>
+      <div class="fc-desc">PASSWORD_HASHERS setting puts Argon2 first — Django uses it automatically for all set_password() calls. Zero code changes — just add django[argon2] to requirements and update settings.</div>
+      <code class="fc-dep">django[argon2]</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(240,192,96,.2)">
+      <div class="fc-icon" style="background:rgba(240,192,96,.1)">⏱️</div>
+      <div class="fc-title" style="color:var(--a3)">Rate limiting / throttling</div>
+      <div class="fc-desc">DRF AnonRateThrottle and UserRateThrottle with Redis backend via django-redis. Custom LoginThrottle at 10/min for auth endpoints. BurstUserThrottle (60/min) + SustainedUserThrottle (1000/day).</div>
+      <code class="fc-dep">djangorestframework · django-redis</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(176,144,224,.2)">
+      <div class="fc-icon" style="background:rgba(176,144,224,.1)">⚡</div>
+      <div class="fc-title" style="color:var(--a6)">Celery async tasks</div>
+      <div class="fc-desc">@shared_task with bind=True for retries. autoretry_for=(Exception,) + max_retries=3. acks_late=True for at-least-once delivery. CELERY_TASK_ALWAYS_EAGER=True in tests for synchronous execution.</div>
+      <code class="fc-dep">celery ^5.x · redis</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(176,144,224,.2)">
+      <div class="fc-icon" style="background:rgba(176,144,224,.1)">🔌</div>
+      <div class="fc-title" style="color:var(--a6)">WebSocket via Channels</div>
+      <div class="fc-desc">Django Channels with AsyncWebsocketConsumer. Redis channel layer for multi-process pub/sub. JWT validation in connect(). group_send() for broadcasting. async_to_sync() to push from sync code (Celery tasks).</div>
+      <code class="fc-dep">channels ^4.x · channels-redis</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(96,184,224,.2)">
+      <div class="fc-icon" style="background:rgba(96,184,224,.1)">💾</div>
+      <div class="fc-title" style="color:var(--a4)">Redis cache layer</div>
+      <div class="fc-desc">django-redis as CACHE backend. @cache_result decorator on selectors for transparent caching. invalidate_cache() called in services after mutations. Cache keys namespaced by resource type.</div>
+      <code class="fc-dep">django-redis ^5.x</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(134,187,100,.2)">
+      <div class="fc-icon" style="background:rgba(134,187,100,.1)">📋</div>
+      <div class="fc-title" style="color:var(--a1)">DRF Serializers + filtering</div>
+      <div class="fc-desc">ModelSerializer for output. Separate input serializers (no ModelSerializer) for write endpoints. django-filter for query param filtering on list endpoints. Cursor pagination for large datasets.</div>
+      <code class="fc-dep">djangorestframework · django-filter</code>
+    </div>
+
+    <div class="fc" style="border-color:rgba(240,192,96,.2)">
+      <div class="fc-icon" style="background:rgba(240,192,96,.1)">🧪</div>
+      <div class="fc-title" style="color:var(--a3)">Testing — pytest-django</div>
+      <div class="fc-desc">pytest-django with @pytest.mark.django_db. factory_boy for model factories — zero fixtures. APIClient for view tests. Service tests call services directly — no HTTP overhead. Celery eager mode.</div>
+      <code class="fc-dep">pytest-django · factory-boy</code>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- PACKAGES -->
+<section class="section reveal" id="packages">
+  <p class="sec-label">06 — Requirements</p>
+  <h2 class="sec-title">The <span class="gt1">pip</span> Registry</h2>
+  <p class="sec-intro">Proven, stable, actively maintained. These are the packages that power Django at scale — not trendy alternatives.</p>
+
+  <div class="warn">
+    <strong>requirements/ structure:</strong> Split into <code style="font-family:var(--fc);font-size:12px">base.txt</code>, <code style="font-family:var(--fc);font-size:12px">development.txt</code>, and <code style="font-family:var(--fc);font-size:12px">production.txt</code>. Development extends base, production extends base. Never mix dev tools into production images.
+  </div>
+
+  <div class="pkg-wrap">
+    <table>
+      <thead>
+        <tr><th>Package</th><th>Version</th><th>Purpose</th><th>Layer</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="pn">Django</code></td><td class="pv">^5.1</td><td class="pd">Core framework — ORM, admin, auth, migrations, signals, middleware</td><td><span class="lp t-mod">core</span></td></tr>
+        <tr><td><code class="pn">djangorestframework</code></td><td class="pv">^3.15</td><td class="pd">DRF — ViewSets, serializers, authentication, permissions, throttling</td><td><span class="lp t-view">view</span></td></tr>
+        <tr><td><code class="pn">django-cors-headers</code></td><td class="pv">^4.4</td><td class="pd">CORS headers middleware — origin allowlist, credentials, preflight</td><td><span class="lp t-view">view</span></td></tr>
+        <tr><td><code class="pn">django-filter</code></td><td class="pv">^24.x</td><td class="pd">Query param filtering for DRF list endpoints — FilterSet + DjangoFilterBackend</td><td><span class="lp t-view">view</span></td></tr>
+        <tr><td><code class="pn">PyJWT</code></td><td class="pv">^2.9</td><td class="pd">JWT encode/decode — used by custom JWTAuthentication backend</td><td><span class="lp t-ser">auth</span></td></tr>
+        <tr><td><code class="pn">cryptography</code></td><td class="pv">^42.x</td><td class="pd">Fernet (AES-128-CBC + HMAC-SHA256) for EncryptedCharField model field</td><td><span class="lp t-ser">security</span></td></tr>
+        <tr><td><code class="pn">django[argon2]</code></td><td class="pv">—</td><td class="pd">Argon2id password hasher — add to PASSWORD_HASHERS as first entry</td><td><span class="lp t-ser">security</span></td></tr>
+        <tr><td><code class="pn">psycopg[binary]</code></td><td class="pv">^3.2</td><td class="pd">PostgreSQL driver (psycopg3) — async-capable, faster than psycopg2</td><td><span class="lp t-mod">data</span></td></tr>
+        <tr><td><code class="pn">django-redis</code></td><td class="pv">^5.4</td><td class="pd">Redis as Django CACHE backend — used for throttling, session, app caching</td><td><span class="lp t-mod">data</span></td></tr>
+        <tr><td><code class="pn">celery</code></td><td class="pv">^5.4</td><td class="pd">Distributed task queue — background jobs, scheduled tasks via beat</td><td><span class="lp t-cel">async</span></td></tr>
+        <tr><td><code class="pn">django-celery-beat</code></td><td class="pv">^2.7</td><td class="pd">Celery Beat with database-backed schedule — manage periodic tasks via admin</td><td><span class="lp t-cel">async</span></td></tr>
+        <tr><td><code class="pn">channels</code></td><td class="pv">^4.1</td><td class="pd">Django Channels — ASGI, WebSocket consumers, AuthMiddlewareStack</td><td><span class="lp t-cel">ws</span></td></tr>
+        <tr><td><code class="pn">channels-redis</code></td><td class="pv">^4.2</td><td class="pd">Redis channel layer for multi-process WebSocket pub/sub</td><td><span class="lp t-cel">ws</span></td></tr>
+        <tr><td><code class="pn">django-environ</code></td><td class="pv">^0.11</td><td class="pd">Typed env var parsing — env.db(), env.cache(), env.bool() with defaults</td><td><span class="lp t-svc">infra</span></td></tr>
+        <tr><td><code class="pn">structlog</code></td><td class="pv">^24.x</td><td class="pd">Structured JSON logging — key-value pairs, context binding, async-safe</td><td><span class="lp t-svc">infra</span></td></tr>
+        <tr><td><code class="pn">sentry-sdk[django]</code></td><td class="pv">^2.x</td><td class="pd">Error tracking + performance monitoring — auto-instruments Django + Celery</td><td><span class="lp t-svc">infra</span></td></tr>
+        <tr><td><code class="pn">django-storages[s3]</code></td><td class="pv">^1.14</td><td class="pd">S3/GCS/Azure file storage backend — swap local media for cloud in production</td><td><span class="lp t-svc">infra</span></td></tr>
+        <tr><td><code class="pn">gunicorn</code></td><td class="pv">^22.x</td><td class="pd">WSGI server for HTTP traffic — behind Nginx in production</td><td><span class="lp t-svc">deploy</span></td></tr>
+        <tr><td><code class="pn">uvicorn[standard]</code></td><td class="pv">^0.30</td><td class="pd">ASGI server — required for Django Channels WebSocket support</td><td><span class="lp t-svc">deploy</span></td></tr>
+        <tr><td><code class="pn">pytest-django</code></td><td class="pv">^4.9</td><td class="pd">pytest plugin — @pytest.mark.django_db, settings fixture, rf (RequestFactory)</td><td><span class="lp t-tst">test</span></td></tr>
+        <tr><td><code class="pn">factory-boy</code></td><td class="pv">^3.3</td><td class="pd">Model factories — DjangoModelFactory, Sequence, Faker — replaces fixtures</td><td><span class="lp t-tst">test</span></td></tr>
+        <tr><td><code class="pn">coverage</code></td><td class="pv">^7.x</td><td class="pd">Coverage reporting — combine with pytest-cov for HTML reports</td><td><span class="lp t-tst">test</span></td></tr>
+        <tr><td><code class="pn">ruff</code></td><td class="pv">^0.6</td><td class="pd">Extremely fast Python linter + formatter — replaces flake8, isort, black</td><td><span class="lp t-tst">dev</span></td></tr>
+        <tr><td><code class="pn">mypy + django-stubs</code></td><td class="pv">^1.11</td><td class="pd">Static type checking with Django ORM awareness — catches model field mismatches</td><td><span class="lp t-tst">dev</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="ft-title">The <span class="gt1">batteries</span> are there. <em>Use them wisely.</em></div>
+  <p class="ft-sub">Django's power is that it makes the right thing easy. Your architecture is what makes the right thing obvious.</p>
+  <p class="ft-copy">Django · DRF · Celery · Channels — Backend Architecture Field Guide · Python 3.12 · 2025</p>
+</footer>
+
+<script>
+function st(id) {
+  document.querySelectorAll('.tp').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b => b.classList.remove('on'));
+  document.getElementById('tp-' + id).classList.add('on');
+  event.currentTarget.classList.add('on');
+}
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('vis'); io.unobserve(e.target); }
+  });
+}, { threshold: 0.06 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+const secs = document.querySelectorAll('section[id]');
+const links = document.querySelectorAll('.nav-links a');
+const nio = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.style.color = '');
+      const l = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+      if (l) l.style.color = 'var(--a1)';
+    }
+  });
+}, { threshold: 0.35 });
+secs.forEach(s => nio.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>iOS — Clean Architecture Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800;900&family=Azeret+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f0f2f7;--bg2:#e8eaf2;--bg3:#dde0ed;
+  --surf:#ffffff;--surf2:#f8f9fc;
+  --bord:rgba(0,0,0,0.07);--bord2:rgba(0,0,0,0.13);
+  --a1:#0071e3;--a2:#34aadc;--a3:#30d158;--a4:#ff375f;
+  --a5:#ff9f0a;--a6:#bf5af2;--a7:#64d2ff;--a8:#30d158;
+  --text:#1d1d1f;--text2:#6e6e73;--text3:#aeaeb2;
+  --fh:'Outfit',sans-serif;--fb:'Cormorant Garamond',serif;--fc:'Azeret Mono',monospace;
+  --r:10px;--rl:18px;--rsm:6px;
+  --shadow:0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg:0 8px 40px rgba(0,0,0,0.12);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--fh);font-size:16px;line-height:1.7;
+  overflow-x:hidden;
+}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--a1);border-radius:2px}
+
+/* APPLE-STYLE NOISE TEXTURE */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse at 70% 0%,rgba(0,113,227,0.08) 0%,transparent 50%),
+    radial-gradient(ellipse at 10% 80%,rgba(52,170,220,0.06) 0%,transparent 45%),
+    radial-gradient(ellipse at 90% 90%,rgba(191,90,242,0.05) 0%,transparent 40%);
+  pointer-events:none;z-index:0;
+}
+
+/* NAV — Apple-style frosted glass */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:rgba(240,242,247,0.85);
+  backdrop-filter:blur(30px) saturate(180%);
+  -webkit-backdrop-filter:blur(30px) saturate(180%);
+  border-bottom:0.5px solid var(--bord2);
+  height:52px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 48px;
+}
+.nav-brand{display:flex;align-items:center;gap:10px}
+.nav-icon{
+  width:28px;height:28px;background:var(--a1);
+  border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:#fff;
+}
+.nav-logo{font-family:var(--fh);font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.nav-links{display:flex;gap:28px;list-style:none}
+.nav-links a{
+  font-family:var(--fh);font-size:12px;font-weight:500;
+  color:var(--text2);text-decoration:none;letter-spacing:-.01em;
+  transition:color .15s;
+}
+.nav-links a:hover{color:var(--a1)}
+
+/* HERO */
+.hero{
+  position:relative;min-height:100vh;
+  display:grid;grid-template-columns:1fr 1fr;
+  padding-top:52px;overflow:hidden;z-index:1;
+  align-items:center;
+}
+.hero-left{padding:60px 60px 60px 10vw}
+.hero-right{
+  padding:60px 10vw 60px 40px;
+  display:flex;flex-direction:column;gap:8px;
+}
+
+.hero-eyebrow{
+  font-family:var(--fh);font-size:11px;font-weight:600;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--a1);
+  margin-bottom:18px;
+  opacity:0;animation:up .6s .1s forwards;
+}
+
+.hero-title{
+  font-family:var(--fh);
+  font-size:clamp(44px,5.5vw,80px);
+  font-weight:800;line-height:.95;letter-spacing:-.04em;
+  margin-bottom:22px;
+  opacity:0;animation:up .7s .22s forwards;
+}
+.ht1{display:block;color:var(--text)}
+.ht2{display:block;background:linear-gradient(135deg,var(--a1) 0%,var(--a6) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.ht3{
+  display:block;font-size:.3em;font-weight:400;
+  letter-spacing:.06em;color:var(--text2);margin-top:10px;
+  -webkit-text-fill-color:var(--text2);background:none;
+}
+
+.hero-desc{
+  font-family:var(--fb);font-style:italic;
+  font-size:19px;color:var(--text2);max-width:480px;
+  line-height:1.6;margin-bottom:32px;
+  opacity:0;animation:up .7s .35s forwards;
+}
+
+.hero-pills{
+  display:flex;flex-wrap:wrap;gap:7px;
+  opacity:0;animation:up .7s .48s forwards;
+}
+.pill{
+  font-family:var(--fh);font-size:10px;font-weight:600;
+  padding:5px 12px;border-radius:100px;border:1px solid;
+  letter-spacing:.02em;white-space:nowrap;
+}
+.p1{border-color:rgba(0,113,227,.4);color:var(--a1);background:rgba(0,113,227,.07)}
+.p2{border-color:rgba(52,170,220,.4);color:var(--a2);background:rgba(52,170,220,.07)}
+.p3{border-color:rgba(48,209,88,.4);color:var(--a3);background:rgba(48,209,88,.07)}
+.p4{border-color:rgba(255,55,95,.4);color:var(--a4);background:rgba(255,55,95,.06)}
+.p5{border-color:rgba(255,159,10,.4);color:var(--a5);background:rgba(255,159,10,.06)}
+.p6{border-color:rgba(191,90,242,.4);color:var(--a6);background:rgba(191,90,242,.07)}
+
+/* LAYER CARDS — right side */
+.layer-card{
+  background:var(--surf);
+  border:0.5px solid var(--bord2);
+  border-radius:var(--rl);
+  padding:16px 20px;
+  box-shadow:var(--shadow);
+  cursor:default;
+  transition:transform .2s,box-shadow .2s;
+  opacity:0;animation:slideLeft .6s forwards;
+  position:relative;overflow:hidden;
+}
+.layer-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;border-radius:3px 0 0 3px;
+}
+.layer-card:hover{transform:translateX(-4px);box-shadow:var(--shadow-lg)}
+.lc1{animation-delay:.3s}.lc1::before{background:var(--a6)}
+.lc2{animation-delay:.4s}.lc2::before{background:var(--a1)}
+.lc3{animation-delay:.5s}.lc3::before{background:var(--a3)}
+.lc4{animation-delay:.6s}.lc4::before{background:var(--a5)}
+.lc5{animation-delay:.7s}.lc5::before{background:var(--a2)}
+.lc6{animation-delay:.8s}.lc6::before{background:var(--a4)}
+
+.lc-head{display:flex;align-items:center;gap:10px;margin-bottom:5px}
+.lc-name{font-family:var(--fh);font-size:13px;font-weight:700;letter-spacing:-.01em}
+.lc-desc{font-family:var(--fh);font-size:11px;color:var(--text2);font-weight:400;line-height:1.5}
+.lc-badge{
+  margin-left:auto;font-family:var(--fh);font-size:9px;font-weight:700;
+  padding:3px 8px;border-radius:100px;letter-spacing:.04em;text-transform:uppercase;
+}
+.dep-line{
+  font-family:var(--fh);font-size:9px;color:var(--text3);
+  text-align:center;padding:1px 0;letter-spacing:.08em;text-transform:uppercase;
+}
+
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:translateX(0)}}
+
+/* MAIN */
+main{position:relative;z-index:1}
+.section{max-width:1160px;margin:0 auto;padding:80px 48px;border-top:0.5px solid var(--bord2)}
+.sec-label{
+  font-family:var(--fh);font-size:10px;font-weight:700;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--a1);
+  margin-bottom:10px;display:flex;align-items:center;gap:10px;
+}
+.sec-label::after{content:'';flex:1;height:0.5px;background:linear-gradient(90deg,var(--a1),transparent);opacity:.3}
+.sec-title{font-family:var(--fh);font-size:clamp(32px,4.5vw,54px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:14px}
+.sec-intro{font-family:var(--fb);font-style:italic;font-size:18px;color:var(--text2);max-width:620px;line-height:1.65;margin-bottom:40px}
+
+/* PRINCIPLE CARDS */
+.prin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.pc{
+  background:var(--surf);border:0.5px solid var(--bord2);
+  border-radius:var(--rl);padding:24px;
+  box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s;
+}
+.pc:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.pc-icon{font-size:26px;margin-bottom:12px;display:block}
+.pc-title{font-family:var(--fh);font-size:15px;font-weight:700;margin-bottom:6px;letter-spacing:-.01em}
+.pc-desc{font-family:var(--fh);font-size:12px;color:var(--text2);line-height:1.65;font-weight:400}
+
+/* FILE TREE */
+.tree-wrap{
+  background:var(--surf);border:0.5px solid var(--bord2);
+  border-radius:var(--rl);overflow:hidden;box-shadow:var(--shadow);
+}
+.tree-hdr{
+  background:var(--surf2);padding:12px 18px;
+  display:flex;align-items:center;gap:7px;border-bottom:0.5px solid var(--bord);
+}
+.td{width:10px;height:10px;border-radius:50%}
+.td:nth-child(1){background:#ff5f57}.td:nth-child(2){background:#ffbd2e}.td:nth-child(3){background:#28c840}
+.tree-path{font-family:var(--fc);font-size:11px;color:var(--text2);margin-left:10px}
+.tree-body{padding:18px 20px;overflow-x:auto}
+.fr{display:flex;align-items:center;height:23px;border-radius:5px;padding:0 4px;transition:background .1s;cursor:default}
+.fr:hover{background:rgba(0,113,227,.06)}
+.fi{font-family:var(--fc);font-size:11px;margin-right:5px;flex-shrink:0}
+.fl{font-family:var(--fc);font-size:11.5px}
+.fl.d{color:var(--a1)}.fl.sw{color:var(--text)}.fl.cfg{color:var(--text2)}.fl.test{color:var(--a3)}
+.atag{
+  margin-left:8px;font-size:9px;padding:1px 6px;border-radius:4px;
+  font-weight:700;font-family:var(--fh);letter-spacing:.04em;text-transform:uppercase;
+  border:0.5px solid;white-space:nowrap;
+}
+.t-view{background:rgba(191,90,242,.08);color:var(--a6);border-color:rgba(191,90,242,.3)}
+.t-vm  {background:rgba(0,113,227,.08);color:var(--a1);border-color:rgba(0,113,227,.3)}
+.t-repo{background:rgba(48,209,88,.08);color:var(--a3);border-color:rgba(48,209,88,.3)}
+.t-svc {background:rgba(255,159,10,.08);color:var(--a5);border-color:rgba(255,159,10,.3)}
+.t-sec {background:rgba(255,55,95,.08);color:var(--a4);border-color:rgba(255,55,95,.3)}
+.t-tst {background:rgba(52,170,220,.08);color:var(--a2);border-color:rgba(52,170,220,.3)}
+
+/* CODE CARDS */
+.code-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.cc{
+  background:var(--surf);border:0.5px solid var(--bord2);
+  border-radius:var(--rl);overflow:hidden;box-shadow:var(--shadow);
+  transition:transform .2s,box-shadow .2s;position:relative;
+}
+.cc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity .2s}
+.cc:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.cc:hover::before{opacity:1}
+.cc-v::before{background:linear-gradient(90deg,var(--a6),transparent)}
+.cc-vm::before{background:linear-gradient(90deg,var(--a1),transparent)}
+.cc-r::before{background:linear-gradient(90deg,var(--a3),transparent)}
+.cc-s::before{background:linear-gradient(90deg,var(--a5),transparent)}
+.cc-n::before{background:linear-gradient(90deg,var(--a2),transparent)}
+.cc-sec::before{background:linear-gradient(90deg,var(--a4),transparent)}
+
+.cc-head{
+  background:var(--surf2);padding:11px 15px;
+  display:flex;align-items:center;gap:8px;border-bottom:0.5px solid var(--bord);
+}
+.cd{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ct{font-family:var(--fh);font-size:12px;font-weight:700;color:var(--text);letter-spacing:-.01em}
+.csub{font-family:var(--fh);font-size:9px;color:var(--text3);margin-left:auto;text-transform:uppercase;letter-spacing:.06em}
+
+pre{
+  padding:16px;font-family:var(--fc);font-size:11.5px;
+  line-height:1.85;overflow-x:auto;color:#1d1d1f;white-space:pre;background:transparent;
+}
+/* SWIFT SYNTAX — light theme */
+.kw{color:#a020f0}
+.cls{color:#0d52a2}
+.fn{color:#236e26}
+.str{color:#c04040}
+.dec{color:#6432a8}
+.cmt{color:#8b8b8b;font-style:italic}
+.typ{color:#1a6ba5}
+.num{color:#8e2f00}
+.imp{color:#a020f0}
+.ann{color:#6432a8}
+.prop{color:#0d52a2}
+
+/* TABS */
+.tab-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:22px}
+.tb{
+  font-family:var(--fh);font-size:10px;font-weight:700;
+  padding:7px 16px;border-radius:100px;
+  border:0.5px solid var(--bord2);background:var(--surf);
+  color:var(--text2);cursor:pointer;letter-spacing:.02em;
+  box-shadow:var(--shadow);transition:all .15s;
+}
+.tb:hover{color:var(--text);border-color:var(--bord2)}
+.tb.on{background:var(--a1);color:#fff;border-color:var(--a1);box-shadow:0 4px 16px rgba(0,113,227,.3)}
+.tp{display:none}.tp.on{display:block}
+
+/* FLOW */
+.flow-section{margin-bottom:24px}
+.flow-lbl{font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.flow-row{display:flex;align-items:center;overflow-x:auto;padding-bottom:6px;gap:0;flex-wrap:nowrap}
+.fb{
+  flex-shrink:0;padding:9px 14px;border-radius:10px;
+  border:0.5px solid;
+  font-family:var(--fh);font-size:10px;font-weight:700;
+  text-align:center;white-space:nowrap;min-width:80px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+.fa{flex-shrink:0;color:var(--text3);padding:0 6px;font-size:13px}
+.fb-v{background:rgba(191,90,242,.08);border-color:rgba(191,90,242,.35);color:var(--a6)}
+.fb-vm{background:rgba(0,113,227,.07);border-color:rgba(0,113,227,.3);color:var(--a1)}
+.fb-r{background:rgba(48,209,88,.07);border-color:rgba(48,209,88,.3);color:var(--a3)}
+.fb-s{background:rgba(255,159,10,.07);border-color:rgba(255,159,10,.3);color:var(--a5)}
+.fb-n{background:rgba(52,170,220,.07);border-color:rgba(52,170,220,.3);color:var(--a2)}
+.fb-sec{background:rgba(255,55,95,.07);border-color:rgba(255,55,95,.3);color:var(--a4)}
+
+/* FEATURE CARDS */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}
+.fc{
+  background:var(--surf);border:0.5px solid var(--bord2);
+  border-radius:var(--rl);padding:22px;
+  box-shadow:var(--shadow);transition:transform .18s,box-shadow .18s;
+}
+.fc:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.fc-icon{font-size:22px;margin-bottom:12px;display:block}
+.fc-title{font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:6px;letter-spacing:-.01em}
+.fc-desc{font-family:var(--fh);font-size:11px;color:var(--text2);line-height:1.65;margin-bottom:10px;font-weight:400}
+.fc-dep{font-family:var(--fc);font-size:10px;color:var(--text2);background:var(--surf2);border:0.5px solid var(--bord2);padding:3px 8px;border-radius:5px;display:inline-block;margin:2px 2px 0 0}
+
+/* PACKAGES TABLE */
+.pkg-wrap{background:var(--surf);border:0.5px solid var(--bord2);border-radius:var(--rl);overflow:hidden;overflow-x:auto;box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:11px 14px;font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);border-bottom:0.5px solid var(--bord)}
+td{padding:11px 14px;border-bottom:0.5px solid var(--bord);font-family:var(--fh);font-size:12px;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,113,227,.03)}
+.pn{font-family:var(--fc);font-size:11px;color:var(--a1)}
+.pv{font-family:var(--fc);font-size:10px;color:var(--text3)}
+.pd{color:var(--text2);font-size:11px}
+.lp{font-size:9px;padding:2px 8px;border-radius:100px;font-weight:700;font-family:var(--fh);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;border:0.5px solid}
+
+/* CALLOUTS */
+.note{background:rgba(0,113,227,.05);border:0.5px solid rgba(0,113,227,.2);border-left:3px solid var(--a1);border-radius:0 10px 10px 0;padding:13px 17px;font-family:var(--fh);font-size:12px;color:var(--text2);margin:18px 0;line-height:1.65}
+.note strong{color:var(--a1);font-weight:700}
+.warn{background:rgba(255,159,10,.05);border:0.5px solid rgba(255,159,10,.2);border-left:3px solid var(--a5);border-radius:0 10px 10px 0;padding:13px 17px;font-family:var(--fh);font-size:12px;color:var(--text2);margin:18px 0;line-height:1.65}
+.warn strong{color:var(--a5);font-weight:700}
+
+.dvdr{height:0.5px;background:linear-gradient(90deg,transparent,var(--bord2),transparent)}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .65s ease,transform .65s ease}
+.reveal.vis{opacity:1;transform:translateY(0)}
+.gt1{background:linear-gradient(135deg,var(--a1),var(--a6));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gt2{background:linear-gradient(135deg,var(--a3),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gt3{background:linear-gradient(135deg,var(--a5),var(--a4));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+footer{position:relative;z-index:1;text-align:center;padding:60px 48px;border-top:0.5px solid var(--bord2)}
+.ft-title{font-family:var(--fh);font-size:clamp(28px,5vw,56px);font-weight:800;letter-spacing:-.04em;margin-bottom:10px}
+.ft-sub{font-family:var(--fb);font-style:italic;color:var(--text2);font-size:17px;margin-bottom:28px}
+.ft-copy{font-family:var(--fh);font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
+
+@media(max-width:900px){
+  nav{padding:0 16px}.nav-links{display:none}
+  .hero{grid-template-columns:1fr}
+  .hero-left{padding:80px 20px 40px}
+  .hero-right{padding:20px 20px 60px}
+  .section{padding:56px 20px}
+  .code-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div class="nav-icon">📱</div>
+    <span class="nav-logo">iOS Architecture</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#layers">Layers</a></li>
+    <li><a href="#structure">Structure</a></li>
+    <li><a href="#patterns">Patterns</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#flows">Flows</a></li>
+    <li><a href="#packages">SPM</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <p class="hero-eyebrow">iOS Engineering · Swift · Apple Platform</p>
+    <h1 class="hero-title">
+      <span class="ht1">iOS Clean</span>
+      <span class="ht2">Architecture</span>
+      <span class="ht3">SwiftUI · TCA · async/await · SwiftData</span>
+    </h1>
+    <p class="hero-desc">The definitive field guide for building scalable, testable, and delightful iOS applications — from Clean Architecture principles to Apple-idiomatic implementation.</p>
+    <div class="hero-pills">
+      <span class="pill p6">TCA / MVVM</span>
+      <span class="pill p1">SwiftUI</span>
+      <span class="pill p2">async/await</span>
+      <span class="pill p3">SwiftData</span>
+      <span class="pill p4">Keychain</span>
+      <span class="pill p5">CryptoKit</span>
+      <span class="pill p6">Combine</span>
+      <span class="pill p1">URLSession</span>
+      <span class="pill p2">SFSpeechRecognizer</span>
+      <span class="pill p3">AVSpeechSynthesizer</span>
+      <span class="pill p4">Network.framework</span>
+      <span class="pill p5">Swift Package Manager</span>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="layer-card lc1">
+      <div class="lc-head">
+        <span style="font-size:16px">🖼️</span>
+        <div class="lc-name" style="color:var(--a6)">Presentation</div>
+        <span class="lc-badge" style="background:rgba(191,90,242,.1);color:var(--a6)">SwiftUI</span>
+      </div>
+      <div class="lc-desc">Views · ViewModels · Reducers · Navigation — no business logic</div>
+    </div>
+    <div class="dep-line">↓ observes state, dispatches actions ↓</div>
+    <div class="layer-card lc2">
+      <div class="lc-head">
+        <span style="font-size:16px">⚙️</span>
+        <div class="lc-name" style="color:var(--a1)">Domain</div>
+        <span class="lc-badge" style="background:rgba(0,113,227,.1);color:var(--a1)">Pure Swift</span>
+      </div>
+      <div class="lc-desc">Use Cases · Entities · Repository protocols — zero UIKit/SwiftUI imports</div>
+    </div>
+    <div class="dep-line">↓ calls protocol, data layer implements ↓</div>
+    <div class="layer-card lc3">
+      <div class="lc-head">
+        <span style="font-size:16px">💾</span>
+        <div class="lc-name" style="color:var(--a3)">Data</div>
+        <span class="lc-badge" style="background:rgba(48,209,88,.1);color:var(--a3)">I/O</span>
+      </div>
+      <div class="lc-desc">Repositories · URLSession · SwiftData · Keychain · DTOs + mappers</div>
+    </div>
+    <div class="dep-line">↓ wired by ↓</div>
+    <div class="layer-card lc4">
+      <div class="lc-head">
+        <span style="font-size:16px">🔧</span>
+        <div class="lc-name" style="color:var(--a5)">Infrastructure</div>
+        <span class="lc-badge" style="background:rgba(255,159,10,.1);color:var(--a5)">Core</span>
+      </div>
+      <div class="lc-desc">DI container · Network client · CryptoKit · Logging · Config</div>
+    </div>
+    <div class="dep-line">↓ async services ↓</div>
+    <div class="layer-card lc5">
+      <div class="lc-head">
+        <span style="font-size:16px">🎙️</span>
+        <div class="lc-name" style="color:var(--a2)">Platform Services</div>
+        <span class="lc-badge" style="background:rgba(52,170,220,.1);color:var(--a2)">Apple SDK</span>
+      </div>
+      <div class="lc-desc">SFSpeechRecognizer · AVSpeechSynthesizer · Network.framework · Push</div>
+    </div>
+    <div class="dep-line">↓ cross-cutting ↓</div>
+    <div class="layer-card lc6">
+      <div class="lc-head">
+        <span style="font-size:16px">🔐</span>
+        <div class="lc-name" style="color:var(--a4)">Security</div>
+        <span class="lc-badge" style="background:rgba(255,55,95,.1);color:var(--a4)">AES·Keychain</span>
+      </div>
+      <div class="lc-desc">Keychain Services · CryptoKit AES-256-GCM · SSL pinning · Biometrics</div>
+    </div>
+  </div>
+</section>
+
+<main>
+
+<!-- LAYERS -->
+<section class="section reveal" id="layers">
+  <p class="sec-label">01 — Architecture</p>
+  <h2 class="sec-title">The <span class="gt1">Layer</span> Contract</h2>
+  <p class="sec-intro">Clean Architecture on iOS — dependencies point inward. SwiftUI views depend on ViewModels. ViewModels depend on Use Cases. Use Cases depend on Repository protocols. Concrete implementations live in the Data layer.</p>
+
+  <div class="note">
+    <strong>The iOS golden rule:</strong> The Domain layer has zero UIKit, SwiftUI, or framework imports. Use Cases are plain Swift classes with <code style="font-family:var(--fc);font-size:11px">async throws</code> functions. Repository interfaces are Swift protocols — any concrete implementation can be swapped. This makes every use case unit-testable without mocking the framework.
+  </div>
+
+  <div class="prin-grid reveal" style="margin-top:28px">
+    <div class="pc">
+      <span class="pc-icon">🖼️</span>
+      <div class="pc-title" style="color:var(--a6)">Presentation</div>
+      <div class="pc-desc">SwiftUI Views are pure functions of state. ViewModels (ObservableObject / @Observable) hold UI state and call use cases. TCA Reducers handle actions and produce state mutations. No direct networking or persistence calls.</div>
+    </div>
+    <div class="pc">
+      <span class="pc-icon">⚙️</span>
+      <div class="pc-title" style="color:var(--a1)">Domain</div>
+      <div class="pc-desc">Pure Swift. Use cases are single-responsibility callable structs. Entities are value types (structs). Repository protocols defined here — Data layer conforms to them. The heart of the app — testable without any mocks.</div>
+    </div>
+    <div class="pc">
+      <span class="pc-icon">💾</span>
+      <div class="pc-title" style="color:var(--a3)">Data</div>
+      <div class="pc-desc">Implements Repository protocols. URLSession for network. SwiftData / Core Data for persistence. Keychain for secure storage. DTOs map to domain entities via mappers. Offline-first via cache-then-network pattern.</div>
+    </div>
+    <div class="pc">
+      <span class="pc-icon">🔧</span>
+      <div class="pc-title" style="color:var(--a5)">Infrastructure</div>
+      <div class="pc-desc">Dependency injection via Swift's environment system or a lightweight container. NetworkClient factory with interceptors. AES-256-GCM encryption via CryptoKit. Structured logging via OSLog. Feature flags.</div>
+    </div>
+    <div class="pc">
+      <span class="pc-icon">🎙️</span>
+      <div class="pc-title" style="color:var(--a2)">Platform Services</div>
+      <div class="pc-desc">Apple framework wrappers — SFSpeechRecognizer for STT, AVSpeechSynthesizer for TTS, Network.framework for WebSocket, UserNotifications for push. Each wrapped in a protocol for testability.</div>
+    </div>
+    <div class="pc">
+      <span class="pc-icon">🔐</span>
+      <div class="pc-title" style="color:var(--a4)">Security</div>
+      <div class="pc-desc">Keychain for tokens, user data, biometric keys. CryptoKit for AES-256-GCM request/response encryption. SSL certificate pinning via URLSessionDelegate. LocalAuthentication for Face ID / Touch ID.</div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- FILE STRUCTURE -->
+<section class="section reveal" id="structure">
+  <p class="sec-label">02 — Project Structure</p>
+  <h2 class="sec-title">Feature-first <span class="gt2">Modules</span></h2>
+  <p class="sec-intro">Organised by feature, not by layer. Each feature owns its slice of presentation, domain, and data. Shared infrastructure lives at the root. Swift Package Manager manages all dependencies.</p>
+
+  <div class="tree-wrap reveal">
+    <div class="tree-hdr">
+      <span class="td"></span><span class="td"></span><span class="td"></span>
+      <span class="tree-path">MyApp.xcodeproj / Sources /</span>
+    </div>
+    <div class="tree-body">
+
+      <div class="fr"><span class="fi" style="width:0">▾</span><span class="fl d">Features/</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— one group per domain feature</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">Auth/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">Presentation/</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">LoginView.swift</span><span class="atag t-view">SwiftUI</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">LoginViewModel.swift</span><span class="atag t-vm">@Observable</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">AuthReducer.swift</span><span class="atag t-vm">TCA</span><span style="margin-left:6px;font-size:10px;color:var(--text2);font-family:var(--fc)">— if using TCA</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">Domain/</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">User.swift</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— domain entity (struct)</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">AuthRepositoryProtocol.swift</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— protocol</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">LoginUseCase.swift</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">LogoutUseCase.swift</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">Data/</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">AuthRepositoryImpl.swift</span><span class="atag t-repo">Repo</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">AuthRemoteDataSource.swift</span><span style="margin-left:6px;font-size:10px;color:var(--text2);font-family:var(--fc)">— URLSession</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">UserDTO.swift</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— Codable DTO + mapper</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">Tests/</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl test">LoginUseCaseTests.swift</span><span class="atag t-tst">Unit</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl test">LoginViewTests.swift</span><span class="atag t-tst">UI</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">Products/</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— same structure, every feature</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">Presentation/ Domain/ Data/ Tests/</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">Chat/</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— WebSocket realtime</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">ChatView.swift</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">ChatViewModel.swift</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">WebSocketService.swift</span><span class="atag t-svc">Network.fw</span></div>
+
+      <div style="height:8px"></div>
+      <div class="fr"><span class="fi" style="width:0">▾</span><span class="fl d">Core/</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— shared infrastructure</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">Network/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">NetworkClient.swift</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— URLSession wrapper</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">RequestInterceptor.swift</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— auth + retry</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">EncryptionInterceptor.swift</span><span class="atag t-sec">CryptoKit</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">SSLPinningDelegate.swift</span><span class="atag t-sec">Security</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">Security/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">KeychainService.swift</span><span class="atag t-sec">Keychain</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">CryptoService.swift</span><span class="atag t-sec">AES-256</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">BiometricService.swift</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— Face ID / Touch ID</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">Speech/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">SpeechToTextService.swift</span><span class="atag t-svc">SFSpeech</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">TextToSpeechService.swift</span><span class="atag t-svc">AVFoundation</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">DI/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">DependencyContainer.swift</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— or use TCA Dependencies</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">AppError.swift</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">Logger.swift</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— OSLog structured logging</span></div>
+
+      <div style="height:8px"></div>
+      <div class="fr"><span class="fi" style="width:0">▾</span><span class="fl d">App/</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">MyApp.swift</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— @main entry, DI bootstrap</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl sw">AppRouter.swift</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— NavigationStack coordinator</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl cfg">Package.swift</span><span style="margin-left:8px;font-size:10px;color:var(--text2);font-family:var(--fc)">— SPM dependencies</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- CODE PATTERNS -->
+<section class="section reveal" id="patterns">
+  <p class="sec-label">03 — Code Patterns</p>
+  <h2 class="sec-title">Swift <span class="gt3">Blueprints</span></h2>
+  <p class="sec-intro">Production-ready Swift 6. Every pattern is async/await-native, Sendable-safe, and compiles with strict concurrency enabled.</p>
+
+  <div class="tab-nav">
+    <button class="tb on" onclick="st('domain')">Domain Layer</button>
+    <button class="tb" onclick="st('viewmodel')">ViewModel + SwiftUI</button>
+    <button class="tb" onclick="st('network')">Network + Encryption</button>
+    <button class="tb" onclick="st('data')">Data + SwiftData</button>
+    <button class="tb" onclick="st('security')">Keychain + Crypto</button>
+    <button class="tb" onclick="st('speech')">Speech + TTS</button>
+    <button class="tb" onclick="st('ws')">WebSocket + Realtime</button>
+    <button class="tb" onclick="st('anim')">Animations + Transitions</button>
+  </div>
+
+  <!-- DOMAIN -->
+  <div class="tp on" id="tp-domain">
+    <div class="code-grid">
+
+      <div class="cc cc-vm">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">User.swift — domain entity</span><span class="csub">domain</span></div>
+<pre><span class="cmt">// Pure Swift — zero framework imports</span>
+<span class="kw">struct</span> <span class="cls">User</span>: <span class="typ">Identifiable</span>, <span class="typ">Equatable</span>, <span class="typ">Sendable</span> {
+    <span class="kw">let</span> id:        <span class="typ">String</span>
+    <span class="kw">let</span> email:     <span class="typ">String</span>
+    <span class="kw">var</span> name:      <span class="typ">String</span>
+    <span class="kw">var</span> role:      <span class="cls">UserRole</span>
+    <span class="kw">let</span> createdAt: <span class="typ">Date</span>
+}
+
+<span class="kw">enum</span> <span class="cls">UserRole</span>: <span class="typ">String</span>, <span class="typ">Codable</span>, <span class="typ">Sendable</span> {
+    <span class="kw">case</span> admin, user, moderator
+}
+
+<span class="cmt">// Repository protocol — domain owns the contract</span>
+<span class="kw">protocol</span> <span class="cls">AuthRepositoryProtocol</span>: <span class="typ">Sendable</span> {
+    <span class="kw">func</span> <span class="fn">login</span>(email: <span class="typ">String</span>, password: <span class="typ">String</span>)
+        <span class="kw">async throws</span> -> <span class="cls">AuthTokens</span>
+    <span class="kw">func</span> <span class="fn">logout</span>() <span class="kw">async throws</span>
+    <span class="kw">func</span> <span class="fn">getCurrentUser</span>() <span class="kw">async throws</span> -> <span class="cls">User</span>?
+    <span class="kw">func</span> <span class="fn">refreshTokens</span>() <span class="kw">async throws</span> -> <span class="cls">AuthTokens</span>
+}
+
+<span class="kw">struct</span> <span class="cls">AuthTokens</span>: <span class="typ">Sendable</span> {
+    <span class="kw">let</span> accessToken:  <span class="typ">String</span>
+    <span class="kw">let</span> refreshToken: <span class="typ">String</span>
+    <span class="kw">let</span> expiresAt:    <span class="typ">Date</span>
+}</pre>
+      </div>
+
+      <div class="cc cc-vm">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">LoginUseCase.swift — SOLID SRP</span><span class="csub">domain</span></div>
+<pre><span class="cmt">// Callable use case — one responsibility</span>
+<span class="kw">struct</span> <span class="cls">LoginUseCase</span>: <span class="typ">Sendable</span> {
+    <span class="kw">private let</span> authRepo:     <span class="kw">any</span> <span class="cls">AuthRepositoryProtocol</span>
+    <span class="kw">private let</span> keychainSvc:  <span class="cls">KeychainService</span>
+
+    <span class="kw">init</span>(
+        authRepo:    <span class="kw">any</span> <span class="cls">AuthRepositoryProtocol</span>,
+        keychainSvc: <span class="cls">KeychainService</span>,
+    ) {
+        <span class="kw">self</span>.authRepo    = authRepo
+        <span class="kw">self</span>.keychainSvc = keychainSvc
+    }
+
+    <span class="kw">func</span> <span class="fn">callAsFunction</span>(
+        email:    <span class="typ">String</span>,
+        password: <span class="typ">String</span>,
+    ) <span class="kw">async throws</span> -> <span class="cls">User</span> {
+        <span class="cmt">// 1. Validate locally before hitting network</span>
+        <span class="kw">guard</span> email.contains(<span class="str">"@"</span>) <span class="kw">else</span> {
+            <span class="kw">throw</span> <span class="cls">AppError</span>.validationFailed(<span class="str">"Invalid email"</span>)
+        }
+
+        <span class="cmt">// 2. Authenticate via repository</span>
+        <span class="kw">let</span> tokens = <span class="kw">try await</span> authRepo.login(
+            email: email, password: password
+        )
+
+        <span class="cmt">// 3. Persist tokens securely</span>
+        <span class="kw">try</span> keychainSvc.save(tokens)
+
+        <span class="cmt">// 4. Fetch and return user profile</span>
+        <span class="kw">return try await</span> authRepo.getCurrentUser()!
+    }
+}
+
+<span class="cmt">// Call like a function: try await loginUseCase(email:password:)</span></pre>
+      </div>
+
+      <div class="cc cc-vm">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">AppError.swift — typed error hierarchy</span><span class="csub">domain</span></div>
+<pre><span class="kw">enum</span> <span class="cls">AppError</span>: <span class="typ">LocalizedError</span>, <span class="typ">Equatable</span> {
+    <span class="kw">case</span> networkError(<span class="cls">URLError</span>)
+    <span class="kw">case</span> serverError(statusCode: <span class="typ">Int</span>, message: <span class="typ">String</span>)
+    <span class="kw">case</span> unauthorized
+    <span class="kw">case</span> notFound(<span class="typ">String</span>)
+    <span class="kw">case</span> validationFailed(<span class="typ">String</span>)
+    <span class="kw">case</span> keychainError(<span class="cls">OSStatus</span>)
+    <span class="kw">case</span> decryptionFailed
+    <span class="kw">case</span> unknown
+
+    <span class="kw">var</span> errorDescription: <span class="typ">String</span>? {
+        <span class="kw">switch self</span> {
+        <span class="kw">case</span> .unauthorized:
+            <span class="kw">return</span> <span class="str">"Session expired. Please log in again."</span>
+        <span class="kw">case</span> .serverError(<span class="kw">let</span> code, <span class="kw">let</span> msg):
+            <span class="kw">return</span> <span class="str">"Server error \(code): \(msg)"</span>
+        <span class="kw">case</span> .validationFailed(<span class="kw">let</span> reason):
+            <span class="kw">return</span> reason
+        <span class="kw">default</span>:
+            <span class="kw">return</span> <span class="str">"An unexpected error occurred."</span>
+        }
+    }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VIEWMODEL + SWIFTUI -->
+  <div class="tp" id="tp-viewmodel">
+    <div class="code-grid">
+
+      <div class="cc cc-v">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">LoginViewModel.swift — @Observable</span><span class="csub">presentation</span></div>
+<pre><span class="ann">@Observable</span>
+<span class="ann">@MainActor</span>
+<span class="kw">final class</span> <span class="cls">LoginViewModel</span> {
+    <span class="cmt">// State</span>
+    <span class="kw">var</span> email    = <span class="str">""</span>
+    <span class="kw">var</span> password = <span class="str">""</span>
+    <span class="kw">var</span> isLoading = <span class="kw">false</span>
+    <span class="kw">var</span> error: <span class="cls">AppError</span>? = <span class="kw">nil</span>
+    <span class="kw">var</span> user: <span class="cls">User</span>? = <span class="kw">nil</span>
+
+    <span class="cmt">// Debounce search via async task</span>
+    <span class="kw">private var</span> searchTask: <span class="cls">Task</span>&lt;<span class="typ">Void</span>, <span class="typ">Never</span>&gt;?
+
+    <span class="kw">private let</span> loginUseCase: <span class="cls">LoginUseCase</span>
+
+    <span class="kw">init</span>(loginUseCase: <span class="cls">LoginUseCase</span>) {
+        <span class="kw">self</span>.loginUseCase = loginUseCase
+    }
+
+    <span class="kw">func</span> <span class="fn">login</span>() {
+        <span class="kw">guard</span> !isLoading <span class="kw">else</span> { <span class="kw">return</span> }
+        isLoading = <span class="kw">true</span>
+        error = <span class="kw">nil</span>
+        <span class="cls">Task</span> {
+            <span class="kw">do</span> {
+                user = <span class="kw">try await</span> loginUseCase(
+                    email: email, password: password
+                )
+            } <span class="kw">catch let</span> appError <span class="kw">as</span> <span class="cls">AppError</span> {
+                error = appError
+            } <span class="kw">catch</span> {
+                <span class="kw">self</span>.error = .unknown
+            }
+            isLoading = <span class="kw">false</span>
+        }
+    }
+
+    <span class="cmt">// Debounced search — cancels previous task</span>
+    <span class="kw">func</span> <span class="fn">onSearchChanged</span>(_ query: <span class="typ">String</span>) {
+        searchTask?.cancel()
+        searchTask = <span class="cls">Task</span> {
+            <span class="kw">try</span>? <span class="kw">await</span> <span class="cls">Task</span>.sleep(for: .milliseconds(<span class="num">350</span>))
+            <span class="kw">guard</span> !<span class="cls">Task</span>.isCancelled <span class="kw">else</span> { <span class="kw">return</span> }
+            <span class="kw">await</span> performSearch(query)
+        }
+    }
+}</pre>
+      </div>
+
+      <div class="cc cc-v">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">LoginView.swift — SwiftUI</span><span class="csub">presentation</span></div>
+<pre><span class="kw">struct</span> <span class="cls">LoginView</span>: <span class="typ">View</span> {
+    <span class="ann">@State</span> <span class="kw">private var</span> viewModel: <span class="cls">LoginViewModel</span>
+    <span class="ann">@Environment</span>(<span class="kw">\</span>.dismiss) <span class="kw">private var</span> dismiss
+    <span class="ann">@Namespace</span> <span class="kw">private var</span> namespace  <span class="cmt">// shared element</span>
+
+    <span class="kw">var</span> body: <span class="kw">some</span> <span class="typ">View</span> {
+        <span class="cls">ScrollView</span> {
+            <span class="cls">VStack</span>(spacing: <span class="num">24</span>) {
+                <span class="cmt">// Matched geometry source</span>
+                <span class="cls">AppLogo</span>()
+                    .matchedGeometryEffect(
+                        id: <span class="str">"logo"</span>,
+                        <span class="kw">in</span>: namespace
+                    )
+                    .animation(.spring(duration: <span class="num">0.5</span>), value: viewModel.isLoading)
+
+                <span class="cls">TextField</span>(<span class="str">"Email"</span>, text: <span class="kw">$</span>viewModel.email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .autocorrectionDisabled()
+
+                <span class="cls">SecureField</span>(<span class="str">"Password"</span>, text: <span class="kw">$</span>viewModel.password)
+                    .textContentType(.password)
+
+                <span class="kw">if let</span> error = viewModel.error {
+                    <span class="cls">ErrorBanner</span>(message: error.errorDescription!)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                <span class="cls">Button</span>(action: viewModel.login) {
+                    <span class="kw">if</span> viewModel.isLoading {
+                        <span class="cls">ProgressView</span>()
+                    } <span class="kw">else</span> {
+                        <span class="cls">Text</span>(<span class="str">"Sign In"</span>).fontWeight(.semibold)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(viewModel.isLoading)
+            }
+            .padding(<span class="num">24</span>)
+        }
+        .animation(.easeInOut(duration: <span class="num">0.25</span>), value: viewModel.error)
+    }
+}</pre>
+      </div>
+
+      <div class="cc cc-v">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">AppRouter.swift — NavigationStack</span><span class="csub">navigation</span></div>
+<pre><span class="cmt">// Type-safe navigation with NavigationStack + enum</span>
+<span class="kw">enum</span> <span class="cls">Route</span>: <span class="typ">Hashable</span> {
+    <span class="kw">case</span> login
+    <span class="kw">case</span> home
+    <span class="kw">case</span> productDetail(productId: <span class="typ">String</span>)
+    <span class="kw">case</span> profile(userId: <span class="typ">String</span>)
+    <span class="kw">case</span> settings
+}
+
+<span class="ann">@Observable</span>
+<span class="ann">@MainActor</span>
+<span class="kw">final class</span> <span class="cls">AppRouter</span> {
+    <span class="kw">var</span> path = <span class="cls">NavigationPath</span>()
+
+    <span class="kw">func</span> <span class="fn">navigate</span>(<span class="kw">to</span> route: <span class="cls">Route</span>) {
+        path.append(route)
+    }
+
+    <span class="kw">func</span> <span class="fn">pop</span>() { path.removeLast() }
+    <span class="kw">func</span> <span class="fn">popToRoot</span>() { path.removeLast(path.count) }
+}
+
+<span class="cmt">// Usage in root view</span>
+<span class="kw">struct</span> <span class="cls">RootView</span>: <span class="typ">View</span> {
+    <span class="ann">@State</span> <span class="kw">private var</span> router = <span class="cls">AppRouter</span>()
+
+    <span class="kw">var</span> body: <span class="kw">some</span> <span class="typ">View</span> {
+        <span class="cls">NavigationStack</span>(path: <span class="kw">$</span>router.path) {
+            <span class="cls">HomeView</span>()
+                .navigationDestination(for: <span class="cls">Route</span>.<span class="kw">self</span>) { route <span class="kw">in</span>
+                    <span class="kw">switch</span> route {
+                    <span class="kw">case</span> .productDetail(<span class="kw">let</span> id):
+                        <span class="cls">ProductDetailView</span>(productId: id)
+                    <span class="kw">case</span> .profile(<span class="kw">let</span> id):
+                        <span class="cls">ProfileView</span>(userId: id)
+                    <span class="kw">case</span> .settings:
+                        <span class="cls">SettingsView</span>()
+                    <span class="kw">default</span>: <span class="cls">EmptyView</span>()
+                    }
+                }
+        }
+        .environment(router)
+    }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- NETWORK + ENCRYPTION -->
+  <div class="tp" id="tp-network">
+    <div class="code-grid">
+
+      <div class="cc cc-n">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">NetworkClient.swift — URLSession wrapper</span><span class="csub">network</span></div>
+<pre><span class="kw">actor</span> <span class="cls">NetworkClient</span> {
+    <span class="kw">private let</span> session:  <span class="cls">URLSession</span>
+    <span class="kw">private let</span> crypto:   <span class="cls">CryptoService</span>
+    <span class="kw">private let</span> keychain: <span class="cls">KeychainService</span>
+    <span class="kw">private let</span> baseURL:  <span class="cls">URL</span>
+
+    <span class="kw">func</span> <span class="fn">request</span>&lt;T: <span class="typ">Decodable</span>&gt;(
+        _ endpoint: <span class="cls">Endpoint</span>
+    ) <span class="kw">async throws</span> -> <span class="cls">T</span> {
+        <span class="kw">var</span> req = endpoint.urlRequest(baseURL: baseURL)
+
+        <span class="cmt">// Attach Bearer token</span>
+        <span class="kw">if let</span> token = <span class="kw">try</span>? keychain.getAccessToken() {
+            req.setValue(<span class="str">"Bearer \(token)"</span>, forHTTPHeaderField: <span class="str">"Authorization"</span>)
+        }
+
+        <span class="cmt">// Encrypt request body (AES-256-GCM)</span>
+        <span class="kw">if let</span> body = req.httpBody {
+            <span class="kw">let</span> encrypted = <span class="kw">try</span> crypto.encrypt(body)
+            req.httpBody   = encrypted.ciphertext
+            req.setValue(encrypted.ivBase64, forHTTPHeaderField: <span class="str">"X-IV"</span>)
+        }
+
+        <span class="kw">let</span> (data, response) = <span class="kw">try await</span> session.data(for: req)
+
+        <span class="kw">guard let</span> http = response <span class="kw">as</span>? <span class="cls">HTTPURLResponse</span> <span class="kw">else</span> {
+            <span class="kw">throw</span> <span class="cls">AppError</span>.unknown
+        }
+
+        <span class="kw">switch</span> http.statusCode {
+        <span class="kw">case</span> <span class="num">200</span>...<span class="num">299</span>:
+            <span class="kw">let</span> decrypted = <span class="kw">try</span> crypto.decrypt(
+                data,
+                ivBase64: http.value(forHTTPHeaderField: <span class="str">"X-IV"</span>) ?? <span class="str">""</span>
+            )
+            <span class="kw">return try</span> <span class="cls">JSONDecoder</span>().decode(<span class="cls">T</span>.<span class="kw">self</span>, from: decrypted)
+        <span class="kw">case</span> <span class="num">401</span>:  <span class="kw">throw</span> <span class="cls">AppError</span>.unauthorized
+        <span class="kw">default</span>:   <span class="kw">throw</span> <span class="cls">AppError</span>.serverError(statusCode: http.statusCode, message: <span class="str">""</span>)
+        }
+    }
+}</pre>
+      </div>
+
+      <div class="cc cc-n">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">Endpoint.swift + cancellation</span><span class="csub">network</span></div>
+<pre><span class="kw">struct</span> <span class="cls">Endpoint</span> {
+    <span class="kw">let</span> path:    <span class="typ">String</span>
+    <span class="kw">let</span> method:  <span class="cls">HTTPMethod</span>
+    <span class="kw">let</span> body:    (<span class="kw">any</span> <span class="typ">Encodable</span>)?
+    <span class="kw">let</span> headers: [<span class="typ">String</span>: <span class="typ">String</span>]
+
+    <span class="kw">static func</span> <span class="fn">get</span>(_ path: <span class="typ">String</span>) -> <span class="cls">Endpoint</span> {
+        <span class="cls">Endpoint</span>(path: path, method: .get, body: <span class="kw">nil</span>, headers: [:])
+    }
+    <span class="kw">static func</span> <span class="fn">post</span>&lt;B: <span class="typ">Encodable</span>&gt;(_ path: <span class="typ">String</span>, body: B) -> <span class="cls">Endpoint</span> {
+        <span class="cls">Endpoint</span>(path: path, method: .post, body: body, headers: [:])
+    }
+}
+
+<span class="cmt">// Cancellable request — Task-based</span>
+<span class="kw">class</span> <span class="cls">ProductsViewModel</span> {
+    <span class="kw">private var</span> searchTask: <span class="cls">Task</span>&lt;<span class="typ">Void</span>, <span class="typ">Never</span>&gt;?
+
+    <span class="kw">func</span> <span class="fn">search</span>(_ query: <span class="typ">String</span>) {
+        searchTask?.cancel()     <span class="cmt">// cancel previous in-flight</span>
+        searchTask = <span class="cls">Task</span> {
+            <span class="kw">do</span> {
+                <span class="kw">try</span> <span class="cls">Task</span>.checkCancellation()
+                <span class="kw">let</span> results: [<span class="cls">Product</span>] = <span class="kw">try await</span> networkClient.request(
+                    .get(<span class="str">"/products?q=\(query)"</span>)
+                )
+                <span class="cmt">// Only update UI if not cancelled</span>
+                <span class="kw">guard</span> !<span class="cls">Task</span>.isCancelled <span class="kw">else</span> { <span class="kw">return</span> }
+                <span class="kw">await</span> <span class="cls">MainActor</span>.run { self.products = results }
+            } <span class="kw">catch</span> <span class="kw">is</span> <span class="cls">CancellationError</span> {
+                <span class="cmt">// Expected — swallow silently</span>
+            } <span class="kw">catch</span> { handleError(error) }
+        }
+    }
+
+    <span class="kw">deinit</span> { searchTask?.cancel() }
+}</pre>
+      </div>
+
+      <div class="cc cc-sec">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">SSLPinningDelegate.swift</span><span class="csub">security</span></div>
+<pre><span class="kw">final class</span> <span class="cls">SSLPinningDelegate</span>: <span class="typ">NSObject</span>,
+    <span class="typ">URLSessionDelegate</span>, <span class="typ">Sendable</span> {
+
+    <span class="kw">private let</span> pinnedHashes: <span class="cls">Set</span>&lt;<span class="typ">String</span>&gt;
+
+    <span class="kw">init</span>(pinnedHashes: <span class="cls">Set</span>&lt;<span class="typ">String</span>&gt;) {
+        <span class="kw">self</span>.pinnedHashes = pinnedHashes
+    }
+
+    <span class="kw">func</span> <span class="fn">urlSession</span>(
+        _ session: <span class="cls">URLSession</span>,
+        didReceive challenge: <span class="cls">URLAuthenticationChallenge</span>,
+        completionHandler: <span class="ann">@escaping</span> (<span class="cls">URLSession</span>.<span class="cls">AuthChallengeDisposition</span>, <span class="cls">URLCredential</span>?) -> <span class="typ">Void</span>
+    ) {
+        <span class="kw">guard</span> challenge.protectionSpace.authenticationMethod ==
+              <span class="cls">NSURLAuthenticationMethodServerTrust</span>,
+              <span class="kw">let</span> serverTrust = challenge.protectionSpace.serverTrust
+        <span class="kw">else</span> {
+            completionHandler(.cancelAuthenticationChallenge, <span class="kw">nil</span>)
+            <span class="kw">return</span>
+        }
+
+        <span class="kw">let</span> chain = <span class="cls">SecTrustCopyCertificateChain</span>(serverTrust)
+            <span class="kw">as</span>? [<span class="cls">SecCertificate</span>] ?? []
+
+        <span class="kw">for</span> cert <span class="kw">in</span> chain {
+            <span class="kw">let</span> hash = sha256Hash(of: <span class="cls">SecCertificateCopyData</span>(cert) <span class="kw">as</span> <span class="cls">Data</span>)
+            <span class="kw">if</span> pinnedHashes.contains(hash) {
+                completionHandler(.useCredential, <span class="cls">URLCredential</span>(trust: serverTrust))
+                <span class="kw">return</span>
+            }
+        }
+        completionHandler(.cancelAuthenticationChallenge, <span class="kw">nil</span>)
+    }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DATA + SWIFTDATA -->
+  <div class="tp" id="tp-data">
+    <div class="code-grid">
+
+      <div class="cc cc-r">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">AuthRepositoryImpl.swift — offline first</span><span class="csub">data</span></div>
+<pre><span class="kw">final class</span> <span class="cls">AuthRepositoryImpl</span>: <span class="cls">AuthRepositoryProtocol</span> {
+    <span class="kw">private let</span> remote:   <span class="cls">AuthRemoteDataSource</span>
+    <span class="kw">private let</span> local:    <span class="cls">AuthLocalDataSource</span>   <span class="cmt">// SwiftData</span>
+    <span class="kw">private let</span> keychain: <span class="cls">KeychainService</span>
+
+    <span class="kw">func</span> <span class="fn">login</span>(email: <span class="typ">String</span>, password: <span class="typ">String</span>) <span class="kw">async throws</span> -> <span class="cls">AuthTokens</span> {
+        <span class="kw">let</span> dto    = <span class="kw">try await</span> remote.login(email: email, password: password)
+        <span class="kw">let</span> tokens = dto.toTokens()
+        <span class="cmt">// Write-through: persist user to SwiftData</span>
+        <span class="kw">try await</span> local.upsertUser(dto.user.toDomain())
+        <span class="kw">return</span> tokens
+    }
+
+    <span class="kw">func</span> <span class="fn">getCurrentUser</span>() <span class="kw">async throws</span> -> <span class="cls">User</span>? {
+        <span class="kw">do</span> {
+            <span class="cmt">// Try network first</span>
+            <span class="kw">let</span> dto = <span class="kw">try await</span> remote.getProfile()
+            <span class="kw">let</span> user = dto.toDomain()
+            <span class="kw">try await</span> local.upsertUser(user)
+            <span class="kw">return</span> user
+        } <span class="kw">catch</span> {
+            <span class="cmt">// Offline: serve cached data</span>
+            <span class="kw">return try await</span> local.getCurrentUser()
+        }
+    }
+}</pre>
+      </div>
+
+      <div class="cc cc-r">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">SwiftData model + local datasource</span><span class="csub">data · SwiftData</span></div>
+<pre><span class="imp">import</span> <span class="cls">SwiftData</span>
+
+<span class="ann">@Model</span>
+<span class="kw">final class</span> <span class="cls">UserModel</span> {
+    <span class="ann">@Attribute</span>(.unique) <span class="kw">var</span> id:        <span class="typ">String</span>
+    <span class="kw">var</span> email:     <span class="typ">String</span>
+    <span class="kw">var</span> name:      <span class="typ">String</span>
+    <span class="kw">var</span> role:      <span class="typ">String</span>
+    <span class="kw">var</span> cachedAt:  <span class="typ">Date</span>
+
+    <span class="kw">init</span>(from user: <span class="cls">User</span>) {
+        id       = user.id
+        email    = user.email
+        name     = user.name
+        role     = user.role.rawValue
+        cachedAt = .now
+    }
+
+    <span class="kw">func</span> <span class="fn">toDomain</span>() -> <span class="cls">User</span> {
+        <span class="cls">User</span>(id: id, email: email, name: name,
+             role: <span class="cls">UserRole</span>(rawValue: role) ?? .user,
+             createdAt: cachedAt)
+    }
+}
+
+<span class="kw">actor</span> <span class="cls">AuthLocalDataSource</span> {
+    <span class="kw">private let</span> container: <span class="cls">ModelContainer</span>
+
+    <span class="kw">func</span> <span class="fn">upsertUser</span>(_ user: <span class="cls">User</span>) <span class="kw">throws</span> {
+        <span class="kw">let</span> ctx = <span class="cls">ModelContext</span>(container)
+        <span class="kw">let</span> model = <span class="cls">UserModel</span>(from: user)
+        ctx.insert(model)
+        <span class="kw">try</span> ctx.save()
+    }
+
+    <span class="kw">func</span> <span class="fn">getCurrentUser</span>() <span class="kw">throws</span> -> <span class="cls">User</span>? {
+        <span class="kw">let</span> ctx = <span class="cls">ModelContext</span>(container)
+        <span class="kw">let</span> desc = <span class="cls">FetchDescriptor</span>&lt;<span class="cls">UserModel</span>&gt;(
+            sortBy: [.init(\.<span class="prop">cachedAt</span>, order: .reverse)]
+        )
+        <span class="kw">return try</span> ctx.fetch(desc).first?.toDomain()
+    }
+}</pre>
+      </div>
+
+      <div class="cc cc-r">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">UserDTO.swift — Codable DTO + mapper</span><span class="csub">data</span></div>
+<pre><span class="kw">struct</span> <span class="cls">UserDTO</span>: <span class="typ">Decodable</span>, <span class="typ">Sendable</span> {
+    <span class="kw">let</span> id:        <span class="typ">String</span>
+    <span class="kw">let</span> email:     <span class="typ">String</span>
+    <span class="kw">let</span> name:      <span class="typ">String</span>
+    <span class="kw">let</span> role:      <span class="typ">String</span>
+
+    <span class="kw">enum</span> <span class="cls">CodingKeys</span>: <span class="typ">String</span>, <span class="typ">CodingKey</span> {
+        <span class="kw">case</span> id, email, name, role
+    }
+
+    <span class="cmt">// Mapper — DTO ↔ Domain entity</span>
+    <span class="kw">func</span> <span class="fn">toDomain</span>() -> <span class="cls">User</span> {
+        <span class="cls">User</span>(
+            id:        id,
+            email:     email,
+            name:      name,
+            role:      <span class="cls">UserRole</span>(rawValue: role) ?? .user,
+            createdAt: .now
+        )
+    }
+}
+
+<span class="kw">struct</span> <span class="cls">AuthResponseDTO</span>: <span class="typ">Decodable</span> {
+    <span class="kw">let</span> accessToken:  <span class="typ">String</span>
+    <span class="kw">let</span> refreshToken: <span class="typ">String</span>
+    <span class="kw">let</span> expiresIn:    <span class="typ">Int</span>
+    <span class="kw">let</span> user:         <span class="cls">UserDTO</span>
+
+    <span class="kw">func</span> <span class="fn">toTokens</span>() -> <span class="cls">AuthTokens</span> {
+        <span class="cls">AuthTokens</span>(
+            accessToken:  accessToken,
+            refreshToken: refreshToken,
+            expiresAt:    <span class="cls">Date</span>().addingTimeInterval(<span class="cls">TimeInterval</span>(expiresIn))
+        )
+    }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECURITY -->
+  <div class="tp" id="tp-security">
+    <div class="code-grid">
+
+      <div class="cc cc-sec">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">KeychainService.swift — tokens</span><span class="csub">security</span></div>
+<pre><span class="imp">import</span> <span class="cls">Security</span>
+
+<span class="kw">final class</span> <span class="cls">KeychainService</span>: <span class="typ">Sendable</span> {
+    <span class="kw">private let</span> service = <span class="str">"com.myapp.tokens"</span>
+
+    <span class="kw">func</span> <span class="fn">save</span>(_ tokens: <span class="cls">AuthTokens</span>) <span class="kw">throws</span> {
+        <span class="kw">let</span> data = <span class="kw">try</span> <span class="cls">JSONEncoder</span>().encode(tokens)
+        <span class="kw">let</span> query: [<span class="cls">CFString</span>: <span class="kw">Any</span>] = [
+            kSecClass:       kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: <span class="str">"auth_tokens"</span>,
+            kSecValueData:   data,
+            <span class="cmt">// Accessible only when device is unlocked</span>
+            kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+        ]
+        <span class="cls">SecItemDelete</span>(query <span class="kw">as</span> <span class="cls">CFDictionary</span>)
+        <span class="kw">let</span> status = <span class="cls">SecItemAdd</span>(query <span class="kw">as</span> <span class="cls">CFDictionary</span>, <span class="kw">nil</span>)
+        <span class="kw">guard</span> status == errSecSuccess <span class="kw">else</span> {
+            <span class="kw">throw</span> <span class="cls">AppError</span>.keychainError(status)
+        }
+    }
+
+    <span class="kw">func</span> <span class="fn">getAccessToken</span>() <span class="kw">throws</span> -> <span class="typ">String</span>? {
+        <span class="kw">let</span> query: [<span class="cls">CFString</span>: <span class="kw">Any</span>] = [
+            kSecClass:       kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: <span class="str">"auth_tokens"</span>,
+            kSecReturnData:  <span class="kw">true</span>,
+        ]
+        <span class="kw">var</span> result: <span class="cls">AnyObject</span>?
+        <span class="kw">let</span> status = <span class="cls">SecItemCopyMatching</span>(query <span class="kw">as</span> <span class="cls">CFDictionary</span>, &result)
+        <span class="kw">guard</span> status == errSecSuccess, <span class="kw">let</span> data = result <span class="kw">as</span>? <span class="cls">Data</span> <span class="kw">else</span> { <span class="kw">return nil</span> }
+        <span class="kw">let</span> tokens = <span class="kw">try</span> <span class="cls">JSONDecoder</span>().decode(<span class="cls">AuthTokens</span>.<span class="kw">self</span>, from: data)
+        <span class="kw">return</span> tokens.accessToken
+    }
+
+    <span class="kw">func</span> <span class="fn">clearAll</span>() {
+        <span class="kw">let</span> query: [<span class="cls">CFString</span>: <span class="kw">Any</span>] = [kSecClass: kSecClassGenericPassword, kSecAttrService: service]
+        <span class="cls">SecItemDelete</span>(query <span class="kw">as</span> <span class="cls">CFDictionary</span>)
+    }
+}</pre>
+      </div>
+
+      <div class="cc cc-sec">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">CryptoService.swift — AES-256-GCM</span><span class="csub">security · CryptoKit</span></div>
+<pre><span class="imp">import</span> <span class="cls">CryptoKit</span>
+<span class="imp">import</span> <span class="cls">Foundation</span>
+
+<span class="kw">struct</span> <span class="cls">EncryptedPayload</span> {
+    <span class="kw">let</span> ciphertext: <span class="cls">Data</span>
+    <span class="kw">let</span> ivBase64:   <span class="typ">String</span>
+}
+
+<span class="kw">actor</span> <span class="cls">CryptoService</span> {
+    <span class="kw">private let</span> key: <span class="cls">SymmetricKey</span>
+
+    <span class="kw">init</span>(base64Secret: <span class="typ">String</span>) <span class="kw">throws</span> {
+        <span class="kw">guard let</span> keyData = <span class="cls">Data</span>(base64Encoded: base64Secret),
+              keyData.count == <span class="num">32</span>
+        <span class="kw">else</span> { <span class="kw">throw</span> <span class="cls">AppError</span>.decryptionFailed }
+        key = <span class="cls">SymmetricKey</span>(data: keyData)
+    }
+
+    <span class="kw">func</span> <span class="fn">encrypt</span>(_ data: <span class="cls">Data</span>) <span class="kw">throws</span> -> <span class="cls">EncryptedPayload</span> {
+        <span class="kw">let</span> nonce     = <span class="kw">try</span> <span class="cls">AES</span>.<span class="cls">GCM</span>.<span class="cls">Nonce</span>()
+        <span class="kw">let</span> sealed    = <span class="kw">try</span> <span class="cls">AES</span>.<span class="cls">GCM</span>.seal(data, using: key, nonce: nonce)
+        <span class="kw">let</span> combined  = sealed.combined!
+        <span class="kw">let</span> ivBase64  = <span class="cls">Data</span>(nonce).base64EncodedString()
+        <span class="kw">return</span> <span class="cls">EncryptedPayload</span>(ciphertext: combined, ivBase64: ivBase64)
+    }
+
+    <span class="kw">func</span> <span class="fn">decrypt</span>(_ data: <span class="cls">Data</span>, ivBase64: <span class="typ">String</span>) <span class="kw">throws</span> -> <span class="cls">Data</span> {
+        <span class="kw">guard let</span> ivData = <span class="cls">Data</span>(base64Encoded: ivBase64),
+              <span class="kw">let</span> nonce = <span class="kw">try</span>? <span class="cls">AES</span>.<span class="cls">GCM</span>.<span class="cls">Nonce</span>(data: ivData)
+        <span class="kw">else</span> { <span class="kw">throw</span> <span class="cls">AppError</span>.decryptionFailed }
+        <span class="kw">let</span> box  = <span class="kw">try</span> <span class="cls">AES</span>.<span class="cls">GCM</span>.<span class="cls">SealedBox</span>(combined: data)
+        <span class="kw">return try</span> <span class="cls">AES</span>.<span class="cls">GCM</span>.open(box, using: key)
+    }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SPEECH + TTS -->
+  <div class="tp" id="tp-speech">
+    <div class="code-grid">
+
+      <div class="cc cc-n">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">SpeechToTextService.swift — SFSpeechRecognizer</span><span class="csub">platform service</span></div>
+<pre><span class="imp">import</span> <span class="cls">Speech</span>
+<span class="imp">import</span> <span class="cls">AVFoundation</span>
+
+<span class="ann">@Observable</span>
+<span class="ann">@MainActor</span>
+<span class="kw">final class</span> <span class="cls">SpeechToTextService</span>: <span class="typ">NSObject</span> {
+    <span class="kw">private let</span> recognizer    = <span class="cls">SFSpeechRecognizer</span>(locale: .current)
+    <span class="kw">private let</span> audioEngine   = <span class="cls">AVAudioEngine</span>()
+    <span class="kw">private var</span> request:        <span class="cls">SFSpeechAudioBufferRecognitionRequest</span>?
+    <span class="kw">private var</span> recognitionTask: <span class="cls">SFSpeechRecognitionTask</span>?
+
+    <span class="kw">var</span> transcript = <span class="str">""</span>
+    <span class="kw">var</span> isListening = <span class="kw">false</span>
+
+    <span class="kw">func</span> <span class="fn">requestPermission</span>() <span class="kw">async</span> -> <span class="typ">Bool</span> {
+        <span class="kw">await withCheckedContinuation</span> { cont <span class="kw">in</span>
+            <span class="cls">SFSpeechRecognizer</span>.requestAuthorization { status <span class="kw">in</span>
+                cont.resume(returning: status == .authorized)
+            }
+        }
+    }
+
+    <span class="kw">func</span> <span class="fn">startListening</span>() <span class="kw">throws</span> {
+        stopListening()
+        <span class="kw">let</span> session = <span class="cls">AVAudioSession</span>.sharedInstance()
+        <span class="kw">try</span> session.setCategory(.record, mode: .measurement, options: .duckOthers)
+        <span class="kw">try</span> session.setActive(<span class="kw">true</span>, options: .notifyOthersOnDeactivation)
+
+        request = <span class="cls">SFSpeechAudioBufferRecognitionRequest</span>()
+        request?.shouldReportPartialResults = <span class="kw">true</span>
+
+        <span class="kw">let</span> inputNode = audioEngine.inputNode
+        request!.addAudioPCMBuffer <span class="cmt">// installed below</span>
+
+        recognitionTask = recognizer?.recognitionTask(with: request!) { [weak self] result, err in
+            <span class="kw">if let</span> result { self?.transcript = result.bestTranscription.formattedString }
+        }
+
+        <span class="kw">let</span> fmt = inputNode.outputFormat(forBus: <span class="num">0</span>)
+        inputNode.installTap(onBus: <span class="num">0</span>, bufferSize: <span class="num">1024</span>, format: fmt) { [<span class="kw">weak</span> self] buf, _ in
+            self?.request?.append(buf)
+        }
+        <span class="kw">try</span> audioEngine.start()
+        isListening = <span class="kw">true</span>
+    }
+
+    <span class="kw">func</span> <span class="fn">stopListening</span>() {
+        audioEngine.stop()
+        audioEngine.inputNode.removeTap(onBus: <span class="num">0</span>)
+        recognitionTask?.cancel()
+        isListening = <span class="kw">false</span>
+    }
+}</pre>
+      </div>
+
+      <div class="cc cc-n">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">TextToSpeechService.swift — AVSpeechSynthesizer</span><span class="csub">platform service</span></div>
+<pre><span class="imp">import</span> <span class="cls">AVFoundation</span>
+
+<span class="ann">@Observable</span>
+<span class="kw">final class</span> <span class="cls">TextToSpeechService</span>: <span class="typ">NSObject</span>, <span class="typ">AVSpeechSynthesizerDelegate</span> {
+    <span class="kw">private let</span> synthesizer = <span class="cls">AVSpeechSynthesizer</span>()
+    <span class="kw">var</span> isSpeaking = <span class="kw">false</span>
+
+    <span class="kw">override init</span>() {
+        <span class="kw">super</span>.init()
+        synthesizer.delegate = <span class="kw">self</span>
+    }
+
+    <span class="kw">func</span> <span class="fn">speak</span>(
+        _ text: <span class="typ">String</span>,
+        rate:   <span class="typ">Float</span> = <span class="cls">AVSpeechUtteranceDefaultSpeechRate</span>,
+        voice:  <span class="cls">AVSpeechSynthesisVoice</span>? = .init(language: <span class="str">"en-US"</span>)
+    ) {
+        stop()
+        <span class="kw">let</span> utterance     = <span class="cls">AVSpeechUtterance</span>(string: text)
+        utterance.rate    = rate
+        utterance.voice   = voice
+        utterance.pitchMultiplier = <span class="num">1.0</span>
+        synthesizer.speak(utterance)
+    }
+
+    <span class="kw">func</span> <span class="fn">stop</span>() {
+        synthesizer.stopSpeaking(at: .immediate)
+    }
+
+    <span class="cmt">// AVSpeechSynthesizerDelegate</span>
+    <span class="kw">func</span> <span class="fn">speechSynthesizer</span>(_ s: <span class="cls">AVSpeechSynthesizer</span>,
+                            didStart u: <span class="cls">AVSpeechUtterance</span>) {
+        isSpeaking = <span class="kw">true</span>
+    }
+    <span class="kw">func</span> <span class="fn">speechSynthesizer</span>(_ s: <span class="cls">AVSpeechSynthesizer</span>,
+                            didFinish u: <span class="cls">AVSpeechUtterance</span>) {
+        isSpeaking = <span class="kw">false</span>
+    }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- WEBSOCKET + REALTIME -->
+  <div class="tp" id="tp-ws">
+    <div class="code-grid">
+
+      <div class="cc cc-n">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">WebSocketService.swift — Network.framework</span><span class="csub">realtime</span></div>
+<pre><span class="imp">import</span> <span class="cls">Network</span>
+<span class="imp">import</span> <span class="cls">Foundation</span>
+
+<span class="ann">@Observable</span>
+<span class="ann">@MainActor</span>
+<span class="kw">final class</span> <span class="cls">WebSocketService</span> {
+    <span class="kw">private var</span> connection: <span class="cls">NWConnection</span>?
+    <span class="kw">private var</span> retryCount  = <span class="num">0</span>
+    <span class="kw">private let</span> maxRetries  = <span class="num">5</span>
+
+    <span class="kw">var</span> messages: [<span class="cls">ChatMessage</span>] = []
+    <span class="kw">var</span> isConnected = <span class="kw">false</span>
+
+    <span class="kw">func</span> <span class="fn">connect</span>(url: <span class="cls">URL</span>, token: <span class="typ">String</span>) {
+        <span class="kw">let</span> params   = <span class="cls">NWParameters</span>.tls
+        <span class="kw">let</span> wsOpts   = <span class="cls">NWProtocolWebSocket</span>.<span class="cls">Options</span>()
+        wsOpts.setAdditionalHeaders([(<span class="str">"Authorization"</span>, <span class="str">"Bearer \(token)"</span>)])
+        params.defaultProtocolStack.applicationProtocols.insert(
+            <span class="cls">NWProtocolWebSocket</span>.Options(), at: <span class="num">0</span>
+        )
+
+        connection = <span class="cls">NWConnection</span>(
+            to: .url(url), using: params
+        )
+        connection?.stateUpdateHandler = { [<span class="kw">weak</span> self] state <span class="kw">in</span>
+            <span class="kw">switch</span> state {
+            <span class="kw">case</span> .ready:
+                <span class="kw">self</span>?.isConnected = <span class="kw">true</span>
+                <span class="kw">self</span>?.retryCount  = <span class="num">0</span>
+                <span class="kw">self</span>?.receiveLoop()
+            <span class="kw">case</span> .failed, .cancelled:
+                <span class="kw">self</span>?.isConnected = <span class="kw">false</span>
+                <span class="kw">self</span>?.scheduleReconnect(url: url, token: token)
+            <span class="kw">default</span>: <span class="kw">break</span>
+            }
+        }
+        connection?.start(queue: .main)
+    }
+
+    <span class="kw">func</span> <span class="fn">send</span>(_ message: <span class="cls">ChatMessage</span>) {
+        <span class="kw">guard let</span> data = <span class="kw">try</span>? <span class="cls">JSONEncoder</span>().encode(message) <span class="kw">else</span> { <span class="kw">return</span> }
+        <span class="kw">let</span> metadata = <span class="cls">NWProtocolWebSocket</span>.<span class="cls">Metadata</span>(opcode: .text)
+        <span class="kw">let</span> ctx      = <span class="cls">NWConnection</span>.<span class="cls">ContentContext</span>(identifier: <span class="str">"msg"</span>, metadata: [metadata])
+        connection?.send(content: data, contentContext: ctx, completion: .idempotent)
+    }
+
+    <span class="kw">private func</span> <span class="fn">receiveLoop</span>() {
+        connection?.receiveMessage { [<span class="kw">weak</span> self] data, ctx, _, err <span class="kw">in</span>
+            <span class="kw">if let</span> data, <span class="kw">let</span> msg = <span class="kw">try</span>? <span class="cls">JSONDecoder</span>().decode(<span class="cls">ChatMessage</span>.<span class="kw">self</span>, from: data) {
+                <span class="kw">self</span>?.messages.append(msg)
+            }
+            <span class="kw">self</span>?.receiveLoop()   <span class="cmt">// recursive receive</span>
+        }
+    }
+
+    <span class="kw">private func</span> <span class="fn">scheduleReconnect</span>(url: <span class="cls">URL</span>, token: <span class="typ">String</span>) {
+        <span class="kw">guard</span> retryCount < maxRetries <span class="kw">else</span> { <span class="kw">return</span> }
+        <span class="kw">let</span> delay = <span class="cls">TimeInterval</span>(pow(<span class="num">2.0</span>, <span class="cls">Double</span>(retryCount)))
+        retryCount += <span class="num">1</span>
+        <span class="cls">Task</span> { <span class="kw">try</span>? <span class="kw">await</span> <span class="cls">Task</span>.sleep(for: .seconds(delay)); connect(url: url, token: token) }
+    }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ANIMATIONS -->
+  <div class="tp" id="tp-anim">
+    <div class="code-grid">
+
+      <div class="cc cc-v">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">Shared element — matchedGeometryEffect</span><span class="csub">animation</span></div>
+<pre><span class="cmt">// Source: product list card</span>
+<span class="kw">struct</span> <span class="cls">ProductCard</span>: <span class="typ">View</span> {
+    <span class="kw">let</span> product:   <span class="cls">Product</span>
+    <span class="kw">var</span> namespace: <span class="cls">Namespace</span>.<span class="cls">ID</span>
+    <span class="ann">@Binding</span> <span class="kw">var</span> selectedId: <span class="typ">String</span>?
+
+    <span class="kw">var</span> body: <span class="kw">some</span> <span class="typ">View</span> {
+        <span class="cls">VStack</span> {
+            <span class="cls">AsyncImage</span>(url: product.imageURL)
+                .matchedGeometryEffect(
+                    id: <span class="str">"image-\(product.id)"</span>,
+                    <span class="kw">in</span>: namespace
+                )
+                .frame(height: <span class="num">180</span>)
+                .clipShape(.rect(cornerRadius: <span class="num">12</span>))
+
+            <span class="cls">Text</span>(product.name)
+                .matchedGeometryEffect(
+                    id: <span class="str">"title-\(product.id)"</span>,
+                    <span class="kw">in</span>: namespace
+                )
+        }
+        .onTapGesture {
+            <span class="kw">withAnimation</span>(.spring(duration: <span class="num">0.45</span>)) {
+                selectedId = product.id
+            }
+        }
+    }
+}
+
+<span class="cmt">// Destination: detail hero</span>
+<span class="kw">struct</span> <span class="cls">ProductDetailView</span>: <span class="typ">View</span> {
+    <span class="kw">let</span> product:   <span class="cls">Product</span>
+    <span class="kw">var</span> namespace: <span class="cls">Namespace</span>.<span class="cls">ID</span>
+
+    <span class="kw">var</span> body: <span class="kw">some</span> <span class="typ">View</span> {
+        <span class="cls">ScrollView</span> {
+            <span class="cls">AsyncImage</span>(url: product.imageURL)
+                .matchedGeometryEffect(
+                    id: <span class="str">"image-\(product.id)"</span>,
+                    <span class="kw">in</span>: namespace       <span class="cmt">// same namespace = morph!</span>
+                )
+                .frame(maxWidth: .infinity, minHeight: <span class="num">320</span>)
+                .ignoresSafeArea(edges: .top)
+
+            <span class="cls">Text</span>(product.name)
+                .matchedGeometryEffect(
+                    id: <span class="str">"title-\(product.id)"</span>,
+                    <span class="kw">in</span>: namespace
+                )
+                .font(.title.bold())
+                .padding()
+        }
+    }
+}</pre>
+      </div>
+
+      <div class="cc cc-v">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">Stagger + phase animations</span><span class="csub">animation</span></div>
+<pre><span class="cmt">// Staggered list entry — PhaseAnimator</span>
+<span class="kw">struct</span> <span class="cls">AnimatedListRow</span>: <span class="typ">View</span> {
+    <span class="kw">let</span> item:  <span class="kw">some</span> <span class="typ">Identifiable</span>
+    <span class="kw">let</span> index: <span class="typ">Int</span>
+
+    <span class="kw">var</span> body: <span class="kw">some</span> <span class="typ">View</span> {
+        <span class="cls">ItemCell</span>(item: item)
+            .offset(y: <span class="num">0</span>)
+            .opacity(<span class="num">1</span>)
+            .transition(
+                .asymmetric(
+                    insertion: .move(edge: .bottom)
+                        .combined(with: .opacity),
+                    removal: .opacity
+                )
+            )
+            .animation(
+                .spring(duration: <span class="num">0.4</span>)
+                    .delay(<span class="cls">Double</span>(index) * <span class="num">0.06</span>),
+                value: item.id
+            )
+    }
+}
+
+<span class="cmt">// Lottie via SPM (Airbnb/lottie-spm)</span>
+<span class="kw">import</span> <span class="cls">Lottie</span>
+<span class="kw">struct</span> <span class="cls">LottieView</span>: <span class="cls">UIViewRepresentable</span> {
+    <span class="kw">let</span> name:     <span class="typ">String</span>
+    <span class="kw">let</span> loopMode: <span class="cls">LottieLoopMode</span>
+
+    <span class="kw">func</span> <span class="fn">makeUIView</span>(context: <span class="cls">Context</span>) -> <span class="cls">LottieAnimationView</span> {
+        <span class="kw">let</span> view = <span class="cls">LottieAnimationView</span>(name: name)
+        view.contentMode = .scaleAspectFit
+        view.loopMode    = loopMode
+        view.play()
+        <span class="kw">return</span> view
+    }
+    <span class="kw">func</span> <span class="fn">updateUIView</span>(_ v: <span class="cls">LottieAnimationView</span>, context: <span class="cls">Context</span>) {}
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+<div class="dvdr"></div>
+
+<!-- DATA FLOWS -->
+<section class="section reveal" id="flows">
+  <p class="sec-label">04 — Data Flows</p>
+  <h2 class="sec-title">Every <span class="gt1">Path</span> Traced</h2>
+  <p class="sec-intro">From user tap to server and back — how data moves through every iOS architectural layer.</p>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Happy path — tap to UI update</p>
+    <div class="flow-row">
+      <div class="fb fb-v">User tap</div><div class="fa">→</div>
+      <div class="fb fb-vm">ViewModel.login()</div><div class="fa">→</div>
+      <div class="fb fb-vm">LoginUseCase.call()</div><div class="fa">→</div>
+      <div class="fb fb-r">Repo protocol</div><div class="fa">→</div>
+      <div class="fb fb-n">URLSession async</div><div class="fa">→</div>
+      <div class="fb fb-sec">Decrypt response</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Response → cache → UI</p>
+    <div class="flow-row">
+      <div class="fb fb-n">DTO received</div><div class="fa">→</div>
+      <div class="fb fb-r">DTO.toDomain()</div><div class="fa">→</div>
+      <div class="fb fb-r">SwiftData.upsert()</div><div class="fa">→</div>
+      <div class="fb fb-vm">ViewModel.user = user</div><div class="fa">→</div>
+      <div class="fb fb-v">SwiftUI re-renders</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Offline path — network unavailable</p>
+    <div class="flow-row">
+      <div class="fb fb-n">URLError thrown</div><div class="fa">→</div>
+      <div class="fb fb-r">catch in Repo impl</div><div class="fa">→</div>
+      <div class="fb fb-r">SwiftData.fetch()</div><div class="fa">→</div>
+      <div class="fb fb-vm">ViewModel.user = cached</div><div class="fa">→</div>
+      <div class="fb fb-v">Offline banner shown</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Debounced search</p>
+    <div class="flow-row">
+      <div class="fb fb-v">TextField onChange</div><div class="fa">→</div>
+      <div class="fb fb-vm">searchTask?.cancel()</div><div class="fa">→</div>
+      <div class="fb fb-vm">Task.sleep(350ms)</div><div class="fa">→</div>
+      <div class="fb fb-vm">Task.checkCancellation()</div><div class="fa">→</div>
+      <div class="fb fb-n">URLSession request</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">WebSocket message → UI</p>
+    <div class="flow-row">
+      <div class="fb fb-n">NWConnection.receive()</div><div class="fa">→</div>
+      <div class="fb fb-n">JSON decode</div><div class="fa">→</div>
+      <div class="fb fb-vm">WebSocketService.messages.append()</div><div class="fa">→</div>
+      <div class="fb fb-v">@Observable auto-update</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Token refresh — 401 interceptor</p>
+    <div class="flow-row">
+      <div class="fb fb-n">401 response</div><div class="fa">→</div>
+      <div class="fb fb-sec">Keychain.getRefreshToken()</div><div class="fa">→</div>
+      <div class="fb fb-n">POST /auth/refresh</div><div class="fa">→</div>
+      <div class="fb fb-sec">Keychain.save(newTokens)</div><div class="fa">→</div>
+      <div class="fb fb-n">retry original request</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Speech-to-text → API call</p>
+    <div class="flow-row">
+      <div class="fb fb-n">SFSpeechRecognizer</div><div class="fa">→</div>
+      <div class="fb fb-v">transcript updated</div><div class="fa">→</div>
+      <div class="fb fb-vm">onSearchChanged(text)</div><div class="fa">→</div>
+      <div class="fb fb-vm">debounce 350ms</div><div class="fa">→</div>
+      <div class="fb fb-n">API search request</div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- FEATURES -->
+<section class="section reveal" id="features">
+  <p class="sec-label">05 — Feature Matrix</p>
+  <h2 class="sec-title">Every Requirement <span class="gt2">Mapped</span></h2>
+  <p class="sec-intro">All requirements from the original brief — translated to Apple-idiomatic iOS solutions.</p>
+
+  <div class="feat-grid">
+    <div class="fc" style="border-color:rgba(191,90,242,.2)">
+      <span class="fc-icon">🖼️</span>
+      <div class="fc-title" style="color:var(--a6)">SwiftUI + @Observable</div>
+      <div class="fc-desc">@Observable macro (iOS 17+) replaces ObservableObject — zero @Published boilerplate. SwiftUI views re-render only when accessed properties change. @MainActor ensures all UI updates on main thread at compile time.</div>
+      <code class="fc-dep">Swift 5.9+ built-in</code>
+    </div>
+    <div class="fc" style="border-color:rgba(0,113,227,.2)">
+      <span class="fc-icon">🔄</span>
+      <div class="fc-title" style="color:var(--a1)">Cancellable API calls</div>
+      <div class="fc-desc">Task-based cancellation — store Task handle, call .cancel() before starting new one. Task.checkCancellation() throws CancellationError which propagates up automatically. URLSession cancels the underlying HTTP request when the Task is cancelled.</div>
+      <code class="fc-dep">Swift Concurrency built-in</code>
+    </div>
+    <div class="fc" style="border-color:rgba(48,209,88,.2)">
+      <span class="fc-icon">💾</span>
+      <div class="fc-title" style="color:var(--a3)">Offline-first + SwiftData</div>
+      <div class="fc-desc">Write-through cache: network success → SwiftData upsert. Network failure → serve SwiftData cache. @Model macro generates efficient SQLite-backed persistence. FetchDescriptor for typed queries without NSPredicate strings.</div>
+      <code class="fc-dep">SwiftData (iOS 17+)</code>
+    </div>
+    <div class="fc" style="border-color:rgba(255,55,95,.2)">
+      <span class="fc-icon">🔑</span>
+      <div class="fc-title" style="color:var(--a4)">Keychain secure storage</div>
+      <div class="fc-desc">Keychain Services for access tokens, refresh tokens, user ID. kSecAttrAccessibleWhenUnlockedThisDeviceOnly — data never leaves the device, inaccessible when locked. Not backed up to iCloud. Survives app reinstall.</div>
+      <code class="fc-dep">Security.framework built-in</code>
+    </div>
+    <div class="fc" style="border-color:rgba(255,159,10,.2)">
+      <span class="fc-icon">🔐</span>
+      <div class="fc-title" style="color:var(--a5)">AES-256-GCM encryption</div>
+      <div class="fc-desc">CryptoKit — Apple's native cryptography framework. AES.GCM.seal() with random Nonce per request. IV transmitted in X-IV header. Hardware-accelerated on all Apple Silicon. No third-party crypto dependencies needed.</div>
+      <code class="fc-dep">CryptoKit built-in</code>
+    </div>
+    <div class="fc" style="border-color:rgba(0,113,227,.2)">
+      <span class="fc-icon">⏱️</span>
+      <div class="fc-title" style="color:var(--a1)">Debounced search</div>
+      <div class="fc-desc">Swift Concurrency Task-based debounce — cancel previous Task, sleep 350ms, check cancellation, execute. Zero external dependencies. Cleaner than Combine's debounce operator. CancellationError propagates automatically.</div>
+      <code class="fc-dep">Swift Concurrency built-in</code>
+    </div>
+    <div class="fc" style="border-color:rgba(52,170,220,.2)">
+      <span class="fc-icon">🎙️</span>
+      <div class="fc-title" style="color:var(--a2)">Google STT via SFSpeechRecognizer</div>
+      <div class="fc-desc">SFSpeechRecognizer with AVAudioEngine for live transcription. shouldReportPartialResults for real-time feedback. Locale-aware — recognizes 60+ languages. On-device recognition available (iOS 16+). Requires NSMicrophoneUsageDescription + NSSpeechRecognitionUsageDescription.</div>
+      <code class="fc-dep">Speech.framework built-in</code>
+    </div>
+    <div class="fc" style="border-color:rgba(52,170,220,.2)">
+      <span class="fc-icon">🔊</span>
+      <div class="fc-title" style="color:var(--a2)">TTS via AVSpeechSynthesizer</div>
+      <div class="fc-desc">AVSpeechSynthesizer with locale-specific AVSpeechSynthesisVoice. Adjustable rate, pitch, volume. AVSpeechSynthesizerDelegate for play/pause/complete callbacks. System voices including enhanced neural voices on iOS 16+.</div>
+      <code class="fc-dep">AVFoundation built-in</code>
+    </div>
+    <div class="fc" style="border-color:rgba(52,170,220,.2)">
+      <span class="fc-icon">⚡</span>
+      <div class="fc-title" style="color:var(--a2)">WebSocket — Network.framework</div>
+      <div class="fc-desc">NWConnection with WebSocket protocol. TLS with certificate pinning via NWParameters. Custom headers for auth. Exponential backoff reconnect. Recursive receiveMessage() loop. Better than URLSessionWebSocketTask for custom TLS configuration.</div>
+      <code class="fc-dep">Network.framework built-in</code>
+    </div>
+    <div class="fc" style="border-color:rgba(191,90,242,.2)">
+      <span class="fc-icon">✨</span>
+      <div class="fc-title" style="color:var(--a6)">Animations + shared elements</div>
+      <div class="fc-desc">matchedGeometryEffect for hero/shared element transitions between views. .animation(.spring()) with stagger delay for list entry. PhaseAnimator for multi-step sequences. .transition(.move + .opacity) for view appearance. Lottie via SPM for motion animations.</div>
+      <code class="fc-dep">SwiftUI + lottie-spm</code>
+    </div>
+    <div class="fc" style="border-color:rgba(255,55,95,.2)">
+      <span class="fc-icon">🔒</span>
+      <div class="fc-title" style="color:var(--a4)">SSL Certificate Pinning</div>
+      <div class="fc-desc">URLSessionDelegate.urlSession(_:didReceive:completionHandler:) validates server certificate SHA-256 hash against pinned hashes. Cancels challenge if hash doesn't match. Prevents MITM attacks even on jailbroken devices.</div>
+      <code class="fc-dep">Security.framework built-in</code>
+    </div>
+    <div class="fc" style="border-color:rgba(48,209,88,.2)">
+      <span class="fc-icon">🧪</span>
+      <div class="fc-title" style="color:var(--a3)">Testing — Swift Testing + XCTest</div>
+      <div class="fc-desc">Swift Testing (@Test macro) for use case unit tests — inject mock repository conforming to protocol. XCTest for UI tests with ViewInspector. Protocol-based DI enables swapping any dependency with a mock. No network in unit tests.</div>
+      <code class="fc-dep">Swift Testing (iOS 17+)</code>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- SPM PACKAGES -->
+<section class="section reveal" id="packages">
+  <p class="sec-label">06 — Swift Package Manager</p>
+  <h2 class="sec-title">The <span class="gt1">SPM</span> Registry</h2>
+  <p class="sec-intro">Lean dependencies — Apple's built-in frameworks handle most requirements. External packages only where the platform genuinely falls short.</p>
+
+  <div class="warn">
+    <strong>Apple-first principle:</strong> Before adding any SPM dependency, check if Apple's built-in frameworks cover it. CryptoKit (encryption), Network.framework (WebSocket), SwiftData (persistence), AVFoundation (TTS), Speech (STT) — all built-in, zero dependency overhead, and deep OS integration.
+  </div>
+
+  <div class="pkg-wrap">
+    <table>
+      <thead>
+        <tr><th>Package</th><th>Version</th><th>Purpose</th><th>Layer</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="pn">SwiftUI</code></td><td class="pv">iOS 17+</td><td class="pd">Declarative UI framework — @Observable, matchedGeometryEffect, NavigationStack, animations</td><td><span class="lp t-view">Pres</span></td></tr>
+        <tr><td><code class="pn">SwiftData</code></td><td class="pv">iOS 17+</td><td class="pd">Offline-first persistence — @Model macro, FetchDescriptor typed queries, CloudKit sync option</td><td><span class="lp t-repo">Data</span></td></tr>
+        <tr><td><code class="pn">CryptoKit</code></td><td class="pv">iOS 13+</td><td class="pd">AES-256-GCM encryption, SHA-256, HMAC, P-256 key agreement — hardware-accelerated</td><td><span class="lp t-sec">Security</span></td></tr>
+        <tr><td><code class="pn">Security.framework</code></td><td class="pv">built-in</td><td class="pd">Keychain Services API — SecItemAdd, SecItemCopyMatching, kSecAttrAccessible</td><td><span class="lp t-sec">Security</span></td></tr>
+        <tr><td><code class="pn">LocalAuthentication</code></td><td class="pv">iOS 8+</td><td class="pd">Face ID + Touch ID — LAContext.evaluatePolicy biometric authentication</td><td><span class="lp t-sec">Security</span></td></tr>
+        <tr><td><code class="pn">Speech.framework</code></td><td class="pv">iOS 10+</td><td class="pd">SFSpeechRecognizer — on-device + server STT, partial results, 60+ locales</td><td><span class="lp t-svc">Platform</span></td></tr>
+        <tr><td><code class="pn">AVFoundation</code></td><td class="pv">built-in</td><td class="pd">AVSpeechSynthesizer for TTS, AVAudioEngine for microphone capture</td><td><span class="lp t-svc">Platform</span></td></tr>
+        <tr><td><code class="pn">Network.framework</code></td><td class="pv">iOS 12+</td><td class="pd">NWConnection WebSocket, NWPathMonitor for connectivity, custom TLS parameters</td><td><span class="lp t-svc">Platform</span></td></tr>
+        <tr><td><code class="pn">UserNotifications</code></td><td class="pv">iOS 10+</td><td class="pd">Push notifications — APNs registration, notification handling, badge/sound/alert</td><td><span class="lp t-svc">Platform</span></td></tr>
+        <tr><td><code class="pn">OSLog</code></td><td class="pv">iOS 14+</td><td class="pd">Structured logging — Logger(subsystem:category:), privacy-aware, Instruments integration</td><td><span class="lp t-svc">Infra</span></td></tr>
+        <tr><td><code class="pn">lottie-spm</code></td><td class="pv">^4.4</td><td class="pd">Airbnb Lottie — motion animations from JSON, LottieAnimationView wrapped in UIViewRepresentable</td><td><span class="lp t-view">Pres</span></td></tr>
+        <tr><td><code class="pn">swift-composable-architecture</code></td><td class="pv">^1.15</td><td class="pd">TCA — Reducer, Store, @Dependency for DI, TestStore for exhaustive testing (alternative to MVVM)</td><td><span class="lp t-view">Pres</span></td></tr>
+        <tr><td><code class="pn">Alamofire</code></td><td class="pv">^5.10</td><td class="pd">HTTP networking with interceptors, retry, multipart — alternative to raw URLSession if preferred</td><td><span class="lp t-repo">Data</span></td></tr>
+        <tr><td><code class="pn">swift-log</code></td><td class="pv">^1.6</td><td class="pd">Apple Swift Log — backend-agnostic logging facade, OSLog backend</td><td><span class="lp t-svc">Infra</span></td></tr>
+        <tr>
+          <td colspan="4" style="padding:12px 14px;font-family:var(--fh);font-size:10px;color:var(--text3);letter-spacing:.04em">
+            REPLACED BY APPLE BUILT-INS: JWT library → Keychain + URLSession · SQLite/CoreData wrapper → SwiftData · OpenSSL/libsodium → CryptoKit · Socket.io → Network.framework NWConnection · Alamofire interceptors → URLSessionDelegate · RxSwift/Combine → Swift Concurrency + @Observable
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="ft-title"><span class="gt1">Built for</span> Apple Silicon.</div>
+  <p class="ft-sub">The best iOS architecture is one your whole team understands and Apple's compiler enforces.</p>
+  <p class="ft-copy">iOS · SwiftUI · Swift 6 · SwiftData · CryptoKit — Architecture Field Guide · 2025</p>
+</footer>
+
+<script>
+function st(id){
+  document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tp-'+id).classList.add('on');
+  event.currentTarget.classList.add('on');
+}
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');io.unobserve(e.target);}});
+},{threshold:0.05});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+const secs=document.querySelectorAll('section[id]');
+const links=document.querySelectorAll('.nav-links a');
+const nio=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){
+    links.forEach(a=>a.style.color='');
+    const l=document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+    if(l)l.style.color='var(--a1)';
+  }});
+},{threshold:0.3});
+secs.forEach(s=>nio.observe(s));
+</script>
+</body>
+</html>

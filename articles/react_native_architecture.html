@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>React Native — Clean Architecture Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Outfit:wght@300;400;500;600;700&family=Victor+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:      #0a0806;
+  --bg2:     #110e0a;
+  --bg3:     #181309;
+  --surf:    #1f1810;
+  --surf2:   #271f14;
+  --border:  rgba(251,191,36,0.07);
+  --border2: rgba(251,191,36,0.16);
+  --r1: #fbbf24;   /* amber — React Native's warmth */
+  --r2: #fb923c;   /* orange */
+  --r3: #34d399;   /* emerald — success/data */
+  --r4: #60a5fa;   /* blue — info */
+  --r5: #f472b6;   /* pink — realtime */
+  --r6: #a78bfa;   /* violet — state */
+  --r7: #f87171;   /* red — error/security */
+  --text:  #f5ede0;
+  --text2: #9c8060;
+  --text3: #4a3820;
+  --fh: 'Outfit', sans-serif;
+  --fd: 'Playfair Display', serif;
+  --fc: 'Victor Mono', monospace;
+  --r: 10px;
+  --rl: 20px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--fh);
+  font-size:16px;
+  line-height:1.75;
+  overflow-x:hidden;
+}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--r1);border-radius:2px}
+
+/* NOISE + GRAIN texture */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(251,191,36,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(251,146,60,0.04) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  background-size:100% 100%, 100% 100%, 256px 256px;
+  pointer-events:none;z-index:0;
+}
+
+/* DIAGONAL GRID */
+body::after{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(251,191,36,0.02) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(251,191,36,0.02) 1px,transparent 1px);
+  background-size:72px 72px;
+  pointer-events:none;z-index:0;
+}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:rgba(10,8,6,0.93);
+  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+  border-bottom:1px solid var(--border2);
+  height:58px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 52px;
+}
+.nav-logo{
+  font-family:var(--fd);font-size:18px;font-weight:700;font-style:italic;
+  color:var(--r1);display:flex;align-items:center;gap:12px;
+}
+.nav-atom{
+  width:30px;height:30px;position:relative;display:flex;align-items:center;justify-content:center;
+}
+.nav-atom-core{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--r1);
+  box-shadow:0 0 8px var(--r1);
+  position:absolute;z-index:2;
+}
+.nav-atom-ring{
+  position:absolute;
+  border:1.5px solid rgba(251,191,36,0.5);
+  border-radius:50%;
+  animation:atomSpin 3s linear infinite;
+}
+.ring1{width:26px;height:12px;animation-duration:2s}
+.ring2{width:26px;height:12px;animation-duration:3s;transform:rotate(60deg)}
+.ring3{width:26px;height:12px;animation-duration:4s;transform:rotate(120deg)}
+@keyframes atomSpin{from{transform:rotateY(0deg)}to{transform:rotateY(360deg)}}
+
+.nav-links{display:flex;gap:30px;list-style:none}
+.nav-links a{
+  font-family:var(--fh);font-size:12px;font-weight:500;
+  color:var(--text2);text-decoration:none;letter-spacing:0.05em;
+  text-transform:uppercase;transition:color .2s;
+}
+.nav-links a:hover{color:var(--r1)}
+
+/* HERO */
+.hero{
+  position:relative;min-height:100vh;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  text-align:center;padding:130px 52px 100px;overflow:hidden;z-index:1;
+}
+
+/* Animated react logo background */
+.hero-react-bg{
+  position:absolute;
+  width:600px;height:600px;
+  opacity:0.04;
+  animation:rotateSlow 40s linear infinite;
+  pointer-events:none;
+}
+@keyframes rotateSlow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+.hero-orb{position:absolute;border-radius:50%;filter:blur(100px);pointer-events:none}
+.orb1{width:800px;height:800px;background:rgba(251,191,36,0.05);top:-300px;left:-350px;animation:d1 22s ease-in-out infinite}
+.orb2{width:600px;height:600px;background:rgba(251,146,60,0.06);bottom:-200px;right:-250px;animation:d2 18s ease-in-out infinite}
+.orb3{width:400px;height:400px;background:rgba(52,211,153,0.03);top:40%;left:45%;animation:d3 28s ease-in-out infinite}
+@keyframes d1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(100px,60px) scale(1.1)}}
+@keyframes d2{0%,100%{transform:translate(0,0)}50%{transform:translate(-80px,-100px)}}
+@keyframes d3{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.5)}}
+
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid rgba(251,191,36,0.25);
+  background:rgba(251,191,36,0.06);
+  border-radius:100px;padding:6px 18px;margin-bottom:36px;
+  font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:0.18em;
+  color:var(--r1);text-transform:uppercase;
+  opacity:0;animation:up .8s .1s forwards;
+}
+.hero-dot{width:6px;height:6px;background:var(--r1);border-radius:50%;animation:blink 1.8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+.hero-title{
+  font-family:var(--fd);
+  font-size:clamp(52px,9vw,118px);
+  font-weight:900;line-height:.9;
+  letter-spacing:-0.03em;margin-bottom:12px;
+  opacity:0;animation:up .9s .3s forwards;
+}
+.hero-title em{
+  font-style:italic;
+  background:linear-gradient(135deg,var(--r1) 0%,var(--r2) 40%,var(--r5) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-sub{
+  font-family:var(--fh);font-size:clamp(13px,1.6vw,17px);font-weight:400;
+  color:var(--text2);letter-spacing:0.25em;text-transform:uppercase;
+  margin-bottom:28px;opacity:0;animation:up .8s .5s forwards;
+}
+.hero-desc{
+  max-width:780px;font-size:18px;line-height:1.8;color:var(--text2);
+  margin:0 auto 52px;font-family:var(--fd);font-style:italic;font-weight:400;
+  opacity:0;animation:up .8s .7s forwards;
+}
+.hero-tags{
+  display:flex;flex-wrap:wrap;gap:9px;justify-content:center;
+  margin-bottom:60px;opacity:0;animation:up .8s .9s forwards;
+}
+.htag{
+  background:var(--surf);border:1px solid var(--border2);
+  border-radius:6px;padding:5px 14px;
+  font-family:var(--fc);font-size:11.5px;color:var(--text2);
+  transition:all .25s;cursor:default;
+}
+.htag:hover{background:var(--surf2);color:var(--r1);border-color:rgba(251,191,36,.3);transform:translateY(-2px)}
+
+.hero-scroll{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  opacity:0;animation:up .8s 1.1s forwards;
+  font-family:var(--fh);font-size:10px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--text3);
+}
+.scroll-bar{width:1px;height:44px;background:linear-gradient(to bottom,transparent,var(--r1));animation:sl 2s ease-in-out infinite}
+@keyframes sl{0%,100%{opacity:.3;transform:scaleY(.4)}50%{opacity:1;transform:scaleY(1)}}
+@keyframes up{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+
+/* MAIN */
+main{position:relative;z-index:1}
+.section{padding:120px 52px;max-width:1380px;margin:0 auto}
+.section-label{
+  font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--r1);margin-bottom:14px;
+  display:flex;align-items:center;gap:12px;
+}
+.section-label::before{content:'';flex:0 0 28px;height:1px;background:var(--r1)}
+.section-title{
+  font-family:var(--fd);font-size:clamp(34px,4.5vw,60px);
+  font-weight:900;line-height:.95;letter-spacing:-.025em;margin-bottom:24px;
+}
+.section-intro{font-size:17px;color:var(--text2);max-width:740px;line-height:1.8;margin-bottom:64px;font-style:italic;font-family:var(--fd);font-weight:400}
+
+.grad-a{background:linear-gradient(90deg,var(--r1),var(--r2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.grad-g{background:linear-gradient(90deg,var(--r3),var(--r4));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.grad-p{background:linear-gradient(90deg,var(--r5),var(--r6));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+.divider{height:1px;background:linear-gradient(to right,transparent,var(--border2) 25%,var(--border2) 75%,transparent);margin:0 52px}
+
+.reveal{opacity:0;transform:translateY(32px);transition:opacity .7s,transform .7s}
+.reveal.visible{opacity:1;transform:none}
+
+/* ═══════════════════════════
+   ARCH FLOW
+═══════════════════════════ */
+.arch-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:16px;margin-bottom:60px;
+}
+.arch-card{
+  background:var(--surf);border:1px solid var(--border2);
+  border-radius:var(--rl);padding:24px 20px;
+  position:relative;overflow:hidden;
+  transition:all .3s;cursor:pointer;
+}
+.arch-card::before{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+  border-radius:0 0 var(--rl) var(--rl);
+  opacity:.6;
+}
+.arch-card:hover{transform:translateY(-5px);background:var(--surf2)}
+.arch-card:hover::before{opacity:1}
+.ac-num{
+  font-family:var(--fd);font-size:40px;font-weight:900;line-height:1;
+  color:var(--text3);margin-bottom:12px;
+}
+.ac-icon{font-size:24px;margin-bottom:10px}
+.ac-name{font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:6px}
+.ac-desc{font-size:12.5px;color:var(--text2);line-height:1.55}
+
+/* ═══════════════════════════
+   FOLDER TREE
+═══════════════════════════ */
+.tree-wrap{
+  background:var(--surf);border:1px solid var(--border2);
+  border-radius:var(--rl);overflow:hidden;
+  font-family:var(--fc);
+}
+.tree-header{
+  background:var(--surf2);padding:12px 24px;
+  display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--border2);
+}
+.tree-dots{display:flex;gap:7px}
+.tree-dot{width:11px;height:11px;border-radius:50%}
+.tree-title{font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--text2);text-transform:uppercase;margin:0 auto}
+.tree-body{padding:22px 28px;overflow-x:auto;font-size:12.5px;line-height:2}
+.tree-line{
+  display:flex;align-items:center;padding:1px 0;
+  white-space:nowrap;cursor:pointer;border-radius:4px;
+  transition:background .15s;
+}
+.tree-line:hover{background:rgba(251,191,36,0.05)}
+.ti{display:inline-block;width:20px;flex-shrink:0}
+.tico{margin-right:7px;font-size:12px;flex-shrink:0}
+.tn{color:var(--text)}
+.tn.folder{color:var(--r1);font-weight:500}
+.tn.tsx{color:var(--r3)}
+.tn.ts{color:var(--r4)}
+.tn.cfg{color:var(--r2)}
+.tn.test{color:var(--r5)}
+.tn.cm{color:var(--text3);font-style:italic;margin-left:12px;font-size:11px}
+
+/* ═══════════════════════════
+   TABS
+═══════════════════════════ */
+.tab-bar{
+  display:flex;gap:2px;overflow-x:auto;
+  border-bottom:1px solid var(--border2);
+  padding-bottom:0;margin-bottom:0;
+}
+.tab-btn{
+  font-family:var(--fh);font-size:12px;font-weight:600;letter-spacing:.05em;
+  text-transform:uppercase;
+  background:none;border:none;cursor:pointer;
+  color:var(--text2);padding:13px 20px;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:all .2s;white-space:nowrap;
+}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--r1);border-bottom-color:var(--r1)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ═══════════════════════════
+   CODE BLOCKS
+═══════════════════════════ */
+.code-block{
+  background:#080604;border:1px solid var(--border2);
+  border-radius:var(--r);overflow:hidden;margin:24px 0;
+}
+.code-header{
+  background:var(--surf2);padding:10px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  flex-wrap:wrap;gap:8px;
+}
+.code-lang{font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--r2);text-transform:uppercase}
+.code-file{font-family:var(--fc);font-size:11px;color:var(--text3)}
+.code-copy{
+  background:none;border:1px solid var(--border2);border-radius:4px;
+  padding:3px 10px;font-family:var(--fh);font-size:10px;letter-spacing:.08em;
+  color:var(--text2);cursor:pointer;text-transform:uppercase;transition:all .2s;
+}
+.code-copy:hover{background:var(--surf);color:var(--r1);border-color:var(--r1)}
+pre{padding:22px 26px;overflow-x:auto;line-height:1.7}
+code{font-family:var(--fc);font-size:13px}
+/* React/TS syntax */
+.kw{color:#c792ea}
+.fn{color:#82aaff}
+.st{color:#c3e88d}
+.cm{color:#546e7a;font-style:italic}
+.ty{color:#ffcb6b}
+.nu{color:#f78c6c}
+.an{color:#89ddff}
+.op{color:#89ddff}
+.im{color:#c792ea}
+.jsx{color:#f07178}
+.at{color:#ff9cac}
+
+/* ═══════════════════════════
+   FEATURE CARDS
+═══════════════════════════ */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;margin-top:20px}
+.feat-card{
+  background:var(--surf);border:1px solid var(--border2);border-radius:var(--rl);
+  padding:28px;transition:all .3s;position:relative;overflow:hidden;
+}
+.feat-card::after{
+  content:'';position:absolute;top:-60px;right:-60px;
+  width:120px;height:120px;border-radius:50%;
+  opacity:0;transition:opacity .3s;
+}
+.feat-card:hover{transform:translateY(-4px);box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.feat-card:hover::after{opacity:1}
+.fc-icon{font-size:28px;margin-bottom:14px}
+.fc-title{font-family:var(--fh);font-size:15px;font-weight:700;margin-bottom:9px;color:var(--r1)}
+.fc-desc{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:14px}
+.fc-pkgs{display:flex;flex-wrap:wrap;gap:6px}
+.fc-pkg{
+  background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.18);
+  border-radius:4px;padding:2px 9px;
+  font-family:var(--fc);font-size:11px;color:var(--r3);
+}
+
+/* ═══════════════════════════
+   HIGHLIGHT BOX
+═══════════════════════════ */
+.hbox{
+  background:rgba(251,191,36,0.05);
+  border:1px solid rgba(251,191,36,0.18);
+  border-left:3px solid var(--r1);
+  border-radius:var(--r);padding:24px 28px;margin:28px 0;
+}
+.hbox-label{font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--r1);margin-bottom:8px}
+.hbox-text{font-size:15px;color:var(--text2);line-height:1.8}
+
+/* ═══════════════════════════
+   LAYER DETAIL
+═══════════════════════════ */
+.ld{
+  background:var(--surf);border:1px solid var(--border2);
+  border-radius:var(--rl);padding:36px;margin-bottom:20px;
+  position:relative;overflow:hidden;transition:all .3s;
+}
+.ld:hover{background:var(--surf2)}
+.ld-top{display:flex;align-items:flex-start;gap:20px;margin-bottom:22px}
+.ld-num{
+  font-family:var(--fd);font-size:52px;font-weight:900;
+  line-height:1;flex-shrink:0;color:var(--text3);
+}
+.ld-name{font-family:var(--fh);font-size:22px;font-weight:700;margin-bottom:4px}
+.ld-sub{font-size:14px;color:var(--text2);font-style:italic;font-family:var(--fd)}
+.ld-body{font-size:15px;color:var(--text2);line-height:1.8;margin-bottom:20px}
+.ld-chips{display:flex;flex-wrap:wrap;gap:8px}
+.ld-chip{
+  background:rgba(251,191,36,0.07);border:1px solid var(--border2);
+  border-radius:6px;padding:5px 13px;
+  font-family:var(--fc);font-size:11.5px;color:var(--text);
+}
+
+/* ═══════════════════════════
+   LIFECYCLE PIPELINE
+═══════════════════════════ */
+.pipeline{
+  border:1px solid var(--border2);border-radius:var(--rl);overflow:hidden;
+}
+.pl-step{
+  display:flex;align-items:flex-start;gap:18px;
+  padding:20px 26px;border-bottom:1px solid var(--border);
+  transition:background .2s;
+}
+.pl-step:last-child{border-bottom:none}
+.pl-step:hover{background:rgba(251,191,36,0.03)}
+.pl-num{
+  flex-shrink:0;width:30px;height:30px;
+  background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--fh);font-size:11px;font-weight:700;color:var(--r1);margin-top:2px;
+}
+.pl-body{flex:1}
+.pl-title{font-family:var(--fh);font-size:13.5px;font-weight:700;margin-bottom:3px}
+.pl-desc{font-size:13px;color:var(--text2);line-height:1.6}
+.pl-badge{
+  flex-shrink:0;align-self:center;
+  background:var(--surf2);border:1px solid var(--border2);
+  border-radius:4px;padding:2px 9px;
+  font-family:var(--fc);font-size:10.5px;color:var(--text2);
+  white-space:nowrap;
+}
+
+/* ═══════════════════════════
+   FLOW NODES
+═══════════════════════════ */
+.flow-wrap{position:relative;padding-left:30px}
+.flow-wrap::before{
+  content:'';position:absolute;left:0;top:16px;bottom:16px;
+  width:2px;background:linear-gradient(to bottom,var(--r1),transparent);border-radius:1px;
+}
+.fn-node{
+  position:relative;
+  background:var(--surf);border:1px solid var(--border2);
+  border-radius:var(--r);padding:18px 22px;margin-bottom:10px;
+  transition:all .2s;
+}
+.fn-node::before{
+  content:'';position:absolute;left:-29px;top:50%;transform:translateY(-50%);
+  width:8px;height:8px;border-radius:50%;
+  background:var(--r1);border:2px solid var(--bg);
+}
+.fn-node:hover{background:var(--surf2);border-color:rgba(251,191,36,.3)}
+.fn-title{font-family:var(--fh);font-size:13px;font-weight:700;color:var(--r1);margin-bottom:3px}
+.fn-desc{font-size:12.5px;color:var(--text2);line-height:1.6}
+
+/* ═══════════════════════════
+   PRINCIPLES
+═══════════════════════════ */
+.p-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+.p-card{
+  background:var(--surf);border:1px solid var(--border2);
+  border-radius:var(--rl);padding:30px 26px;transition:all .3s;
+}
+.p-card:hover{transform:translateY(-3px);background:var(--surf2)}
+.p-letter{font-family:var(--fd);font-size:60px;font-weight:900;line-height:1;margin-bottom:10px}
+.p-title{font-family:var(--fh);font-size:15px;font-weight:700;margin-bottom:8px}
+.p-desc{font-size:13.5px;color:var(--text2);line-height:1.7}
+
+/* ═══════════════════════════
+   PACKAGES TABLE
+═══════════════════════════ */
+.pkg-table{width:100%;border-collapse:collapse}
+.pkg-table th{
+  font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--text2);
+  padding:13px 18px;text-align:left;border-bottom:1px solid var(--border2);
+}
+.pkg-table td{padding:13px 18px;border-bottom:1px solid var(--border);vertical-align:top}
+.pkg-table tbody tr:hover{background:rgba(251,191,36,0.025)}
+.pkg-name{color:var(--r1);font-family:var(--fc);font-size:12.5px}
+.pkg-ver{color:var(--r2);font-family:var(--fc);font-size:11.5px;white-space:nowrap}
+.pkg-desc{font-size:13.5px;color:var(--text2);line-height:1.5}
+.pill{
+  display:inline-flex;align-items:center;
+  border-radius:4px;padding:2px 9px;
+  font-family:var(--fh);font-size:10px;font-weight:600;letter-spacing:.05em;
+  text-transform:uppercase;white-space:nowrap;
+}
+.t-nav{background:rgba(251,191,36,0.1);color:var(--r1);border:1px solid rgba(251,191,36,0.25)}
+.t-state{background:rgba(167,139,250,0.1);color:var(--r6);border:1px solid rgba(167,139,250,0.25)}
+.t-data{background:rgba(52,211,153,0.1);color:var(--r3);border:1px solid rgba(52,211,153,0.25)}
+.t-sec{background:rgba(248,113,113,0.1);color:var(--r7);border:1px solid rgba(248,113,113,0.25)}
+.t-rt{background:rgba(244,114,182,0.1);color:var(--r5);border:1px solid rgba(244,114,182,0.25)}
+.t-ui{background:rgba(96,165,250,0.1);color:var(--r4);border:1px solid rgba(96,165,250,0.25)}
+.t-dev{background:rgba(251,146,60,0.1);color:var(--r2);border:1px solid rgba(251,146,60,0.25)}
+
+/* STATS */
+.stat-row{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:52px}
+.stat-box{
+  flex:1;min-width:150px;
+  background:var(--surf);border:1px solid var(--border2);border-radius:var(--rl);
+  padding:22px 18px;text-align:center;transition:all .25s;
+}
+.stat-box:hover{background:var(--surf2);transform:translateY(-3px)}
+.stat-num{font-family:var(--fd);font-size:36px;font-weight:900;line-height:1}
+.stat-lbl{font-size:12px;color:var(--text2);margin-top:5px;font-family:var(--fh);font-weight:500}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+@media(max-width:960px){
+  .grid-2{grid-template-columns:1fr}
+  .arch-grid{grid-template-columns:1fr 1fr}
+  nav{padding:0 20px}
+  .nav-links{gap:14px;display:none}
+  .section{padding:80px 24px}
+}
+
+/* INLINE CODE */
+.ic{
+  font-family:var(--fc);font-size:12.5px;
+  background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.15);
+  border-radius:3px;padding:1px 6px;color:var(--r3);
+}
+
+/* FOOTER */
+footer{
+  border-top:1px solid var(--border2);
+  padding:80px 52px;text-align:center;
+  position:relative;z-index:1;
+}
+.ft-title{font-family:var(--fd);font-size:36px;font-weight:900;font-style:italic;margin-bottom:12px}
+.ft-sub{font-size:16px;color:var(--text2);font-style:italic;font-family:var(--fd);max-width:640px;margin:0 auto 28px}
+.ft-copy{font-family:var(--fh);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--text3)}
+
+/* ANNOTATION */
+.anno{
+  display:inline-flex;align-items:center;
+  background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);
+  border-radius:3px;padding:1px 7px;
+  font-family:var(--fc);font-size:11.5px;color:var(--r4);
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-atom">
+      <div class="nav-atom-core"></div>
+      <div class="nav-atom-ring ring1"></div>
+      <div class="nav-atom-ring ring2"></div>
+      <div class="nav-atom-ring ring3"></div>
+    </div>
+    <em>React Native</em>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#structure">Structure</a></li>
+    <li><a href="#layers">Layers</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#lifecycle">Lifecycle</a></li>
+    <li><a href="#principles">Principles</a></li>
+    <li><a href="#packages">Packages</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-orb orb1"></div>
+  <div class="hero-orb orb2"></div>
+  <div class="hero-orb orb3"></div>
+
+  <!-- SVG React atom -->
+  <svg class="hero-react-bg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="100" cy="100" r="8" fill="#fbbf24"/>
+    <ellipse cx="100" cy="100" rx="90" ry="30" stroke="#fbbf24" stroke-width="2"/>
+    <ellipse cx="100" cy="100" rx="90" ry="30" stroke="#fbbf24" stroke-width="2" transform="rotate(60 100 100)"/>
+    <ellipse cx="100" cy="100" rx="90" ry="30" stroke="#fbbf24" stroke-width="2" transform="rotate(120 100 100)"/>
+  </svg>
+
+  <div class="hero-eyebrow"><span class="hero-dot"></span>Production Architecture Guide — 2025</div>
+  <h1 class="hero-title">React<br/><em>Native</em></h1>
+  <p class="hero-sub">Clean Architecture Field Guide</p>
+  <p class="hero-desc">A scalable, production-grade React Native architecture using Zustand, TanStack Query, MMKV, WatermelonDB, Socket.IO, NativeWind — covering offline-first, secure storage, API encryption, real-time, smooth animations, and speech services.</p>
+  <div class="hero-tags">
+    <span class="htag">React Native 0.76+</span>
+    <span class="htag">TypeScript</span>
+    <span class="htag">Zustand</span>
+    <span class="htag">TanStack Query</span>
+    <span class="htag">MMKV</span>
+    <span class="htag">WatermelonDB</span>
+    <span class="htag">Socket.IO</span>
+    <span class="htag">Reanimated 3</span>
+    <span class="htag">AES-256</span>
+    <span class="htag">Expo Speech</span>
+    <span class="htag">SOLID + KISS</span>
+  </div>
+  <div class="hero-scroll">Scroll to explore<div class="scroll-bar"></div></div>
+</section>
+
+<main>
+
+<!-- ═══════════════ OVERVIEW ═══════════════ -->
+<section class="section reveal" id="structure">
+  <p class="section-label">01 — Overview</p>
+  <h2 class="section-title">Five Layers, <em class="grad-a">One Direction</em></h2>
+  <p class="section-intro">Unidirectional data flow from UI to Domain to Data. Each layer knows only the layer below it. UI never touches the database; data layer never imports a React component.</p>
+
+  <div class="arch-grid reveal">
+    <div class="arch-card" style="border-top:3px solid var(--r1)">
+      <div class="ac-num" style="color:var(--r1)">01</div>
+      <div class="ac-icon">🖼️</div>
+      <div class="ac-name" style="color:var(--r1)">Presentation</div>
+      <div class="ac-desc">Screens, components, hooks, navigation. Pure UI. Never accesses DB or network directly.</div>
+    </div>
+    <div class="arch-card" style="border-top:3px solid var(--r6)">
+      <div class="ac-num" style="color:var(--r6)">02</div>
+      <div class="ac-icon">🧠</div>
+      <div class="ac-name" style="color:var(--r6)">State</div>
+      <div class="ac-desc">Zustand stores, TanStack Query cache. Single source of truth. No I/O — delegates to services.</div>
+    </div>
+    <div class="arch-card" style="border-top:3px solid var(--r3)">
+      <div class="ac-num" style="color:var(--r3)">03</div>
+      <div class="ac-icon">⚙️</div>
+      <div class="ac-name" style="color:var(--r3)">Domain</div>
+      <div class="ac-desc">Pure TypeScript: entities, use-case functions, repository interfaces. Zero React, zero network.</div>
+    </div>
+    <div class="arch-card" style="border-top:3px solid var(--r4)">
+      <div class="ac-num" style="color:var(--r4)">04</div>
+      <div class="ac-icon">📡</div>
+      <div class="ac-name" style="color:var(--r4)">Data</div>
+      <div class="ac-desc">API clients (Axios), repository impls, WatermelonDB models, MMKV, Socket.IO.</div>
+    </div>
+    <div class="arch-card" style="border-top:3px solid var(--r2)">
+      <div class="ac-num" style="color:var(--r2)">05</div>
+      <div class="ac-icon">🔧</div>
+      <div class="ac-name" style="color:var(--r2)">Core / Infra</div>
+      <div class="ac-desc">Encryption, DI container (tsyringe), config, logging, error boundaries, theme tokens.</div>
+    </div>
+  </div>
+
+  <div class="stat-row reveal">
+    <div class="stat-box"><div class="stat-num" style="color:var(--r1)">5</div><div class="stat-lbl">Architecture Layers</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--r3)">100%</div><div class="stat-lbl">TypeScript Strict</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--r4)">Offline</div><div class="stat-lbl">First Design</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--r6)">AES-256</div><div class="stat-lbl">Payload Encryption</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--r5)">RT</div><div class="stat-lbl">Real-time Events</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--r2)">60fps</div><div class="stat-lbl">Reanimated 3</div></div>
+  </div>
+
+  <!-- FOLDER TREE -->
+  <div class="tree-wrap reveal">
+    <div class="tree-header">
+      <div class="tree-dots">
+        <div class="tree-dot" style="background:#ff5f57"></div>
+        <div class="tree-dot" style="background:#febc2e"></div>
+        <div class="tree-dot" style="background:#28c840"></div>
+      </div>
+      <div class="tree-title">Project Structure — src/</div>
+    </div>
+    <div class="tree-body">
+
+<div class="tree-line"><span class="tico">📁</span><span class="tn folder">src/</span></div>
+
+<div class="tree-line"><span class="ti"></span><span class="tico">📁</span><span class="tn folder">core/</span><span class="tn cm">// cross-cutting: DI, config, encryption, theme tokens</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">config/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">AppConfig.ts</span><span class="tn cm">// typed env vars via react-native-config</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">di/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">container.ts</span><span class="tn cm">// tsyringe IOC container bootstrap</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">tokens.ts</span><span class="tn cm">// injection tokens</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">security/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">EncryptionService.ts</span><span class="tn cm">// AES-256-GCM via react-native-aes-crypto</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">KeychainService.ts</span><span class="tn cm">// react-native-keychain wrapper</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">theme/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">colors.ts</span><span class="tn cm">// semantic color tokens</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">typography.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">spacing.ts</span><span class="tn cm">// 4pt grid constants</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn tsx">useTheme.ts</span><span class="tn cm">// light/dark token resolution</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">errors/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">AppError.ts</span><span class="tn cm">// discriminated union error types</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn tsx">ErrorBoundary.tsx</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">utils/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">debounce.ts</span><span class="tn cm">// typed debounce for search inputs</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">logger.ts</span><span class="tn cm">// dev + crash reporting</span></div>
+
+<br/>
+<div class="tree-line"><span class="ti"></span><span class="tico">📁</span><span class="tn folder">domain/</span><span class="tn cm">// pure TypeScript — zero RN, zero network</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">entities/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">User.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">AuthToken.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">repositories/</span><span class="tn cm">// interfaces only</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">IUserRepository.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">IAuthRepository.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">usecases/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">loginUseCase.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">registerUseCase.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">getUserProfileUseCase.ts</span></div>
+
+<br/>
+<div class="tree-line"><span class="ti"></span><span class="tico">📁</span><span class="tn folder">data/</span><span class="tn cm">// impls: Axios, WatermelonDB, MMKV, Socket.IO</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">api/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">httpClient.ts</span><span class="tn cm">// Axios + interceptors + cancel tokens</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">authApiService.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">userApiService.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">local/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">database.ts</span><span class="tn cm">// WatermelonDB setup</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">UserModel.ts</span><span class="tn cm">// WatermelonDB model</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">schema.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">repositories/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">UserRepositoryImpl.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">AuthRepositoryImpl.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">realtime/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">socketClient.ts</span><span class="tn cm">// Socket.IO client with reconnect logic</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">eventBus.ts</span><span class="tn cm">// typed event emitter</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">storage/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">mmkvStorage.ts</span><span class="tn cm">// typed MMKV wrapper for fast key-value</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">secureStorage.ts</span><span class="tn cm">// Keychain/Keystore for tokens</span></div>
+
+<br/>
+<div class="tree-line"><span class="ti"></span><span class="tico">📁</span><span class="tn folder">state/</span><span class="tn cm">// Zustand stores + TanStack Query hooks</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">authStore.ts</span><span class="tn cm">// Zustand — user, token, login/logout actions</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">uiStore.ts</span><span class="tn cm">// Zustand — theme, loading, toast, modals</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">queries/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">useUserQuery.ts</span><span class="tn cm">// TanStack Query — fetching, caching, sync</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">useSearchQuery.ts</span><span class="tn cm">// debounced search query</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">queryClient.ts</span><span class="tn cm">// shared QueryClient config</span></div>
+
+<br/>
+<div class="tree-line"><span class="ti"></span><span class="tico">📁</span><span class="tn folder">presentation/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">navigation/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn tsx">RootNavigator.tsx</span><span class="tn cm">// React Navigation 7 — stack + tabs</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">navigationTypes.ts</span><span class="tn cm">// typed route params</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">components/</span><span class="tn cm">// design system atoms</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn tsx">Button.tsx</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn tsx">Input.tsx</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn tsx">SkeletonLoader.tsx</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn tsx">AnimatedListItem.tsx</span><span class="tn cm">// Reanimated 3 enter/exit</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">screens/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">auth/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn tsx">LoginScreen.tsx</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn tsx">RegisterScreen.tsx</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">home/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn tsx">HomeScreen.tsx</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">useHomeViewModel.ts</span><span class="tn cm">// screen-local state + queries</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">hooks/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">useNetworkStatus.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">useSpeech.ts</span><span class="tn cm">// STT + TTS abstraction hook</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">useWebSocket.ts</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="ti"></span><span class="tico">📄</span><span class="tn ts">useDebounce.ts</span></div>
+
+<br/>
+<div class="tree-line"><span class="ti"></span><span class="tico">📁</span><span class="tn folder">__tests__/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">unit/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">integration/</span></div>
+<div class="tree-line"><span class="ti"></span><span class="ti"></span><span class="tico">📁</span><span class="tn folder">e2e/</span><span class="tn cm">// Maestro flows</span></div>
+<div class="tree-line"><span class="tico">📄</span><span class="tn cfg">tsconfig.json</span></div>
+<div class="tree-line"><span class="tico">📄</span><span class="tn cfg">babel.config.js</span></div>
+<div class="tree-line"><span class="tico">📄</span><span class="tn cfg">.env.production / .env.development</span></div>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ LAYERS ═══════════════ -->
+<section class="section reveal" id="layers">
+  <p class="section-label">02 — Layer Breakdown</p>
+  <h2 class="section-title">Each Layer <em class="grad-g">Owns Its Job</em></h2>
+  <p class="section-intro">Boundaries are enforced by TypeScript interfaces and inversion of control — not by convention or team discipline alone.</p>
+
+  <div class="ld reveal" style="border-left:3px solid var(--r1)">
+    <div class="ld-top">
+      <div class="ld-num" style="color:var(--r1)">01</div>
+      <div>
+        <div class="ld-name">Presentation Layer 🖼️</div>
+        <div class="ld-sub">Screens, components, navigation — renders state, dispatches intent</div>
+      </div>
+    </div>
+    <div class="ld-body">Screens are dumb: they subscribe to state slices via Zustand selectors and call use-case hooks. No business logic, no direct API calls. Every screen has a co-located <span class="ic">useXxxViewModel.ts</span> hook that assembles the state and handlers the screen needs — keeping JSX files clean. Navigation lives in <span class="ic">RootNavigator.tsx</span> with typed params; auth guards are plugin-style route wrappers.</div>
+    <div class="ld-chips">
+      <span class="ld-chip">React Navigation 7</span>
+      <span class="ld-chip">NativeWind (Tailwind CSS)</span>
+      <span class="ld-chip">Reanimated 3</span>
+      <span class="ld-chip">Shared Element Transitions</span>
+      <span class="ld-chip">ViewModel hooks</span>
+    </div>
+  </div>
+
+  <div class="ld reveal" style="border-left:3px solid var(--r6);margin-top:16px">
+    <div class="ld-top">
+      <div class="ld-num" style="color:var(--r6)">02</div>
+      <div>
+        <div class="ld-name">State Layer 🧠</div>
+        <div class="ld-sub">Zustand global state + TanStack Query server cache</div>
+      </div>
+    </div>
+    <div class="ld-body">Two distinct state concerns: <span class="ic">Zustand</span> for client-owned state (auth, theme, UI flags) and <span class="ic">TanStack Query</span> for server-synchronized state (fetching, caching, background sync, optimistic updates). They never collide. Zustand stores are sliced by domain — never one giant store. TanStack Query's <span class="ic">staleTime</span> and <span class="ic">gcTime</span> are configured per query for offline-first resilience.</div>
+    <div class="ld-chips">
+      <span class="ld-chip">Zustand slices</span>
+      <span class="ld-chip">TanStack Query v5</span>
+      <span class="ld-chip">Optimistic updates</span>
+      <span class="ld-chip">Background sync</span>
+      <span class="ld-chip">Persist middleware (MMKV)</span>
+    </div>
+  </div>
+
+  <div class="ld reveal" style="border-left:3px solid var(--r3);margin-top:16px">
+    <div class="ld-top">
+      <div class="ld-num" style="color:var(--r3)">03</div>
+      <div>
+        <div class="ld-name">Domain Layer ⚙️</div>
+        <div class="ld-sub">Pure TypeScript — zero React, zero Axios, zero anything</div>
+      </div>
+    </div>
+    <div class="ld-body">This is the heart. Entities are plain TypeScript interfaces. Repository interfaces define contracts — <span class="ic">IUserRepository</span>, <span class="ic">IAuthRepository</span>. Use-cases are pure async functions that take repository interfaces as parameters — no class instances, no DI magic, trivially unit-testable. The <span class="ic">AppError</span> discriminated union propagates cleanly from domain to UI.</div>
+    <div class="ld-chips">
+      <span class="ld-chip">Pure TS entities</span>
+      <span class="ld-chip">Repository interfaces</span>
+      <span class="ld-chip">Use-case functions</span>
+      <span class="ld-chip">AppError union type</span>
+    </div>
+  </div>
+
+  <div class="ld reveal" style="border-left:3px solid var(--r4);margin-top:16px">
+    <div class="ld-top">
+      <div class="ld-num" style="color:var(--r4)">04</div>
+      <div>
+        <div class="ld-name">Data Layer 📡</div>
+        <div class="ld-sub">Axios, WatermelonDB, MMKV, Socket.IO — all I/O lives here</div>
+      </div>
+    </div>
+    <div class="ld-body">Implements domain repository interfaces. <span class="ic">UserRepositoryImpl</span> tries cache first (WatermelonDB), then network. On success, persists to DB. <span class="ic">httpClient.ts</span> is an Axios instance with request/response interceptors for JWT injection, AES encryption, cancel-token management, and retry logic. Socket.IO client manages reconnect, heartbeat, and typed event routing.</div>
+    <div class="ld-chips">
+      <span class="ld-chip">Axios interceptors</span>
+      <span class="ld-chip">WatermelonDB (offline cache)</span>
+      <span class="ld-chip">MMKV (fast KV)</span>
+      <span class="ld-chip">Keychain (secure)</span>
+      <span class="ld-chip">Socket.IO client</span>
+    </div>
+  </div>
+
+  <div class="ld reveal" style="border-left:3px solid var(--r2);margin-top:16px">
+    <div class="ld-top">
+      <div class="ld-num" style="color:var(--r2)">05</div>
+      <div>
+        <div class="ld-name">Core / Infra Layer 🔧</div>
+        <div class="ld-sub">Encryption, DI, theme, error boundaries, config</div>
+      </div>
+    </div>
+    <div class="ld-body">Everything that's needed everywhere but shouldn't be bundled with business logic. <span class="ic">tsyringe</span> is the IOC container — use-case and repository bindings registered here, resolved at runtime. Theme tokens (colors, spacing, typography) as plain TypeScript objects — NativeWind reads them via <span class="ic">tailwind.config.ts</span>. <span class="ic">react-native-config</span> provides typed environment variables, never hardcoded strings.</div>
+    <div class="ld-chips">
+      <span class="ld-chip">tsyringe DI</span>
+      <span class="ld-chip">AES-256-GCM service</span>
+      <span class="ld-chip">Theme tokens</span>
+      <span class="ld-chip">react-native-config</span>
+      <span class="ld-chip">ErrorBoundary</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ FEATURES ═══════════════ -->
+<section class="section reveal" id="features">
+  <p class="section-label">03 — Features Deep Dive</p>
+  <h2 class="section-title">Every Concern <em class="grad-p">Solved</em></h2>
+  <p class="section-intro">Speech-to-text, API encryption, offline-first, cancellable calls with debounce, secure token storage, real-time events, and 60fps animations — none of these are bolted on.</p>
+
+  <div class="tabs reveal">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="showTab('api')">📡 API Client</button>
+      <button class="tab-btn" onclick="showTab('offline')">📦 Offline-First</button>
+      <button class="tab-btn" onclick="showTab('auth')">🔐 Auth & Storage</button>
+      <button class="tab-btn" onclick="showTab('encrypt')">🔒 Encryption</button>
+      <button class="tab-btn" onclick="showTab('speech')">🎤 Speech</button>
+      <button class="tab-btn" onclick="showTab('realtime')">🔄 Real-time</button>
+      <button class="tab-btn" onclick="showTab('anim')">✨ Animations</button>
+    </div>
+
+    <!-- API CLIENT -->
+    <div class="tab-panel active" id="tab-api">
+      <div class="hbox" style="margin-top:28px">
+        <div class="hbox-label">Strategy</div>
+        <div class="hbox-text">Single Axios instance with layered interceptors: JWT injection → AES-256 body encryption → AbortController cancel tokens → exponential-backoff retry (non-2xx). Debounced search queries use a shared <span class="ic">useDebouncedQuery</span> hook — one hook, consistent 300ms delay, automatic cancel on unmount.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">data/api/httpClient.ts</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="im">import</span> axios, { <span class="ty">AxiosInstance</span>, <span class="ty">InternalAxiosRequestConfig</span> } <span class="im">from</span> <span class="st">'axios'</span>;
+<span class="im">import</span> { secureStorage } <span class="im">from</span> <span class="st">'../storage/secureStorage'</span>;
+<span class="im">import</span> { encryptionService } <span class="im">from</span> <span class="st">'../../core/security/EncryptionService'</span>;
+
+<span class="kw">const</span> <span class="fn">createHttpClient</span> = (): <span class="ty">AxiosInstance</span> => {
+  <span class="kw">const</span> client = axios.create({
+    baseURL: <span class="ty">AppConfig</span>.API_BASE_URL,
+    timeout: <span class="nu">15_000</span>,
+  });
+
+  <span class="cm">// 1. Inject JWT + AES-encrypt body</span>
+  client.interceptors.request.use(<span class="kw">async</span> (config: <span class="ty">InternalAxiosRequestConfig</span>) => {
+    <span class="kw">const</span> token = <span class="kw">await</span> secureStorage.getAccessToken();
+    <span class="kw">if</span> (token) config.headers.Authorization = <span class="st">`Bearer <span class="at">${token}</span>`</span>;
+
+    <span class="kw">if</span> (config.data) {
+      config.data = <span class="kw">await</span> encryptionService.encryptPayload(config.data);
+      config.headers[<span class="st">'X-Encrypted'</span>] = <span class="st">'1'</span>;
+    }
+    <span class="kw">return</span> config;
+  });
+
+  <span class="cm">// 2. Decrypt response + handle token refresh</span>
+  client.interceptors.response.use(
+    <span class="kw">async</span> (response) => {
+      <span class="kw">if</span> (response.headers[<span class="st">'x-encrypted'</span>]) {
+        response.data = <span class="kw">await</span> encryptionService.decryptPayload(response.data);
+      }
+      <span class="kw">return</span> response;
+    },
+    <span class="kw">async</span> (error) => {
+      <span class="kw">if</span> (error.response?.status === <span class="nu">401</span>) {
+        <span class="kw">await</span> <span class="fn">refreshTokenAndRetry</span>(error, client);
+      }
+      <span class="kw">return</span> Promise.reject(<span class="fn">toAppError</span>(error));
+    }
+  );
+  <span class="kw">return</span> client;
+};
+
+<span class="cm">// Cancellable request helper</span>
+<span class="kw">export const</span> <span class="fn">cancellableRequest</span> = &lt;<span class="ty">T</span>&gt;(
+  request: (<span class="an">signal</span>: <span class="ty">AbortSignal</span>) => <span class="ty">Promise</span>&lt;<span class="ty">T</span>&gt;
+) => {
+  <span class="kw">const</span> controller = <span class="kw">new</span> <span class="ty">AbortController</span>();
+  <span class="kw">return</span> { promise: request(controller.signal), cancel: () => controller.abort() };
+};</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">state/queries/useSearchQuery.ts — debounced</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="kw">export const</span> <span class="fn">useSearchQuery</span> = (<span class="an">rawQuery</span>: <span class="ty">string</span>) => {
+  <span class="kw">const</span> debouncedQuery = <span class="fn">useDebounce</span>(rawQuery, <span class="nu">300</span>);
+
+  <span class="kw">return</span> useQuery({
+    queryKey: [<span class="st">'search'</span>, debouncedQuery],
+    queryFn: ({ signal }) => userApiService.search(debouncedQuery, signal),
+    enabled: debouncedQuery.length > <span class="nu">1</span>,   <span class="cm">// skip empty / single char</span>
+    staleTime: <span class="nu">30_000</span>,                     <span class="cm">// 30s — search cache</span>
+    placeholderData: keepPreviousData,      <span class="cm">// no flicker between keystrokes</span>
+  });
+};
+
+<span class="cm">// useDebounce — typed, cancels on unmount</span>
+<span class="kw">export const</span> <span class="fn">useDebounce</span> = &lt;<span class="ty">T</span>&gt;(value: <span class="ty">T</span>, delay: <span class="ty">number</span>): <span class="ty">T</span> => {
+  <span class="kw">const</span> [debounced, setDebounced] = useState&lt;<span class="ty">T</span>&gt;(value);
+  useEffect(() => {
+    <span class="kw">const</span> id = setTimeout(() => setDebounced(value), delay);
+    <span class="kw">return</span> () => clearTimeout(id);
+  }, [value, delay]);
+  <span class="kw">return</span> debounced;
+};</code></pre>
+      </div>
+    </div>
+
+    <!-- OFFLINE FIRST -->
+    <div class="tab-panel" id="tab-offline">
+      <div class="hbox" style="margin-top:28px">
+        <div class="hbox-label">Strategy</div>
+        <div class="hbox-text">WatermelonDB as the offline database (SQLite under the hood, observable records). TanStack Query's <span class="ic">networkMode: 'offlineFirst'</span> + <span class="ic">persistQueryClient</span> backed by MMKV for query cache persistence across app restarts. NetInfo drives a connectivity Zustand slice — UI degrades gracefully and queues mutations for later sync.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">data/repositories/UserRepositoryImpl.ts</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="kw">export class</span> <span class="ty">UserRepositoryImpl</span> <span class="kw">implements</span> <span class="ty">IUserRepository</span> {
+  <span class="kw">constructor</span>(
+    <span class="kw">private</span> api: <span class="ty">UserApiService</span>,
+    <span class="kw">private</span> db: <span class="ty">Database</span>,
+  ) {}
+
+  <span class="kw">async</span> <span class="fn">getUser</span>(id: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">User</span>&gt; {
+    <span class="cm">// 1. Try local cache first</span>
+    <span class="kw">const</span> local = <span class="kw">await</span> this.db.collections
+      .get&lt;<span class="ty">UserModel</span>&gt;(<span class="st">'users'</span>).find(id);
+    <span class="kw">if</span> (local) <span class="kw">return</span> <span class="fn">toDomain</span>(local);
+
+    <span class="cm">// 2. Fetch from network</span>
+    <span class="kw">const</span> remote = <span class="kw">await</span> this.api.getUser(id);
+
+    <span class="cm">// 3. Persist to local DB</span>
+    <span class="kw">await</span> this.db.write(<span class="kw">async</span> () => {
+      <span class="kw">await</span> this.db.collections
+        .get&lt;<span class="ty">UserModel</span>&gt;(<span class="st">'users'</span>)
+        .create(u => { u._raw.id = remote.id; u.name = remote.name; });
+    });
+    <span class="kw">return</span> remote;
+  }
+}
+
+<span class="cm">// TanStack Query persistence setup</span>
+<span class="kw">const</span> mmkvPersister = <span class="fn">createMMKVStoragePersister</span>({ storage: mmkv });
+<span class="fn">persistQueryClient</span>({ queryClient, persister: mmkvPersister, maxAge: <span class="ty">Infinity</span> });</code></pre>
+      </div>
+    </div>
+
+    <!-- AUTH STORAGE -->
+    <div class="tab-panel" id="tab-auth">
+      <div class="hbox" style="margin-top:28px">
+        <div class="hbox-label">Strategy</div>
+        <div class="hbox-text">Two-tier storage: <span class="ic">react-native-keychain</span> (iOS Keychain / Android Keystore) for tokens — hardware-backed, biometric-accessible. <span class="ic">MMKV</span> for non-sensitive fast-access values (theme preference, onboarding flags, last seen user ID). Never store tokens in AsyncStorage or MMKV — those are not encrypted at the OS level.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">data/storage/secureStorage.ts</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="im">import</span> * <span class="im">as</span> Keychain <span class="im">from</span> <span class="st">'react-native-keychain'</span>;
+
+<span class="kw">const</span> SERVICE = <span class="st">'com.app.tokens'</span>;
+
+<span class="kw">export const</span> secureStorage = {
+  <span class="kw">async</span> <span class="fn">saveTokens</span>(access: <span class="ty">string</span>, refresh: <span class="ty">string</span>) {
+    <span class="kw">await</span> Keychain.setGenericPassword(
+      <span class="st">'tokens'</span>,
+      <span class="ty">JSON</span>.stringify({ access, refresh }),
+      {
+        service: SERVICE,
+        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
+        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      }
+    );
+  },
+
+  <span class="kw">async</span> <span class="fn">getAccessToken</span>(): <span class="ty">Promise</span>&lt;<span class="ty">string</span> | <span class="kw">null</span>&gt; {
+    <span class="kw">const</span> creds = <span class="kw">await</span> Keychain.getGenericPassword({ service: SERVICE });
+    <span class="kw">if</span> (!creds) <span class="kw">return null</span>;
+    <span class="kw">return</span> <span class="ty">JSON</span>.parse(creds.password).access;
+  },
+
+  <span class="kw">async</span> <span class="fn">clearTokens</span>() {
+    <span class="kw">await</span> Keychain.resetGenericPassword({ service: SERVICE });
+  },
+};
+
+<span class="cm">// MMKV — typed wrapper for non-sensitive values</span>
+<span class="kw">const</span> storage = <span class="kw">new</span> <span class="ty">MMKV</span>({ id: <span class="st">'app-prefs'</span> });
+<span class="kw">export const</span> prefs = {
+  <span class="fn">setTheme</span>: (mode: <span class="st">'light'</span> | <span class="st">'dark'</span>) => storage.set(<span class="st">'theme'</span>, mode),
+  <span class="fn">getTheme</span>: () => storage.getString(<span class="st">'theme'</span>),
+  <span class="fn">setOnboarded</span>: () => storage.set(<span class="st">'onboarded'</span>, <span class="kw">true</span>),
+  <span class="fn">isOnboarded</span>: () => storage.getBoolean(<span class="st">'onboarded'</span>) ?? <span class="kw">false</span>,
+};</code></pre>
+      </div>
+    </div>
+
+    <!-- ENCRYPTION -->
+    <div class="tab-panel" id="tab-encrypt">
+      <div class="hbox" style="margin-top:28px">
+        <div class="hbox-label">Strategy</div>
+        <div class="hbox-text">AES-256-GCM via <span class="ic">react-native-aes-crypto</span> (native module — no JS-land crypto). Session key established via ECDH handshake on app init; stored in Keychain for the session. Every API request body is encrypted before leaving the device; every response body is decrypted in the Axios interceptor — routes are completely unaware.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">core/security/EncryptionService.ts</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="im">import</span> Aes <span class="im">from</span> <span class="st">'react-native-aes-crypto'</span>;
+
+<span class="kw">class</span> <span class="ty">EncryptionService</span> {
+  <span class="kw">private</span> sessionKey: <span class="ty">string</span> | <span class="kw">null</span> = <span class="kw">null</span>;
+
+  <span class="kw">async</span> <span class="fn">initSessionKey</span>(serverPublicKey: <span class="ty">string</span>) {
+    <span class="cm">// ECDH: derive shared secret, store in Keychain</span>
+    <span class="kw">this</span>.sessionKey = <span class="kw">await</span> <span class="fn">deriveECDHSecret</span>(serverPublicKey);
+    <span class="kw">await</span> secureStorage.saveKey(<span class="kw">this</span>.sessionKey);
+  }
+
+  <span class="kw">async</span> <span class="fn">encryptPayload</span>(data: <span class="ty">unknown</span>): <span class="ty">Promise</span>&lt;<span class="ty">string</span>&gt; {
+    <span class="kw">const</span> key = <span class="kw">await this</span>.<span class="fn">getKey</span>();
+    <span class="kw">const</span> iv = <span class="kw">await</span> Aes.randomKey(<span class="nu">16</span>); <span class="cm">// 128-bit IV</span>
+    <span class="kw">const</span> plaintext = <span class="ty">JSON</span>.stringify(data);
+    <span class="kw">const</span> cipher = <span class="kw">await</span> Aes.encrypt(plaintext, key, iv, <span class="st">'aes-256-gcm'</span>);
+    <span class="cm">// Pack as base64: iv.cipher (server splits on first 32 chars)</span>
+    <span class="kw">return</span> <span class="st">`<span class="at">${iv}</span>.<span class="at">${cipher}</span>`</span>;
+  }
+
+  <span class="kw">async</span> <span class="fn">decryptPayload</span>(packed: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">unknown</span>&gt; {
+    <span class="kw">const</span> [iv, cipher] = packed.split(<span class="st">'.'</span>);
+    <span class="kw">const</span> key = <span class="kw">await this</span>.<span class="fn">getKey</span>();
+    <span class="kw">const</span> plaintext = <span class="kw">await</span> Aes.decrypt(cipher, key, iv, <span class="st">'aes-256-gcm'</span>);
+    <span class="kw">return</span> <span class="ty">JSON</span>.parse(plaintext);
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- SPEECH -->
+    <div class="tab-panel" id="tab-speech">
+      <div class="hbox" style="margin-top:28px">
+        <div class="hbox-label">Strategy</div>
+        <div class="hbox-text"><span class="ic">@react-native-voice/voice</span> for Speech-to-Text — streaming partial results via onSpeechPartialResults, final via onSpeechResults. <span class="ic">expo-speech</span> for Text-to-Speech (or <span class="ic">react-native-tts</span> for bare RN) with language, pitch, rate, and queue control. Both are abstracted behind a <span class="ic">useSpeech</span> hook — screens never import native modules directly.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">presentation/hooks/useSpeech.ts</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="im">import</span> Voice, { <span class="ty">SpeechResultsEvent</span> } <span class="im">from</span> <span class="st">'@react-native-voice/voice'</span>;
+<span class="im">import</span> * <span class="im">as</span> Speech <span class="im">from</span> <span class="st">'expo-speech'</span>;
+
+<span class="kw">export const</span> <span class="fn">useSpeech</span> = () => {
+  <span class="kw">const</span> [transcript, setTranscript] = useState(<span class="st">''</span>);
+  <span class="kw">const</span> [isListening, setListening] = useState(<span class="kw">false</span>);
+
+  useEffect(() => {
+    Voice.onSpeechPartialResults = (e: <span class="ty">SpeechResultsEvent</span>) =>
+      setTranscript(e.value?.[<span class="nu">0</span>] ?? <span class="st">''</span>);
+
+    Voice.onSpeechResults = (e: <span class="ty">SpeechResultsEvent</span>) => {
+      setTranscript(e.value?.[<span class="nu">0</span>] ?? <span class="st">''</span>);
+      setListening(<span class="kw">false</span>);
+    };
+    <span class="kw">return</span> () => { Voice.destroy().then(Voice.removeAllListeners); };
+  }, []);
+
+  <span class="kw">const</span> <span class="fn">startListening</span> = <span class="kw">async</span> (locale = <span class="st">'en-US'</span>) => {
+    setTranscript(<span class="st">''</span>);
+    setListening(<span class="kw">true</span>);
+    <span class="kw">await</span> Voice.start(locale);
+  };
+
+  <span class="kw">const</span> <span class="fn">stopListening</span> = <span class="kw">async</span> () => {
+    <span class="kw">await</span> Voice.stop();
+    setListening(<span class="kw">false</span>);
+  };
+
+  <span class="kw">const</span> <span class="fn">speak</span> = (text: <span class="ty">string</span>, language = <span class="st">'en-US'</span>) =>
+    Speech.speak(text, { language, pitch: <span class="nu">1.0</span>, rate: <span class="nu">0.9</span> });
+
+  <span class="kw">return</span> { transcript, isListening, startListening, stopListening, speak };
+};</code></pre>
+      </div>
+    </div>
+
+    <!-- REAL-TIME -->
+    <div class="tab-panel" id="tab-realtime">
+      <div class="hbox" style="margin-top:28px">
+        <div class="hbox-label">Strategy</div>
+        <div class="hbox-text">Socket.IO client with automatic reconnect and typed event system. A singleton <span class="ic">socketClient.ts</span> manages the connection lifecycle. Events are typed via a shared <span class="ic">ServerToClientEvents</span> interface (matched to the backend). A <span class="ic">useWebSocket</span> hook subscribes to events in components and handles cleanup. Disconnection triggers an offline flag in Zustand; reconnection triggers a TanStack Query invalidation burst.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">data/realtime/socketClient.ts</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="im">import</span> { io, <span class="ty">Socket</span> } <span class="im">from</span> <span class="st">'socket.io-client'</span>;
+
+<span class="kw">interface</span> <span class="ty">ServerToClientEvents</span> {
+  notification: (payload: { title: <span class="ty">string</span>; body: <span class="ty">string</span> }) => <span class="kw">void</span>;
+  data_update:  (payload: { entity: <span class="ty">string</span>; id: <span class="ty">string</span> }) => <span class="kw">void</span>;
+}
+
+<span class="kw">let</span> socket: <span class="ty">Socket</span>&lt;<span class="ty">ServerToClientEvents</span>&gt; | <span class="kw">null</span> = <span class="kw">null</span>;
+
+<span class="kw">export const</span> <span class="fn">connectSocket</span> = (token: <span class="ty">string</span>) => {
+  socket = io(<span class="ty">AppConfig</span>.WS_URL, {
+    auth: { token },
+    reconnection: <span class="kw">true</span>,
+    reconnectionDelay: <span class="nu">1000</span>,
+    reconnectionDelayMax: <span class="nu">30_000</span>,
+    reconnectionAttempts: <span class="ty">Infinity</span>,
+    transports: [<span class="st">'websocket'</span>],
+  });
+
+  socket.on(<span class="st">'connect'</span>, () => useSocketStore.getState().setConnected(<span class="kw">true</span>));
+  socket.on(<span class="st">'disconnect'</span>, () => useSocketStore.getState().setConnected(<span class="kw">false</span>));
+
+  socket.on(<span class="st">'data_update'</span>, ({ entity, id }) => {
+    queryClient.invalidateQueries({ queryKey: [entity, id] });
+  });
+};
+
+<span class="cm">// Hook for component-level subscriptions</span>
+<span class="kw">export const</span> <span class="fn">useWebSocket</span> = &lt;<span class="ty">K</span> <span class="kw">extends keyof</span> <span class="ty">ServerToClientEvents</span>&gt;(
+  event: <span class="ty">K</span>, handler: <span class="ty">ServerToClientEvents</span>[<span class="ty">K</span>]
+) => {
+  useEffect(() => {
+    socket?.on(event, handler <span class="kw">as any</span>);
+    <span class="kw">return</span> () => { socket?.off(event, handler <span class="kw">as any</span>); };
+  }, [event, handler]);
+};</code></pre>
+      </div>
+    </div>
+
+    <!-- ANIMATIONS -->
+    <div class="tab-panel" id="tab-anim">
+      <div class="hbox" style="margin-top:28px">
+        <div class="hbox-label">Strategy</div>
+        <div class="hbox-text">React Native Reanimated 3 for all motion — runs on the UI thread, never the JS thread. Shared Element Transitions via <span class="ic">react-native-shared-element</span> (or Reanimated 3's Layout Animations for simple cases). <span class="ic">useAnimatedStyle</span> + <span class="ic">withSpring</span> / <span class="ic">withTiming</span> for gesture-driven interactions. <span class="ic">FlatList</span> items enter via <span class="ic">FadeInDown</span> layout animation. No Animated API — Reanimated 3 everywhere.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">presentation/components/AnimatedListItem.tsx</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="im">import</span> Animated, {
+  FadeInDown, FadeOutUp,
+  useAnimatedStyle, useSharedValue,
+  withSpring, withTiming, interpolateColor
+} <span class="im">from</span> <span class="st">'react-native-reanimated'</span>;
+
+<span class="kw">export const</span> <span class="ty">AnimatedListItem</span> = ({ item, index }: <span class="ty">Props</span>) => {
+  <span class="kw">const</span> pressed = useSharedValue(<span class="nu">0</span>);
+
+  <span class="kw">const</span> animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: withSpring(pressed.value ? <span class="nu">0.96</span> : <span class="nu">1</span>, { damping: <span class="nu">15</span> }) }],
+    backgroundColor: interpolateColor(
+      pressed.value, [<span class="nu">0</span>, <span class="nu">1</span>],
+      [<span class="st">'transparent'</span>, <span class="st">'rgba(251,191,36,0.08)'</span>]
+    ),
+  }));
+
+  <span class="kw">return</span> (
+    &lt;<span class="jsx">Animated.View</span>
+      entering={FadeInDown.delay(index * <span class="nu">40</span>).springify().damping(<span class="nu">14</span>)}
+      exiting={FadeOutUp.duration(<span class="nu">200</span>)}
+      style={animStyle}
+    &gt;
+      &lt;<span class="jsx">Pressable</span>
+        onPressIn={() => { pressed.value = <span class="nu">1</span>; }}
+        onPressOut={() => { pressed.value = <span class="nu">0</span>; }}
+      &gt;
+        &lt;<span class="jsx">Text</span>&gt;{item.title}&lt;/<span class="jsx">Text</span>&gt;
+      &lt;/<span class="jsx">Pressable</span>&gt;
+    &lt;/<span class="jsx">Animated.View</span>&gt;
+  );
+};</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">Shared Element Hero Transition</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="cm">// List screen — tag the shared element</span>
+<span class="im">import</span> { SharedElement } <span class="im">from</span> <span class="st">'react-native-shared-element'</span>;
+
+&lt;<span class="jsx">SharedElement</span> id={<span class="st">`user.avatar.<span class="at">${user.id}</span>`</span>}&gt;
+  &lt;<span class="jsx">Image</span> source={{ uri: user.avatarUrl }} style={styles.avatar} /&gt;
+&lt;/<span class="jsx">SharedElement</span>&gt;
+
+<span class="cm">// Detail screen — same id, Reanimated handles the morph</span>
+&lt;<span class="jsx">SharedElement</span> id={<span class="st">`user.avatar.<span class="at">${userId}</span>`</span>}&gt;
+  &lt;<span class="jsx">Image</span> source={{ uri: user.avatarUrl }} style={styles.heroBanner} /&gt;
+&lt;/<span class="jsx">SharedElement</span>&gt;</code></pre>
+      </div>
+    </div>
+  </div><!-- /tabs -->
+
+  <!-- FEATURE CARDS -->
+  <div class="feat-grid reveal" style="margin-top:48px">
+
+    <div class="feat-card" style="border-color:rgba(251,191,36,0.2)">
+      <div class="fc-icon">🎤</div>
+      <div class="fc-title">Speech-to-Text / Text-to-Speech</div>
+      <div class="fc-desc">Google Speech via <span class="ic">@react-native-voice/voice</span> with streaming partial results. <span class="ic">expo-speech</span> for TTS with language, pitch, rate. Both hidden behind <span class="ic">useSpeech()</span> — swap the native module without touching screens.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">@react-native-voice/voice</span><span class="fc-pkg">expo-speech</span></div>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(96,165,250,0.2)">
+      <div class="fc-icon">📦</div>
+      <div class="fc-title">Offline-First (WatermelonDB)</div>
+      <div class="fc-desc">WatermelonDB (SQLite + observables) as local cache. Repository reads local first, fetches remote on miss, persists back. TanStack Query's persistQueryClient backed by MMKV survives app restarts.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">@nozbe/watermelondb</span><span class="fc-pkg">react-native-mmkv</span></div>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(167,139,250,0.2)">
+      <div class="fc-icon">🧠</div>
+      <div class="fc-title">Zustand + TanStack Query</div>
+      <div class="fc-desc">Zustand for client state (auth, UI), TanStack Query v5 for server state. No Redux boilerplate. Query keys typed as const tuples. Background sync, optimistic updates, and automatic stale-while-revalidate.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">zustand ^5.x</span><span class="fc-pkg">@tanstack/react-query ^5.x</span></div>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(248,113,113,0.2)">
+      <div class="fc-icon">🔑</div>
+      <div class="fc-title">Secure Token Storage</div>
+      <div class="fc-desc">iOS Keychain / Android Keystore via react-native-keychain. Biometric-gated access, WHEN_UNLOCKED_THIS_DEVICE_ONLY. MMKV for non-sensitive prefs. Never AsyncStorage for secrets.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">react-native-keychain ^9.x</span><span class="fc-pkg">react-native-mmkv ^3.x</span></div>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(244,114,182,0.2)">
+      <div class="fc-icon">🔄</div>
+      <div class="fc-title">Real-time (Socket.IO)</div>
+      <div class="fc-desc">Typed Socket.IO client. Auto-reconnect with exponential backoff. <span class="ic">data_update</span> events trigger TanStack Query invalidations — UI updates automatically without manual polling. <span class="ic">useWebSocket()</span> hook for component subscriptions.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">socket.io-client ^4.x</span></div>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(52,211,153,0.2)">
+      <div class="fc-icon">✨</div>
+      <div class="fc-title">Reanimated 3 Animations</div>
+      <div class="fc-desc">UI-thread animations, 60fps guaranteed. Layout Animations (FadeInDown, staggered) for lists. Shared Element Transitions for hero navigation. spring-based press feedback. Zero Animated API usage.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">react-native-reanimated ^3.x</span><span class="fc-pkg">react-native-shared-element</span></div>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(251,146,60,0.2)">
+      <div class="fc-icon">🎨</div>
+      <div class="fc-title">NativeWind Design System</div>
+      <div class="fc-desc">Tailwind CSS utility classes mapped to StyleSheet via NativeWind 4. Semantic color tokens in <span class="ic">tailwind.config.ts</span>. No hardcoded hex values in components. Dark mode via <span class="ic">colorScheme</span> — one class change, both themes.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">nativewind ^4.x</span><span class="fc-pkg">tailwindcss ^3.x</span></div>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(167,139,250,0.2)">
+      <div class="fc-icon">🧩</div>
+      <div class="fc-title">Dependency Injection (tsyringe)</div>
+      <div class="fc-desc">Microsoft tsyringe IOC container. <span class="ic">@injectable()</span> + <span class="ic">@inject(TOKEN)</span> annotations. Repository bindings swapped in tests — no module mocking. Container bootstrapped once at app startup in <span class="ic">container.ts</span>.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">tsyringe ^4.x</span><span class="fc-pkg">reflect-metadata</span></div>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(248,113,113,0.2)">
+      <div class="fc-icon">🌐</div>
+      <div class="fc-title">React Navigation 7</div>
+      <div class="fc-desc">Type-safe navigation with <span class="ic">RootStackParamList</span>. Auth flow guards using useNavigationContainerRef. Deep link support. Screen transition animations via Reanimated. Tab navigator with NativeWind-styled tab bar.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">@react-navigation/native ^7.x</span><span class="fc-pkg">@react-navigation/native-stack</span></div>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(251,191,36,0.2)">
+      <div class="fc-icon">🔒</div>
+      <div class="fc-title">AES-256-GCM Payload Encryption</div>
+      <div class="fc-desc">Native module — no JS crypto. Session key via ECDH exchange stored in Keychain. Axios interceptor encrypts/decrypts transparently. GCM provides authenticity check — tampered responses are rejected before reaching domain.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">react-native-aes-crypto</span></div>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(96,165,250,0.2)">
+      <div class="fc-icon">🛰️</div>
+      <div class="fc-title">Network Awareness</div>
+      <div class="fc-desc"><span class="ic">@react-native-community/netinfo</span> drives a Zustand connectivity slice. Offline banner auto-shown. Mutations queued in TanStack Query via <span class="ic">networkMode: 'offlineFirst'</span>. Re-sync burst on reconnect via <span class="ic">queryClient.invalidateQueries()</span>.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">@react-native-community/netinfo ^11.x</span></div>
+    </div>
+
+    <div class="feat-card" style="border-color:rgba(52,211,153,0.2)">
+      <div class="fc-icon">🧪</div>
+      <div class="fc-title">Testing Strategy</div>
+      <div class="fc-desc">Jest + RNTL for unit/component tests. Domain use-cases are pure functions — zero mocking required. Repositories tested with in-memory fakes. E2E with Maestro — YAML flows, screenshot assertions. CI runs all three tiers.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">@testing-library/react-native</span><span class="fc-pkg">maestro</span></div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ LIFECYCLE ═══════════════ -->
+<section class="section reveal" id="lifecycle">
+  <p class="section-label">04 — Request Lifecycle</p>
+  <h2 class="section-title">A Data Request's <em class="grad-a">Journey</em></h2>
+  <p class="section-intro">From a screen component dispatching an intent to pixels updating on screen — every hop is traceable and testable.</p>
+
+  <div class="grid-2 reveal">
+    <div>
+      <h3 style="font-family:var(--fh);font-size:17px;font-weight:700;color:var(--r1);margin-bottom:20px">HTTP Request Pipeline</h3>
+      <div class="pipeline">
+        <div class="pl-step">
+          <div class="pl-num">1</div>
+          <div class="pl-body">
+            <div class="pl-title">Screen → ViewModel hook</div>
+            <div class="pl-desc">User action calls <span class="ic">viewModel.doSomething()</span>. ViewModel invokes a use-case from DI container.</div>
+          </div>
+          <div class="pl-badge">UI</div>
+        </div>
+        <div class="pl-step">
+          <div class="pl-num">2</div>
+          <div class="pl-body">
+            <div class="pl-title">Use Case execution</div>
+            <div class="pl-desc">Pure async function: validates input, calls repository interface. No I/O itself.</div>
+          </div>
+          <div class="pl-badge">Domain</div>
+        </div>
+        <div class="pl-step">
+          <div class="pl-num">3</div>
+          <div class="pl-body">
+            <div class="pl-title">Repository — cache-aside</div>
+            <div class="pl-desc">Checks WatermelonDB first. On miss, delegates to API service.</div>
+          </div>
+          <div class="pl-badge">Data</div>
+        </div>
+        <div class="pl-step">
+          <div class="pl-num">4</div>
+          <div class="pl-body">
+            <div class="pl-title">Axios interceptor chain</div>
+            <div class="pl-desc">JWT injected → body AES-encrypted → request dispatched with AbortSignal.</div>
+          </div>
+          <div class="pl-badge">Infra</div>
+        </div>
+        <div class="pl-step">
+          <div class="pl-num">5</div>
+          <div class="pl-body">
+            <div class="pl-title">Response interceptor</div>
+            <div class="pl-desc">Body decrypted → mapped to domain entity → persisted to WatermelonDB.</div>
+          </div>
+          <div class="pl-badge">Infra</div>
+        </div>
+        <div class="pl-step">
+          <div class="pl-num">6</div>
+          <div class="pl-body">
+            <div class="pl-title">TanStack Query cache update</div>
+            <div class="pl-desc">Result stored in query cache. All subscribers (screens) re-render via selector equality.</div>
+          </div>
+          <div class="pl-badge">State</div>
+        </div>
+        <div class="pl-step">
+          <div class="pl-num">7</div>
+          <div class="pl-body">
+            <div class="pl-title">Reanimated layout update</div>
+            <div class="pl-desc">New items animate in via FadeInDown. Removed items FadeOutUp. UI-thread — zero JS-thread jank.</div>
+          </div>
+          <div class="pl-badge">UI</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="font-family:var(--fh);font-size:17px;font-weight:700;color:var(--r5);margin-bottom:20px">Real-time Event Lifecycle</h3>
+      <div class="flow-wrap">
+        <div class="fn-node">
+          <div class="fn-title">App starts → connectSocket()</div>
+          <div class="fn-desc">JWT retrieved from Keychain, passed as Socket.IO auth param. Connection established over WSS.</div>
+        </div>
+        <div class="fn-node">
+          <div class="fn-title">Connection confirmed</div>
+          <div class="fn-desc">Zustand <span class="ic">socketStore.setConnected(true)</span>. UI can show real-time indicator badge.</div>
+        </div>
+        <div class="fn-node">
+          <div class="fn-title">Server emits data_update</div>
+          <div class="fn-desc">Typed event received: <span class="ic">{ entity: 'user', id: '42' }</span>.</div>
+        </div>
+        <div class="fn-node">
+          <div class="fn-title">TanStack Query invalidation</div>
+          <div class="fn-desc"><span class="ic">queryClient.invalidateQueries({ queryKey: ['user', '42'] })</span> — triggers refetch for all active subscribers.</div>
+        </div>
+        <div class="fn-node">
+          <div class="fn-title">Screen auto-updates</div>
+          <div class="fn-desc">All screens subscribed to that query key re-render with fresh data. No manual setState anywhere.</div>
+        </div>
+        <div class="fn-node">
+          <div class="fn-title">Disconnect → reconnect</div>
+          <div class="fn-desc">Socket.IO reconnects with exponential backoff. On reconnect: full <span class="ic">invalidateQueries()</span> burst catches missed events.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ PRINCIPLES ═══════════════ -->
+<section class="section reveal" id="principles">
+  <p class="section-label">05 — Principles</p>
+  <h2 class="section-title">SOLID + KISS <em class="grad-p">in React Native</em></h2>
+  <p class="section-intro">Each principle maps to a concrete decision in this codebase — not a poster on the wall.</p>
+
+  <div class="p-grid">
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--r1)">S</div>
+      <div class="p-title">Single Responsibility</div>
+      <div class="p-desc"><span class="ic">LoginScreen.tsx</span> renders — it does not validate credentials. <span class="ic">loginUseCase.ts</span> authenticates — it doesn't know about navigation. <span class="ic">EncryptionService</span> encrypts — it doesn't send requests. Every file has one reason to change.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--r3)">O</div>
+      <div class="p-title">Open / Closed</div>
+      <div class="p-desc">Add a new feature by adding a new folder — never modifying domain. New Axios interceptors are added, never existing ones modified. New WsMessage event types extend the typed interface without touching handlers.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--r4)">L</div>
+      <div class="p-title">Liskov Substitution</div>
+      <div class="p-desc">Any <span class="ic">IUserRepository</span> implementation drops into use cases — <span class="ic">UserRepositoryImpl</span>, <span class="ic">FakeUserRepository</span> in tests, or a future GraphQL impl. The use case never knows the difference.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--r6)">I</div>
+      <div class="p-title">Interface Segregation</div>
+      <div class="p-desc"><span class="ic">IAuthRepository</span> exposes only <span class="ic">login / logout / refresh</span>. It's not a god CRUD interface. <span class="ic">useSpeech()</span> exposes only what a screen needs — not the raw Voice module API with its 20 callbacks.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--r5)">D</div>
+      <div class="p-title">Dependency Inversion</div>
+      <div class="p-desc">Screens depend on ViewModel hooks (abstraction). Use cases depend on repository interfaces (abstraction). Nothing in domain knows Axios, Socket.IO, or WatermelonDB exist. tsyringe wires the concretions.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--r2)">K</div>
+      <div class="p-title">Keep It Simple</div>
+      <div class="p-desc"><span class="ic">useDebounce</span> is 8 lines — not a library. <span class="ic">socketClient</span> is a module singleton — not an actor system. <span class="ic">AppError</span> is a discriminated union — not a class hierarchy. Complexity is borrowed; simplicity is earned.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ PACKAGES ═══════════════ -->
+<section class="section reveal" id="packages">
+  <p class="section-label">06 — Package Registry</p>
+  <h2 class="section-title">The Definitive <em class="grad-a">Stack</em></h2>
+  <p class="section-intro">No Redux. No AsyncStorage for tokens. No moment.js. No class components. Proven, actively-maintained, TypeScript-first picks only.</p>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);overflow:hidden;overflow-x:auto">
+    <table class="pkg-table">
+      <thead>
+        <tr>
+          <th>Package</th><th>Version</th><th>Purpose</th><th>Layer</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="pkg-name">react-native</code></td><td class="pkg-ver">0.76+</td><td class="pkg-desc">New Architecture (Fabric + JSI) enabled by default — faster bridge, synchronous native calls</td><td><span class="pill t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-name">react-native-reanimated</code></td><td class="pkg-ver">^3.16</td><td class="pkg-desc">UI-thread animations via JSI — 60fps guaranteed. Layout Animations, Gestures, SharedValues</td><td><span class="pill t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-name">react-native-gesture-handler</code></td><td class="pkg-ver">^2.21</td><td class="pkg-desc">Native gesture system for swipes, pans, and complex multi-touch interactions</td><td><span class="pill t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-name">react-native-shared-element</code></td><td class="pkg-ver">^0.8</td><td class="pkg-desc">Hero / shared element transitions between screens — native bridged morphing</td><td><span class="pill t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-name">nativewind</code></td><td class="pkg-ver">^4.x</td><td class="pkg-desc">Tailwind CSS for React Native — semantic tokens, dark mode via colorScheme, zero StyleSheet</td><td><span class="pill t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-name">@react-navigation/native</code></td><td class="pkg-ver">^7.x</td><td class="pkg-desc">Typed navigation — native-stack (fully native transitions), bottom-tabs, deep links</td><td><span class="pill t-nav">nav</span></td></tr>
+        <tr><td><code class="pkg-name">@react-navigation/native-stack</code></td><td class="pkg-ver">^7.x</td><td class="pkg-desc">Native screen transitions via RNScreens — avoids JS-driven re-renders on navigation</td><td><span class="pill t-nav">nav</span></td></tr>
+        <tr><td><code class="pkg-name">zustand</code></td><td class="pkg-ver">^5.x</td><td class="pkg-desc">Minimal global state — sliced stores, MMKV persist middleware, devtools via Redux DevTools bridge</td><td><span class="pill t-state">state</span></td></tr>
+        <tr><td><code class="pkg-name">@tanstack/react-query</code></td><td class="pkg-ver">^5.x</td><td class="pkg-desc">Server state, caching, background sync, optimistic updates, offline persistQueryClient</td><td><span class="pill t-state">state</span></td></tr>
+        <tr><td><code class="pkg-name">axios</code></td><td class="pkg-ver">^1.7</td><td class="pkg-desc">HTTP client with full interceptor chain, AbortController cancel tokens, transform pipeline</td><td><span class="pill t-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">@nozbe/watermelondb</code></td><td class="pkg-ver">^0.27</td><td class="pkg-desc">Observable SQLite ORM — offline-first, reactive queries, sync protocol for server sync</td><td><span class="pill t-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">react-native-mmkv</code></td><td class="pkg-ver">^3.x</td><td class="pkg-desc">10x faster than AsyncStorage — JSI-based key-value store. TanStack Query persister. Preferences.</td><td><span class="pill t-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">react-native-keychain</code></td><td class="pkg-ver">^9.x</td><td class="pkg-desc">iOS Keychain + Android Keystore. Biometric-gated access. Only place tokens are stored.</td><td><span class="pill t-sec">security</span></td></tr>
+        <tr><td><code class="pkg-name">react-native-aes-crypto</code></td><td class="pkg-ver">^2.x</td><td class="pkg-desc">Native AES-256-GCM encryption — no JS-land crypto. Used by EncryptionService for API payload encryption</td><td><span class="pill t-sec">security</span></td></tr>
+        <tr><td><code class="pkg-name">socket.io-client</code></td><td class="pkg-ver">^4.8</td><td class="pkg-desc">Typed real-time WebSocket client — auto-reconnect, namespaces, binary support</td><td><span class="pill t-rt">real-time</span></td></tr>
+        <tr><td><code class="pkg-name">@react-native-voice/voice</code></td><td class="pkg-ver">^3.x</td><td class="pkg-desc">Google Speech-to-Text — streaming partial results, multi-language, on-device or cloud</td><td><span class="pill t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-name">expo-speech</code></td><td class="pkg-ver">^13.x</td><td class="pkg-desc">Text-to-Speech — language, pitch, rate, voice selection. Works in bare RN too.</td><td><span class="pill t-ui">ui</span></td></tr>
+        <tr><td><code class="pkg-name">react-native-config</code></td><td class="pkg-ver">^1.5</td><td class="pkg-desc">Typed .env variable injection — API URLs, feature flags, never hardcoded</td><td><span class="pill t-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">@react-native-community/netinfo</code></td><td class="pkg-ver">^11.x</td><td class="pkg-desc">Network status stream — drives offline banner, mutation queuing, re-sync on reconnect</td><td><span class="pill t-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">tsyringe</code></td><td class="pkg-ver">^4.x</td><td class="pkg-desc">Microsoft IOC container with TypeScript decorators — zero magic, swappable bindings in tests</td><td><span class="pill t-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">react-native-screens</code></td><td class="pkg-ver">^4.x</td><td class="pkg-desc">Native screen containers — reduces memory, enables native transitions, required by React Navigation</td><td><span class="pill t-nav">nav</span></td></tr>
+        <tr><td><code class="pkg-name">@testing-library/react-native</code></td><td class="pkg-ver">^13.x</td><td class="pkg-desc">Accessibility-first component testing — query by role, text, testId. Pairs with Jest</td><td><span class="pill t-dev">dev</span></td></tr>
+        <tr><td><code class="pkg-name">maestro</code></td><td class="pkg-ver">latest</td><td class="pkg-desc">YAML-driven E2E — tap, swipe, assert text. Runs on real devices in CI. No Detox setup hell.</td><td><span class="pill t-dev">dev</span></td></tr>
+        <tr><td><code class="pkg-name">@sentry/react-native</code></td><td class="pkg-ver">^6.x</td><td class="pkg-desc">Crash reporting, breadcrumbs, performance tracing, source map upload for symbolicated traces</td><td><span class="pill t-dev">dev</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="ft-title">Ship apps that <span class="grad-a">endure.</span></div>
+  <p class="ft-sub">Clean architecture isn't a constraint — it's the thing that lets you move fast three years from now.</p>
+  <p class="ft-copy">React Native Clean Architecture Field Guide &mdash; 2025</p>
+</footer>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }
+  });
+}, { threshold: 0.07 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+const navObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.style.color = '');
+      const lnk = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+      if (lnk) lnk.style.color = 'var(--r1)';
+    }
+  });
+}, { threshold: 0.35 });
+sections.forEach(s => navObs.observe(s));
+
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.style.color = 'var(--r3)';
+    btn.style.borderColor = 'var(--r3)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+  });
+}
+
+// stagger arch cards
+const cards = document.querySelectorAll('.arch-card');
+cards.forEach((c, i) => {
+  c.style.opacity = '0';
+  c.style.transform = 'translateY(20px)';
+  c.style.transition = `opacity .5s ${i * 0.1}s, transform .5s ${i * 0.1}s`;
+  setTimeout(() => { c.style.opacity = '1'; c.style.transform = 'none'; }, 500 + i * 100);
+});
+</script>
+</body>
+</html>

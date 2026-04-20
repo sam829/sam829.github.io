@@ -1,0 +1,1776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GCP + Firebase — Cloud Architecture Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,200;0,400;0,600;0,800;0,900;1,200;1,400&family=Source+Code+Pro:ital,wght@0,300;0,400;0,500;1,300&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:     #06080f;
+  --bg2:    #090c15;
+  --bg3:    #0c101c;
+  --surf:   #111828;
+  --surf2:  #161f32;
+  --bord:   rgba(66,133,244,0.08);
+  --bord2:  rgba(66,133,244,0.18);
+  --a1: #4285f4;   /* Google Blue */
+  --a2: #34a853;   /* Google Green */
+  --a3: #fbbc04;   /* Google Yellow */
+  --a4: #ea4335;   /* Google Red */
+  --a5: #ff6d00;   /* Firebase Orange */
+  --a6: #00bcd4;   /* Cloud Cyan */
+  --a7: #7c4dff;   /* Vertex Purple */
+  --text:  #dce8ff;
+  --text2: #6080aa;
+  --text3: #2d4060;
+  --fh: 'Exo 2', sans-serif;
+  --fb: 'Libre Baskerville', serif;
+  --fc: 'Source Code Pro', monospace;
+  --r: 8px;
+  --rl: 14px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--fb);font-size:16px;line-height:1.75;
+  overflow-x:hidden;
+}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--a1);border-radius:2px}
+
+/* DEEP SPACE BG */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(66,133,244,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(124,77,255,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(0,188,212,0.03) 0%, transparent 60%);
+  pointer-events:none;z-index:0;
+}
+
+/* STAR FIELD */
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:
+    radial-gradient(1px 1px at 15% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 35% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 15%, rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 45%, rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 70%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 5%  80%, rgba(255,255,255,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 45% 90%, rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(2px 2px at 85% 25%, rgba(66,133,244,0.5) 0%, transparent 100%),
+    radial-gradient(2px 2px at 25% 75%, rgba(124,77,255,0.4) 0%, transparent 100%);
+  pointer-events:none;z-index:0;
+}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:rgba(6,8,15,0.92);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--bord2);
+  height:56px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 48px;
+}
+.nav-brand{display:flex;align-items:center;gap:12px}
+.nav-gcp-dots{display:flex;gap:4px}
+.nav-dot{
+  width:9px;height:9px;border-radius:50%;
+  animation:dotpulse 2.4s ease-in-out infinite;
+}
+.nd1{background:var(--a1);animation-delay:0s}
+.nd2{background:var(--a2);animation-delay:.3s}
+.nd3{background:var(--a3);animation-delay:.6s}
+.nd4{background:var(--a4);animation-delay:.9s}
+@keyframes dotpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.nav-logo{font-family:var(--fh);font-size:14px;font-weight:800;color:var(--a1);letter-spacing:.08em;text-transform:uppercase}
+.nav-links{display:flex;gap:28px;list-style:none}
+.nav-links a{font-family:var(--fh);font-size:10px;font-weight:400;color:var(--text2);text-decoration:none;letter-spacing:.1em;text-transform:uppercase;transition:color .15s}
+.nav-links a:hover{color:var(--a1)}
+
+/* HERO — full width, cloud diagram style */
+.hero{
+  position:relative;min-height:100vh;
+  display:flex;flex-direction:column;
+  justify-content:center;align-items:center;
+  text-align:center;padding:100px 48px 80px;
+  overflow:hidden;z-index:1;
+}
+
+.hero-orbit{
+  position:absolute;border-radius:50%;border:1px solid;
+  pointer-events:none;animation:orbit 20s linear infinite;
+}
+.ob1{width:500px;height:500px;border-color:rgba(66,133,244,0.08);top:50%;left:50%;margin:-250px 0 0 -250px;animation-duration:25s}
+.ob2{width:720px;height:720px;border-color:rgba(124,77,255,0.06);top:50%;left:50%;margin:-360px 0 0 -360px;animation-duration:40s;animation-direction:reverse}
+.ob3{width:960px;height:960px;border-color:rgba(0,188,212,0.04);top:50%;left:50%;margin:-480px 0 0 -480px;animation-duration:60s}
+@keyframes orbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+.hero-eyebrow{
+  font-family:var(--fh);font-size:10px;font-weight:600;
+  letter-spacing:.24em;text-transform:uppercase;color:var(--a1);
+  margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:12px;
+  opacity:0;animation:fadeUp .7s .1s forwards;
+}
+.hero-eyebrow::before,.hero-eyebrow::after{content:'';width:32px;height:1px;background:var(--a1);opacity:.5}
+
+.hero-title{
+  font-family:var(--fh);
+  font-size:clamp(48px,8vw,110px);
+  font-weight:900;line-height:.92;letter-spacing:-.03em;
+  margin-bottom:24px;
+  opacity:0;animation:fadeUp .8s .25s forwards;
+}
+.ht1{display:block;color:var(--text)}
+.ht2{display:block;background:linear-gradient(135deg,var(--a1) 0%,var(--a6) 40%,var(--a7) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.ht3{display:block;font-size:.3em;font-weight:200;letter-spacing:.2em;text-transform:uppercase;color:var(--text2);margin-top:8px;font-style:italic}
+
+.hero-sub{
+  font-family:var(--fb);font-style:italic;
+  font-size:19px;color:var(--text2);max-width:640px;
+  line-height:1.65;margin-bottom:44px;
+  opacity:0;animation:fadeUp .8s .4s forwards;
+}
+
+/* SERVICE PILLS */
+.service-ring{
+  display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
+  max-width:700px;margin-bottom:48px;
+  opacity:0;animation:fadeUp .8s .55s forwards;
+}
+.svc-pill{
+  font-family:var(--fh);font-size:10px;font-weight:600;
+  padding:6px 14px;border-radius:100px;border:1px solid;
+  letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;
+}
+.sp1{border-color:rgba(66,133,244,.5);color:var(--a1);background:rgba(66,133,244,.08)}
+.sp2{border-color:rgba(52,168,83,.4);color:var(--a2);background:rgba(52,168,83,.07)}
+.sp3{border-color:rgba(251,188,4,.4);color:var(--a3);background:rgba(251,188,4,.06)}
+.sp4{border-color:rgba(234,67,53,.4);color:var(--a4);background:rgba(234,67,53,.06)}
+.sp5{border-color:rgba(255,109,0,.5);color:var(--a5);background:rgba(255,109,0,.08)}
+.sp6{border-color:rgba(0,188,212,.4);color:var(--a6);background:rgba(0,188,212,.06)}
+.sp7{border-color:rgba(124,77,255,.4);color:var(--a7);background:rgba(124,77,255,.07)}
+
+/* CLOUD STACK — hero visual */
+.cloud-stack{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  width:100%;max-width:800px;
+  opacity:0;animation:fadeUp .8s .7s forwards;
+}
+.cs-card{
+  background:var(--surf);border:1px solid var(--bord2);
+  border-radius:var(--r);padding:14px 12px;
+  text-align:left;position:relative;overflow:hidden;
+  transition:border-color .2s,transform .2s;cursor:default;
+}
+.cs-card:hover{border-color:rgba(66,133,244,.35);transform:translateY(-3px)}
+.cs-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.cs1::before{background:var(--a5)}
+.cs2::before{background:var(--a1)}
+.cs3::before{background:var(--a2)}
+.cs4::before{background:var(--a7)}
+.cs5::before{background:var(--a3)}
+.cs6::before{background:var(--a4)}
+.cs7::before{background:var(--a6)}
+.cs8::before{background:var(--a1)}
+.cs-icon{font-size:20px;margin-bottom:6px;display:block}
+.cs-name{font-family:var(--fh);font-size:11px;font-weight:700;color:var(--text);letter-spacing:.02em}
+.cs-sub{font-family:var(--fh);font-size:9px;color:var(--text2);font-weight:300;margin-top:2px}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* MAIN */
+main{position:relative;z-index:1}
+
+.section{
+  max-width:1160px;margin:0 auto;
+  padding:80px 48px;border-top:1px solid var(--bord);
+}
+.sec-label{
+  font-family:var(--fh);font-size:9px;font-weight:600;
+  letter-spacing:.24em;text-transform:uppercase;color:var(--a1);
+  margin-bottom:10px;display:flex;align-items:center;gap:10px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--a1),transparent);opacity:.2}
+.sec-title{
+  font-family:var(--fh);font-size:clamp(34px,4.5vw,58px);
+  font-weight:900;line-height:1;letter-spacing:-.03em;margin-bottom:14px;
+}
+.sec-intro{
+  font-family:var(--fb);font-style:italic;
+  font-size:17px;color:var(--text2);max-width:640px;line-height:1.65;margin-bottom:40px;
+}
+
+/* SERVICE CARDS — layered architecture */
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.svc-card{
+  background:var(--bg2);border:1px solid var(--bord);
+  border-radius:var(--rl);padding:22px;
+  transition:border-color .2s,transform .18s;
+  position:relative;overflow:hidden;cursor:default;
+}
+.svc-card:hover{border-color:var(--bord2);transform:translateY(-2px)}
+.svc-card::after{
+  content:'';position:absolute;
+  bottom:0;right:0;width:80px;height:80px;
+  border-radius:50%;opacity:.05;
+}
+.sc-gcp::after{background:var(--a1)}
+.sc-fb::after{background:var(--a5)}
+.sc-gcp:hover{border-color:rgba(66,133,244,.28)}
+.sc-fb:hover{border-color:rgba(255,109,0,.28)}
+
+.svc-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+.svc-icon-wrap{
+  width:38px;height:38px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.svc-name{font-family:var(--fh);font-size:14px;font-weight:700;letter-spacing:-.01em;margin-bottom:3px}
+.svc-tag{font-family:var(--fh);font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)}
+.svc-desc{font-family:var(--fh);font-size:11px;color:var(--text2);line-height:1.65;font-weight:300;margin-bottom:12px}
+.svc-use{font-family:var(--fc);font-size:10px;color:var(--text3);background:var(--surf);border:1px solid var(--bord);padding:4px 8px;border-radius:4px;display:inline-block;margin:2px 2px 0 0}
+
+/* FILE TREE */
+.tree-wrap{background:var(--bg2);border:1px solid var(--bord2);border-radius:var(--rl);overflow:hidden}
+.tree-hdr{background:var(--surf);padding:12px 18px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--bord)}
+.td{width:10px;height:10px;border-radius:50%}
+.td:nth-child(1){background:#ff5f57}.td:nth-child(2){background:#ffbd2e}.td:nth-child(3){background:#28c840}
+.tree-path{font-family:var(--fc);font-size:11px;color:var(--text2);margin-left:10px}
+.tree-body{padding:18px 20px;overflow-x:auto}
+.fr{display:flex;align-items:center;height:23px;border-radius:4px;padding:0 4px;transition:background .12s;cursor:default}
+.fr:hover{background:rgba(66,133,244,.05)}
+.fi{font-family:var(--fc);font-size:11px;margin-right:5px;flex-shrink:0}
+.fl{font-family:var(--fc);font-size:11.5px}
+.fl.d{color:var(--a1)}.fl.ts{color:var(--text)}.fl.cfg{color:var(--text2)}.fl.spec{color:var(--a2)}
+.atag{
+  margin-left:8px;font-size:9px;padding:1px 6px;border-radius:3px;
+  font-weight:600;font-family:var(--fh);letter-spacing:.06em;text-transform:uppercase;
+  border:1px solid;white-space:nowrap;
+}
+.t-fn{background:rgba(66,133,244,.1);color:var(--a1);border-color:rgba(66,133,244,.3)}
+.t-fb{background:rgba(255,109,0,.09);color:var(--a5);border-color:rgba(255,109,0,.28)}
+.t-gcp{background:rgba(52,168,83,.08);color:var(--a2);border-color:rgba(52,168,83,.25)}
+.t-ai{background:rgba(124,77,255,.08);color:var(--a7);border-color:rgba(124,77,255,.25)}
+.t-sec{background:rgba(234,67,53,.07);color:var(--a4);border-color:rgba(234,67,53,.22)}
+
+/* CODE CARDS */
+.code-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.cc{
+  background:var(--bg2);border:1px solid var(--bord2);
+  border-radius:var(--rl);overflow:hidden;
+  transition:border-color .2s,transform .2s;position:relative;
+}
+.cc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity .2s}
+.cc:hover{border-color:rgba(66,133,244,.32);transform:translateY(-2px)}
+.cc:hover::before{opacity:1}
+.cc-fn::before{background:linear-gradient(90deg,var(--a1),transparent)}
+.cc-fb::before{background:linear-gradient(90deg,var(--a5),transparent)}
+.cc-fs::before{background:linear-gradient(90deg,var(--a3),transparent)}
+.cc-gcp::before{background:linear-gradient(90deg,var(--a2),transparent)}
+.cc-sec::before{background:linear-gradient(90deg,var(--a4),transparent)}
+.cc-ai::before{background:linear-gradient(90deg,var(--a7),transparent)}
+.cc-rt::before{background:linear-gradient(90deg,var(--a6),transparent)}
+
+.cc-head{
+  background:var(--surf);padding:11px 15px;
+  display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bord);
+}
+.cd{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ct{font-family:var(--fh);font-size:11px;font-weight:700;color:var(--text);letter-spacing:.02em}
+.cs2{font-family:var(--fh);font-size:9px;color:var(--text3);margin-left:auto;text-transform:uppercase;letter-spacing:.08em}
+
+pre{
+  padding:16px;font-family:var(--fc);font-size:11.5px;
+  line-height:1.85;overflow-x:auto;color:#c8d8f0;white-space:pre;background:transparent;
+}
+.kw{color:#4285f4}.cls{color:#00bcd4}.fn{color:#34a853}
+.str{color:#fbbc04}.dec{color:#ff6d00}.cmt{color:var(--text3);font-style:italic}
+.typ{color:#7c4dff}.num{color:#ea4335}.imp{color:#4285f4;font-style:italic}
+
+/* TABS */
+.tab-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:22px}
+.tb{
+  font-family:var(--fh);font-size:9px;font-weight:700;
+  padding:7px 16px;border-radius:4px;
+  border:1px solid var(--bord2);background:transparent;
+  color:var(--text2);cursor:pointer;letter-spacing:.08em;text-transform:uppercase;transition:all .15s;
+}
+.tb:hover{background:var(--surf);color:var(--text)}
+.tb.on{background:var(--a1);color:#fff;border-color:var(--a1)}
+.tp{display:none}.tp.on{display:block}
+
+/* FLOW */
+.flow-section{margin-bottom:26px}
+.flow-lbl{font-family:var(--fh);font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.flow-row{display:flex;align-items:center;overflow-x:auto;padding-bottom:6px;gap:0;flex-wrap:nowrap}
+.fb{flex-shrink:0;padding:8px 12px;border-radius:6px;border:1px solid;font-family:var(--fh);font-size:10px;font-weight:700;text-align:center;white-space:nowrap;min-width:80px}
+.fa{flex-shrink:0;color:var(--text3);padding:0 6px;font-size:12px}
+.fb-fn{background:rgba(66,133,244,.1);border-color:rgba(66,133,244,.4);color:var(--a1)}
+.fb-fb{background:rgba(255,109,0,.08);border-color:rgba(255,109,0,.35);color:var(--a5)}
+.fb-fs{background:rgba(251,188,4,.07);border-color:rgba(251,188,4,.3);color:var(--a3)}
+.fb-ps{background:rgba(52,168,83,.07);border-color:rgba(52,168,83,.3);color:var(--a2)}
+.fb-cr{background:rgba(0,188,212,.07);border-color:rgba(0,188,212,.3);color:var(--a6)}
+.fb-ai{background:rgba(124,77,255,.07);border-color:rgba(124,77,255,.3);color:var(--a7)}
+.fb-se{background:rgba(234,67,53,.07);border-color:rgba(234,67,53,.28);color:var(--a4)}
+
+/* ARCH DIAGRAM — visual service map */
+.arch-map{
+  background:var(--bg2);border:1px solid var(--bord2);
+  border-radius:var(--rl);padding:32px;
+  display:grid;grid-template-columns:1fr auto 1fr;
+  gap:24px;align-items:start;
+}
+.arch-col{display:flex;flex-direction:column;gap:8px}
+.arch-mid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0 12px}
+.arch-center-box{
+  background:rgba(66,133,244,.1);border:1px solid rgba(66,133,244,.3);
+  border-radius:var(--r);padding:16px 20px;text-align:center;
+  font-family:var(--fh);font-size:12px;font-weight:700;color:var(--a1);
+}
+.arch-arrow{font-size:18px;color:var(--text3)}
+.arch-item{
+  background:var(--surf);border:1px solid var(--bord);
+  border-radius:var(--r);padding:10px 14px;
+  font-family:var(--fh);font-size:11px;font-weight:600;
+  display:flex;align-items:center;gap:8px;
+  transition:border-color .15s;cursor:default;
+}
+.arch-item:hover{border-color:var(--bord2)}
+.arch-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.arch-label{font-size:9px;color:var(--text2);font-weight:300;display:block;margin-top:2px}
+
+/* PRINCIPLE CARDS */
+.prin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.pc{background:var(--bg2);border:1px solid var(--bord);border-radius:var(--rl);padding:22px;transition:border-color .18s}
+.pc:hover{border-color:var(--bord2)}
+.pc-icon{font-size:28px;margin-bottom:10px;display:block}
+.pc-title{font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:6px;letter-spacing:-.01em}
+.pc-desc{font-family:var(--fh);font-size:11px;color:var(--text2);line-height:1.65;font-weight:300}
+
+/* PACKAGES TABLE */
+.pkg-wrap{background:var(--bg2);border:1px solid var(--bord2);border-radius:var(--rl);overflow:hidden;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 14px;font-family:var(--fh);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--bord)}
+td{padding:10px 14px;border-bottom:1px solid var(--bord);font-family:var(--fh);font-size:11px;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(66,133,244,.02)}
+.pn{font-family:var(--fc);font-size:11px;color:var(--a1)}
+.pv{font-family:var(--fc);font-size:10px;color:var(--text3)}
+.pd{color:var(--text2);font-size:11px;font-weight:300}
+.lp{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;font-family:var(--fh);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;border:1px solid}
+
+/* CALLOUTS */
+.note{background:rgba(66,133,244,.05);border:1px solid rgba(66,133,244,.18);border-left:3px solid var(--a1);border-radius:0 8px 8px 0;padding:13px 17px;font-family:var(--fh);font-size:12px;color:var(--text2);margin:18px 0;line-height:1.6;font-weight:300}
+.note strong{color:var(--a1);font-weight:700}
+.warn{background:rgba(255,109,0,.05);border:1px solid rgba(255,109,0,.15);border-left:3px solid var(--a5);border-radius:0 8px 8px 0;padding:13px 17px;font-family:var(--fh);font-size:12px;color:var(--text2);margin:18px 0;line-height:1.6;font-weight:300}
+.warn strong{color:var(--a5);font-weight:700}
+
+.dvdr{height:1px;background:linear-gradient(90deg,transparent,var(--bord2),transparent)}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+.reveal.vis{opacity:1;transform:translateY(0)}
+.gt1{background:linear-gradient(120deg,var(--a1),var(--a6));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gt2{background:linear-gradient(120deg,var(--a5),var(--a3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gt3{background:linear-gradient(120deg,var(--a2),var(--a7));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+footer{position:relative;z-index:1;text-align:center;padding:60px 48px;border-top:1px solid var(--bord)}
+.ft-title{font-family:var(--fh);font-size:clamp(28px,5vw,60px);font-weight:900;letter-spacing:-.03em;margin-bottom:10px}
+.ft-sub{font-family:var(--fb);font-style:italic;color:var(--text2);font-size:16px;margin-bottom:28px}
+.ft-copy{font-family:var(--fh);font-size:10px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase}
+
+@media(max-width:900px){
+  nav{padding:0 16px}.nav-links{display:none}
+  .hero{padding:90px 20px 60px}
+  .cloud-stack{grid-template-columns:repeat(2,1fr)}
+  .section{padding:56px 20px}
+  .code-grid{grid-template-columns:1fr}
+  .arch-map{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div class="nav-gcp-dots">
+      <span class="nav-dot nd1"></span>
+      <span class="nav-dot nd2"></span>
+      <span class="nav-dot nd3"></span>
+      <span class="nav-dot nd4"></span>
+    </div>
+    <span class="nav-logo">GCP · Firebase Architecture</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#services">Services</a></li>
+    <li><a href="#structure">Structure</a></li>
+    <li><a href="#patterns">Patterns</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#flows">Flows</a></li>
+    <li><a href="#packages">SDK</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-orbit ob1"></div>
+  <div class="hero-orbit ob2"></div>
+  <div class="hero-orbit ob3"></div>
+
+  <p class="hero-eyebrow">Cloud Backend Engineering · Serverless · Event-driven</p>
+  <h1 class="hero-title">
+    <span class="ht1">Cloud</span>
+    <span class="ht2">Architecture</span>
+    <span class="ht3">GCP · Firebase · Cloud Functions · Firestore · Vertex AI</span>
+  </h1>
+  <p class="hero-sub">Serverless by default. Event-driven by design. A complete field guide to building scalable cloud backends with the GCP + Firebase ecosystem — zero servers to manage, infinite scale to reach.</p>
+
+  <div class="service-ring">
+    <span class="svc-pill sp5">Cloud Functions</span>
+    <span class="svc-pill sp1">Cloud Run</span>
+    <span class="svc-pill sp5">Firestore</span>
+    <span class="svc-pill sp2">Cloud Pub/Sub</span>
+    <span class="svc-pill sp3">Firebase Auth</span>
+    <span class="svc-pill sp4">Firebase Security Rules</span>
+    <span class="svc-pill sp6">Cloud Storage</span>
+    <span class="svc-pill sp7">Vertex AI</span>
+    <span class="svc-pill sp1">Secret Manager</span>
+    <span class="svc-pill sp2">Cloud Tasks</span>
+    <span class="svc-pill sp5">Firebase Realtime DB</span>
+    <span class="svc-pill sp3">BigQuery</span>
+  </div>
+
+  <div class="cloud-stack">
+    <div class="cs-card cs1"><span class="cs-icon">🔥</span><div class="cs-name">Firebase Auth</div><div class="cs-sub">Identity platform</div></div>
+    <div class="cs-card cs2"><span class="cs-icon">⚡</span><div class="cs-name">Cloud Functions</div><div class="cs-sub">Serverless compute</div></div>
+    <div class="cs-card cs3"><span class="cs-icon">🏃</span><div class="cs-name">Cloud Run</div><div class="cs-sub">Containerized workloads</div></div>
+    <div class="cs-card cs4"><span class="cs-icon">🧠</span><div class="cs-name">Vertex AI</div><div class="cs-sub">ML / Gemini API</div></div>
+    <div class="cs-card cs5"><span class="cs-icon">🗄️</span><div class="cs-name">Firestore</div><div class="cs-sub">NoSQL realtime DB</div></div>
+    <div class="cs-card cs6"><span class="cs-icon">📨</span><div class="cs-name">Pub/Sub</div><div class="cs-sub">Async messaging</div></div>
+    <div class="cs-card cs7"><span class="cs-icon">🗂️</span><div class="cs-name">Cloud Storage</div><div class="cs-sub">Object storage + CDN</div></div>
+    <div class="cs-card cs8"><span class="cs-icon">🔐</span><div class="cs-name">Secret Manager</div><div class="cs-sub">Secrets at runtime</div></div>
+  </div>
+</section>
+
+<main>
+
+<!-- SERVICES MAP -->
+<section class="section reveal" id="services">
+  <p class="sec-label">01 — The Ecosystem</p>
+  <h2 class="sec-title">Service <span class="gt1">Selection</span> Guide</h2>
+  <p class="sec-intro">GCP + Firebase offers dozens of services. These are the ones that matter for production backend architecture — and exactly when to use each one.</p>
+
+  <div class="note">
+    <strong>The serverless shift:</strong> There is no "server" to manage. Cloud Functions replace controllers. Firestore replaces SQL with a database. Pub/Sub replaces Celery. Firebase Auth replaces your JWT service. Cloud Run handles anything that needs a persistent process or WebSocket. You pay for exactly what you use, and the platform handles scaling to zero and to millions.
+  </div>
+
+  <div class="svc-grid reveal">
+
+    <div class="svc-card sc-fn">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(66,133,244,.12)">⚡</div>
+        <div><div class="svc-name" style="color:var(--a1)">Cloud Functions (2nd gen)</div><div class="svc-tag">GCP · Serverless compute</div></div>
+      </div>
+      <div class="svc-desc">HTTP-triggered and event-triggered TypeScript/Python functions. 2nd gen uses Cloud Run under the hood — supports concurrency up to 1000 req/instance. Cold starts ~100ms with min-instances=1.</div>
+      <code class="svc-use">onRequest()</code><code class="svc-use">onDocumentCreated()</code><code class="svc-use">onMessagePublished()</code>
+    </div>
+
+    <div class="svc-card sc-fn">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(0,188,212,.1)">🏃</div>
+        <div><div class="svc-name" style="color:var(--a6)">Cloud Run</div><div class="svc-tag">GCP · Containerized serverless</div></div>
+      </div>
+      <div class="svc-desc">Stateful workloads, WebSocket servers, long-running jobs, heavy ML inference. Containerized — any language, any framework. Scales to zero. Use when Cloud Functions hit the 60-min timeout or need WebSocket.</div>
+      <code class="svc-use">WebSocket server</code><code class="svc-use">Heavy workloads</code><code class="svc-use">Long tasks</code>
+    </div>
+
+    <div class="svc-card sc-fb">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(255,109,0,.1)">🔥</div>
+        <div><div class="svc-name" style="color:var(--a5)">Firestore</div><div class="svc-tag">Firebase · NoSQL realtime</div></div>
+      </div>
+      <div class="svc-desc">Document-oriented NoSQL with real-time listeners. Collections → Documents → Subcollections. Offline-first SDKs. Security Rules enforce access control at the DB level. Automatic sharding and global replication.</div>
+      <code class="svc-use">onSnapshot()</code><code class="svc-use">Transactions</code><code class="svc-use">Security Rules</code>
+    </div>
+
+    <div class="svc-card sc-fb">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(251,188,4,.1)">🔑</div>
+        <div><div class="svc-name" style="color:var(--a3)">Firebase Auth</div><div class="svc-tag">Firebase · Identity</div></div>
+      </div>
+      <div class="svc-desc">Managed authentication — email/password, Google Sign-In, Apple, phone OTP, SAML/OIDC for enterprise. Issues JWTs automatically. Admin SDK verifies tokens server-side. Custom claims for RBAC.</div>
+      <code class="svc-use">verifyIdToken()</code><code class="svc-use">setCustomUserClaims()</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(52,168,83,.1)">📨</div>
+        <div><div class="svc-name" style="color:var(--a2)">Cloud Pub/Sub</div><div class="svc-tag">GCP · Async messaging</div></div>
+      </div>
+      <div class="svc-desc">At-least-once async message delivery. Replaces Celery/RabbitMQ. Publishers push events, subscribers process them in Cloud Functions or Cloud Run. Dead-letter topics for failed messages. Ordered delivery option.</div>
+      <code class="svc-use">topic.publish()</code><code class="svc-use">onMessagePublished()</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(66,133,244,.1)">📋</div>
+        <div><div class="svc-name" style="color:var(--a1)">Cloud Tasks</div><div class="svc-tag">GCP · Task queue</div></div>
+      </div>
+      <div class="svc-desc">Exactly-once HTTP task queue with scheduling and deduplication. Better than Pub/Sub when you need: scheduled delay, deduplication, rate limiting, or guaranteed delivery to an HTTP endpoint.</div>
+      <code class="svc-use">createTask()</code><code class="svc-use">scheduleTime</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(234,67,53,.1)">🔐</div>
+        <div><div class="svc-name" style="color:var(--a4)">Secret Manager</div><div class="svc-tag">GCP · Secrets</div></div>
+      </div>
+      <div class="svc-desc">Versioned, encrypted secret storage. Cloud Functions access secrets at runtime via environment variables OR SDK calls. Never put secrets in code or environment config files. IAM controls access per function.</div>
+      <code class="svc-use">accessSecretVersion()</code><code class="svc-use">runWith({secrets})</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(124,77,255,.1)">🧠</div>
+        <div><div class="svc-name" style="color:var(--a7)">Vertex AI / Gemini</div><div class="svc-tag">GCP · AI platform</div></div>
+      </div>
+      <div class="svc-desc">Gemini API for generative AI, Vertex AI for custom model training and serving. Call from Cloud Functions or Cloud Run. Built-in streaming support. IAM-authenticated — no API keys needed inside GCP.</div>
+      <code class="svc-use">generateContent()</code><code class="svc-use">streamGenerateContent()</code>
+    </div>
+
+    <div class="svc-card sc-fb">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(0,188,212,.1)">🗂️</div>
+        <div><div class="svc-name" style="color:var(--a6)">Cloud Storage</div><div class="svc-tag">GCP · Object storage</div></div>
+      </div>
+      <div class="svc-desc">S3-equivalent. Firebase Storage SDK wraps it with auth-gated access rules. Signed URLs for secure client-direct upload/download. Triggers Cloud Functions on object finalize/delete. Global CDN via Cloud CDN.</div>
+      <code class="svc-use">getSignedUrl()</code><code class="svc-use">onObjectFinalized()</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(52,168,83,.1)">📊</div>
+        <div><div class="svc-name" style="color:var(--a2)">BigQuery</div><div class="svc-tag">GCP · Analytics warehouse</div></div>
+      </div>
+      <div class="svc-desc">Petabyte-scale analytics. Stream events from Pub/Sub or export Firestore via BigQuery connector. Run complex aggregations that Firestore can't handle. Export reports to Cloud Storage. Separate from operational DB.</div>
+      <code class="svc-use">insertRows()</code><code class="svc-use">createQueryJob()</code>
+    </div>
+
+    <div class="svc-card sc-fb">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(255,109,0,.1)">⚡</div>
+        <div><div class="svc-name" style="color:var(--a5)">Firebase Realtime DB</div><div class="svc-tag">Firebase · Low-latency sync</div></div>
+      </div>
+      <div class="svc-desc">JSON tree database with sub-10ms latency. Use for presence, typing indicators, live cursors — things that need real-time at scale. Not a general-purpose DB — use Firestore for structured data.</div>
+      <code class="svc-use">onValue()</code><code class="svc-use">onDisconnect()</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(66,133,244,.1)">🌐</div>
+        <div><div class="svc-name" style="color:var(--a1)">Cloud Armor + Load Balancer</div><div class="svc-tag">GCP · Edge security</div></div>
+      </div>
+      <div class="svc-desc">DDoS protection, WAF rules, IP allowlist/denylist, geographic restrictions. Sits in front of Cloud Run or Cloud Functions via HTTPS Load Balancer. Rate limiting at the edge — before traffic hits your functions.</div>
+      <code class="svc-use">WAF rules</code><code class="svc-use">Rate limiting</code>
+    </div>
+
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- FILE STRUCTURE -->
+<section class="section reveal" id="structure">
+  <p class="sec-label">02 — Project Structure</p>
+  <h2 class="sec-title">Function-first <span class="gt2">Layout</span></h2>
+  <p class="sec-intro">Organised by domain feature. Each feature exports HTTP functions, Firestore triggers, Pub/Sub subscribers, and scheduled functions. Shared infrastructure in common layers.</p>
+
+  <div class="tree-wrap reveal">
+    <div class="tree-hdr">
+      <span class="td"></span><span class="td"></span><span class="td"></span>
+      <span class="tree-path">functions / src /</span>
+    </div>
+    <div class="tree-body">
+
+      <div class="fr"><span class="fi" style="width:0">▾</span><span class="fl d">features/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— one dir per domain</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">auth/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">auth.functions.ts</span><span class="atag t-fn">HTTP fn</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— onRequest login/register endpoints</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">auth.triggers.ts</span><span class="atag t-fb">Trigger</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— beforeUserCreated, afterUserCreated</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">auth.service.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— custom claims, user profile creation</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">products/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">products.functions.ts</span><span class="atag t-fn">HTTP fn</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">products.triggers.ts</span><span class="atag t-fb">Firestore</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— onDocumentCreated/Updated/Deleted</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">products.service.ts</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">products.repository.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Firestore reads/writes</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">notifications/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">notifications.subscribers.ts</span><span class="atag t-gcp">Pub/Sub</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— onMessagePublished handlers</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">notifications.service.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— FCM, email dispatch</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">ai/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">ai.functions.ts</span><span class="atag t-fn">HTTP fn</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">ai.service.ts</span><span class="atag t-ai">Vertex AI</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Gemini API calls</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">scheduled/</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">cleanup.functions.ts</span><span class="atag t-gcp">Scheduled</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— onSchedule cron jobs</span></div>
+
+      <div style="height:8px"></div>
+      <div class="fr"><span class="fi" style="width:0">▾</span><span class="fl d">shared/</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">firebase-admin.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— singleton Admin SDK init</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">auth.middleware.ts</span><span class="atag t-sec">Auth</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— verifyIdToken guard</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">errors.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— typed HttpsError hierarchy</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">pubsub.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— typed Pub/Sub publisher helper</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">secrets.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Secret Manager accessor</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">logger.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— structured Google Cloud Logging</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">validate.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— zod schema validation helper</span></div>
+
+      <div style="height:8px"></div>
+      <div class="fr"><span class="fi" style="width:0">▾</span><span class="fl d">firestore/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— security rules + indexes</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl cfg">firestore.rules</span><span class="atag t-sec">Security</span></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl cfg">firestore.indexes.json</span></div>
+      <div class="fr"><span class="fi" style="width:0">◦</span><span class="fl cfg">firebase.json</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— functions, hosting, rules deploy config</span></div>
+      <div class="fr"><span class="fi" style="width:0">◦</span><span class="fl cfg">.firebaserc</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— project aliases (dev/staging/prod)</span></div>
+      <div class="fr"><span class="fi" style="width:0">◦</span><span class="fl cfg">package.json</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- CODE PATTERNS -->
+<section class="section reveal" id="patterns">
+  <p class="sec-label">03 — Code Patterns</p>
+  <h2 class="sec-title">TypeScript <span class="gt3">Blueprints</span></h2>
+  <p class="sec-intro">Production-ready TypeScript. Every pattern uses the Firebase Admin SDK v12+ and Cloud Functions v2 APIs.</p>
+
+  <div class="tab-nav">
+    <button class="tb on" onclick="st('http')">HTTP Functions</button>
+    <button class="tb" onclick="st('triggers')">Firestore Triggers</button>
+    <button class="tb" onclick="st('auth')">Auth + Security</button>
+    <button class="tb" onclick="st('pubsub')">Pub/Sub + Tasks</button>
+    <button class="tb" onclick="st('repo')">Firestore Repos</button>
+    <button class="tb" onclick="st('rules')">Security Rules</button>
+    <button class="tb" onclick="st('ai')">Vertex AI + Gemini</button>
+    <button class="tb" onclick="st('infra')">Infra + Config</button>
+  </div>
+
+  <!-- HTTP FUNCTIONS -->
+  <div class="tp on" id="tp-http">
+    <div class="code-grid">
+
+      <div class="cc cc-fn">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">products.functions.ts — HTTP v2</span><span class="cs2">Cloud Functions v2</span></div>
+<pre><span class="imp">import</span> { onRequest } <span class="imp">from</span> <span class="str">'firebase-functions/v2/https'</span>
+<span class="imp">import</span> { requireAuth, requireRole } <span class="imp">from</span> <span class="str">'../shared/auth.middleware'</span>
+<span class="imp">import</span> { validate } <span class="imp">from</span> <span class="str">'../shared/validate'</span>
+<span class="imp">import</span> { ProductService } <span class="imp">from</span> <span class="str">'./products.service'</span>
+<span class="imp">import</span> { z } <span class="imp">from</span> <span class="str">'zod'</span>
+
+<span class="kw">const</span> CreateProductSchema = z.object({
+  name:  z.string().min(<span class="num">1</span>).max(<span class="num">200</span>),
+  price: z.number().positive(),
+  sku:   z.string().min(<span class="num">1</span>),
+})
+
+<span class="cmt">// Cloud Functions v2 — supports concurrency, longer timeouts</span>
+<span class="kw">export const</span> getProducts = onRequest(
+  { region: <span class="str">'us-central1'</span>, memory: <span class="str">'256MiB'</span>, minInstances: <span class="num">1</span> },
+  <span class="kw">async</span> (req, res) => {
+    <span class="kw">const</span> user = <span class="kw">await</span> requireAuth(req, res)
+    <span class="kw">if</span> (!user) <span class="kw">return</span>
+
+    <span class="kw">const</span> products = <span class="kw">await</span> <span class="cls">ProductService</span>.list({
+      userId: user.uid,
+      page:   <span class="cls">Number</span>(req.query.page) || <span class="num">1</span>,
+    })
+    res.json({ success: <span class="kw">true</span>, data: products })
+  }
+)
+
+<span class="kw">export const</span> createProduct = onRequest(
+  { region: <span class="str">'us-central1'</span>, memory: <span class="str">'256MiB'</span> },
+  <span class="kw">async</span> (req, res) => {
+    <span class="kw">const</span> user = <span class="kw">await</span> requireAuth(req, res)
+    <span class="kw">if</span> (!user) <span class="kw">return</span>
+    <span class="kw">if</span> (req.method !== <span class="str">'POST'</span>) {
+      res.status(<span class="num">405</span>).json({ error: <span class="str">'Method not allowed'</span> }); <span class="kw">return</span>
+    }
+
+    <span class="kw">const</span> body = validate(CreateProductSchema, req.body, res)
+    <span class="kw">if</span> (!body) <span class="kw">return</span>
+
+    <span class="kw">const</span> product = <span class="kw">await</span> <span class="cls">ProductService</span>.create(body, user.uid)
+    res.status(<span class="num">201</span>).json({ success: <span class="kw">true</span>, data: product })
+  }
+)</pre>
+      </div>
+
+      <div class="cc cc-fn">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">shared/auth.middleware.ts — guard</span><span class="cs2">shared</span></div>
+<pre><span class="imp">import</span> { Request, Response } <span class="imp">from</span> <span class="str">'firebase-functions/v2/https'</span>
+<span class="imp">import</span> { getAuth } <span class="imp">from</span> <span class="str">'firebase-admin/auth'</span>
+<span class="imp">import</span> { HttpsError } <span class="imp">from</span> <span class="str">'firebase-functions/v2/https'</span>
+<span class="imp">import type</span> { DecodedIdToken } <span class="imp">from</span> <span class="str">'firebase-admin/auth'</span>
+
+<span class="kw">export async function</span> requireAuth(
+  req: Request,
+  res: Response,
+): <span class="cls">Promise</span>&lt;<span class="cls">DecodedIdToken</span> | <span class="kw">null</span>&gt; {
+  <span class="kw">const</span> token = req.headers.authorization?.split(<span class="str">'Bearer '</span>)[<span class="num">1</span>]
+
+  <span class="kw">if</span> (!token) {
+    res.status(<span class="num">401</span>).json({ error: <span class="str">'Missing auth token'</span> })
+    <span class="kw">return null</span>
+  }
+
+  <span class="kw">try</span> {
+    <span class="cmt">// Verifies signature, expiry, revocation</span>
+    <span class="kw">const</span> decoded = <span class="kw">await</span> getAuth().verifyIdToken(token, <span class="kw">true</span>)
+    <span class="kw">return</span> decoded
+  } <span class="kw">catch</span> {
+    res.status(<span class="num">401</span>).json({ error: <span class="str">'Invalid or expired token'</span> })
+    <span class="kw">return null</span>
+  }
+}
+
+<span class="cmt">// RBAC — checks custom claims set via setCustomUserClaims</span>
+<span class="kw">export function</span> requireRole(
+  user: <span class="cls">DecodedIdToken</span>,
+  res: Response,
+  ...roles: <span class="typ">string</span>[]
+): <span class="typ">boolean</span> {
+  <span class="kw">if</span> (!roles.includes(user.role <span class="kw">as</span> <span class="typ">string</span>)) {
+    res.status(<span class="num">403</span>).json({ error: <span class="str">'Insufficient permissions'</span> })
+    <span class="kw">return false</span>
+  }
+  <span class="kw">return true</span>
+}</pre>
+      </div>
+
+      <div class="cc cc-fn">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">Callable Functions — typed SDK calls</span><span class="cs2">alternative to HTTP</span></div>
+<pre><span class="imp">import</span> { onCall, HttpsError } <span class="imp">from</span> <span class="str">'firebase-functions/v2/https'</span>
+<span class="imp">import</span> { z } <span class="imp">from</span> <span class="str">'zod'</span>
+
+<span class="kw">const</span> PurchaseSchema = z.object({
+  productId: z.string(),
+  quantity:  z.number().int().positive(),
+})
+
+<span class="cmt">// Callable — client SDK handles auth + serialization automatically</span>
+<span class="cmt">// No headers, no HTTP — call like a typed function from the client</span>
+<span class="kw">export const</span> purchaseProduct = onCall&lt;z.infer&lt;<span class="kw">typeof</span> PurchaseSchema&gt;&gt;(
+  { region: <span class="str">'us-central1'</span>, memory: <span class="str">'512MiB'</span> },
+  <span class="kw">async</span> (request) => {
+    <span class="cmt">// auth is verified automatically by the SDK</span>
+    <span class="kw">if</span> (!request.auth) {
+      <span class="kw">throw new</span> <span class="cls">HttpsError</span>(<span class="str">'unauthenticated'</span>, <span class="str">'Login required'</span>)
+    }
+
+    <span class="kw">const</span> input = PurchaseSchema.safeParse(request.data)
+    <span class="kw">if</span> (!input.success) {
+      <span class="kw">throw new</span> <span class="cls">HttpsError</span>(<span class="str">'invalid-argument'</span>, input.error.message)
+    }
+
+    <span class="kw">return</span> <span class="cls">OrderService</span>.purchase(
+      input.data, request.auth.uid
+    )
+  }
+)
+
+<span class="cmt">// Client (Flutter, React, etc.):</span>
+<span class="cmt">// const fn = httpsCallable(functions, 'purchaseProduct')</span>
+<span class="cmt">// const result = await fn({ productId, quantity })</span></pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FIRESTORE TRIGGERS -->
+  <div class="tp" id="tp-triggers">
+    <div class="code-grid">
+
+      <div class="cc cc-fb">
+        <div class="cc-head"><span class="cd" style="background:var(--a5)"></span><span class="ct">products.triggers.ts — Firestore</span><span class="cs2">event-driven</span></div>
+<pre><span class="imp">import</span> {
+  onDocumentCreated,
+  onDocumentUpdated,
+  onDocumentDeleted,
+} <span class="imp">from</span> <span class="str">'firebase-functions/v2/firestore'</span>
+<span class="imp">import</span> { publishEvent } <span class="imp">from</span> <span class="str">'../shared/pubsub'</span>
+<span class="imp">import</span> { logger } <span class="imp">from</span> <span class="str">'../shared/logger'</span>
+
+<span class="cmt">// Fires when a new product document is created</span>
+<span class="kw">export const</span> onProductCreated = onDocumentCreated(
+  <span class="str">'products/{productId}'</span>,
+  <span class="kw">async</span> (event) => {
+    <span class="kw">const</span> data = event.data?.data()
+    <span class="kw">if</span> (!data) <span class="kw">return</span>
+
+    logger.info(<span class="str">'Product created'</span>, { id: event.params.productId })
+
+    <span class="cmt">// Publish to Pub/Sub — notif service handles it</span>
+    <span class="kw">await</span> publishEvent(<span class="str">'product-events'</span>, {
+      type:      <span class="str">'product.created'</span>,
+      productId: event.params.productId,
+      sellerId:  data.sellerId,
+    })
+  }
+)
+
+<span class="cmt">// Fires when any field in the order document changes</span>
+<span class="kw">export const</span> onOrderStatusChanged = onDocumentUpdated(
+  <span class="str">'orders/{orderId}'</span>,
+  <span class="kw">async</span> (event) => {
+    <span class="kw">const</span> before = event.data?.before.data()
+    <span class="kw">const</span> after  = event.data?.after.data()
+    <span class="kw">if</span> (!before || !after) <span class="kw">return</span>
+
+    <span class="cmt">// Only react to status field changes</span>
+    <span class="kw">if</span> (before.status === after.status) <span class="kw">return</span>
+
+    <span class="kw">await</span> publishEvent(<span class="str">'order-events'</span>, {
+      type:     <span class="str">'order.status_changed'</span>,
+      orderId:  event.params.orderId,
+      from:     before.status,
+      to:       after.status,
+      userId:   after.userId,
+    })
+  }
+)</pre>
+      </div>
+
+      <div class="cc cc-fb">
+        <div class="cc-head"><span class="cd" style="background:var(--a5)"></span><span class="ct">auth.triggers.ts — Firebase Auth hooks</span><span class="cs2">auth trigger</span></div>
+<pre><span class="imp">import</span> {
+  beforeUserCreated,
+  beforeUserSignedIn,
+} <span class="imp">from</span> <span class="str">'firebase-functions/v2/identity'</span>
+<span class="imp">import</span> { getAuth }       <span class="imp">from</span> <span class="str">'firebase-admin/auth'</span>
+<span class="imp">import</span> { getFirestore } <span class="imp">from</span> <span class="str">'firebase-admin/firestore'</span>
+<span class="imp">import</span> { HttpsError }   <span class="imp">from</span> <span class="str">'firebase-functions/v2/https'</span>
+
+<span class="cmt">// Block registration from banned domains</span>
+<span class="kw">export const</span> beforeCreate = beforeUserCreated(<span class="kw">async</span> (event) => {
+  <span class="kw">const</span> email = event.data.email ?? <span class="str">''</span>
+  <span class="kw">const</span> bannedDomains = [<span class="str">'mailinator.com'</span>, <span class="str">'tempmail.com'</span>]
+
+  <span class="kw">if</span> (bannedDomains.some(d => email.endsWith(<span class="str">`@${d}`</span>))) {
+    <span class="kw">throw new</span> <span class="cls">HttpsError</span>(<span class="str">'permission-denied'</span>, <span class="str">'Email domain not allowed'</span>)
+  }
+
+  <span class="cmt">// Create user profile in Firestore automatically</span>
+  <span class="kw">await</span> getFirestore().collection(<span class="str">'users'</span>).doc(event.data.uid).set({
+    email,
+    name:      event.data.displayName ?? <span class="str">''</span>,
+    role:      <span class="str">'user'</span>,
+    createdAt: <span class="cls">FieldValue</span>.serverTimestamp(),
+  })
+
+  <span class="cmt">// Return custom claims — attached to JWT immediately</span>
+  <span class="kw">return</span> { customClaims: { role: <span class="str">'user'</span> } }
+})
+
+<span class="cmt">// Set RBAC custom claims on sign-in (refresh if role changed)</span>
+<span class="kw">export const</span> beforeSignIn = beforeUserSignedIn(<span class="kw">async</span> (event) => {
+  <span class="kw">const</span> doc = <span class="kw">await</span> getFirestore()
+    .collection(<span class="str">'users'</span>).doc(event.data.uid).get()
+  <span class="kw">const</span> role = doc.data()?.role ?? <span class="str">'user'</span>
+  <span class="kw">return</span> { customClaims: { role } }
+})</pre>
+      </div>
+
+      <div class="cc cc-gcp">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">scheduled/cleanup.functions.ts</span><span class="cs2">cron</span></div>
+<pre><span class="imp">import</span> { onSchedule } <span class="imp">from</span> <span class="str">'firebase-functions/v2/scheduler'</span>
+<span class="imp">import</span> { getFirestore, FieldValue, Timestamp }
+  <span class="imp">from</span> <span class="str">'firebase-admin/firestore'</span>
+<span class="imp">import</span> { logger } <span class="imp">from</span> <span class="str">'../shared/logger'</span>
+
+<span class="cmt">// Cloud Scheduler — cron syntax, runs in your region</span>
+<span class="kw">export const</span> cleanupExpiredSessions = onSchedule(
+  { schedule: <span class="str">'every 6 hours'</span>, region: <span class="str">'us-central1'</span> },
+  <span class="kw">async</span> () => {
+    <span class="kw">const</span> db  = getFirestore()
+    <span class="kw">const</span> now = <span class="cls">Timestamp</span>.now()
+
+    <span class="cmt">// Firestore bulk delete with batched writes (max 500/batch)</span>
+    <span class="kw">const</span> expired = <span class="kw">await</span> db.collection(<span class="str">'sessions'</span>)
+      .where(<span class="str">'expiresAt'</span>, <span class="str">'<'</span>, now)
+      .limit(<span class="num">500</span>)
+      .get()
+
+    <span class="kw">if</span> (expired.empty) <span class="kw">return</span>
+
+    <span class="kw">const</span> batch = db.batch()
+    expired.docs.forEach(doc => batch.delete(doc.ref))
+    <span class="kw">await</span> batch.commit()
+
+    logger.info(<span class="str">`Cleaned ${expired.size} expired sessions`</span>)
+  }
+)</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- AUTH + SECURITY -->
+  <div class="tp" id="tp-auth">
+    <div class="code-grid">
+
+      <div class="cc cc-sec">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">auth.service.ts — custom claims RBAC</span><span class="cs2">auth · rbac</span></div>
+<pre><span class="imp">import</span> { getAuth } <span class="imp">from</span> <span class="str">'firebase-admin/auth'</span>
+<span class="imp">import</span> { logger } <span class="imp">from</span> <span class="str">'../shared/logger'</span>
+
+<span class="kw">export type</span> <span class="cls">UserRole</span> = <span class="str">'admin'</span> | <span class="str">'moderator'</span> | <span class="str">'user'</span>
+
+<span class="kw">export class</span> <span class="cls">AuthService</span> {
+
+  <span class="kw">static async</span> setRole(uid: <span class="typ">string</span>, role: <span class="cls">UserRole</span>): <span class="cls">Promise</span>&lt;<span class="kw">void</span>&gt; {
+    <span class="cmt">// Custom claims are embedded in the Firebase JWT</span>
+    <span class="cmt">// User must refresh their token to see new claims</span>
+    <span class="kw">await</span> getAuth().setCustomUserClaims(uid, { role })
+    logger.info(<span class="str">'Role updated'</span>, { uid, role })
+  }
+
+  <span class="kw">static async</span> revokeTokens(uid: <span class="typ">string</span>): <span class="cls">Promise</span>&lt;<span class="kw">void</span>&gt; {
+    <span class="kw">await</span> getAuth().revokeRefreshTokens(uid)
+    logger.info(<span class="str">'Tokens revoked'</span>, { uid })
+  }
+
+  <span class="kw">static async</span> disableUser(uid: <span class="typ">string</span>): <span class="cls">Promise</span>&lt;<span class="kw">void</span>&gt; {
+    <span class="kw">await</span> getAuth().updateUser(uid, { disabled: <span class="kw">true</span> })
+    <span class="kw">await</span> <span class="cls">AuthService</span>.revokeTokens(uid)
+  }
+
+  <span class="kw">static async</span> verifyAndDecode(
+    idToken: <span class="typ">string</span>,
+    checkRevoked = <span class="kw">true</span>,
+  ) {
+    <span class="cmt">// checkRevoked=true validates against revocation time</span>
+    <span class="kw">return</span> getAuth().verifyIdToken(idToken, checkRevoked)
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-sec">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">shared/secrets.ts — Secret Manager</span><span class="cs2">infra · secrets</span></div>
+<pre><span class="imp">import</span> { SecretManagerServiceClient }
+  <span class="imp">from</span> <span class="str">'@google-cloud/secret-manager'</span>
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="cls">SecretManagerServiceClient</span>()
+<span class="kw">const</span> cache = <span class="kw">new</span> <span class="cls">Map</span>&lt;<span class="typ">string</span>, <span class="typ">string</span>&gt;()
+
+<span class="kw">export async function</span> getSecret(
+  name: <span class="typ">string</span>,
+  version = <span class="str">'latest'</span>,
+): <span class="cls">Promise</span>&lt;<span class="typ">string</span>&gt; {
+  <span class="cmt">// Cache in memory for function lifetime (warm instance)</span>
+  <span class="kw">if</span> (cache.has(name)) <span class="kw">return</span> cache.get(name)!
+
+  <span class="kw">const</span> projectId = process.env.GCLOUD_PROJECT
+  <span class="kw">const</span> [secret]  = <span class="kw">await</span> client.accessSecretVersion({
+    name: <span class="str">`projects/${projectId}/secrets/${name}/versions/${version}`</span>,
+  })
+
+  <span class="kw">const</span> value = secret.payload?.data?.toString() ?? <span class="str">''</span>
+  cache.set(name, value)
+  <span class="kw">return</span> value
+}
+
+<span class="cmt">// Alternative — bind secrets as env vars in function config:</span>
+<span class="cmt">// export const myFn = onRequest(</span>
+<span class="cmt">//   { secrets: ['STRIPE_KEY', 'SENDGRID_KEY'] },</span>
+<span class="cmt">//   async (req, res) => {</span>
+<span class="cmt">//     const key = process.env.STRIPE_KEY  // auto-injected</span>
+<span class="cmt">//   }</span>
+<span class="cmt">// )</span></pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PUB/SUB + TASKS -->
+  <div class="tp" id="tp-pubsub">
+    <div class="code-grid">
+
+      <div class="cc cc-gcp">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">shared/pubsub.ts — typed publisher</span><span class="cs2">Pub/Sub</span></div>
+<pre><span class="imp">import</span> { PubSub } <span class="imp">from</span> <span class="str">'@google-cloud/pubsub'</span>
+
+<span class="kw">const</span> pubsub = <span class="kw">new</span> <span class="cls">PubSub</span>()
+
+<span class="cmt">// Type-safe event publishing</span>
+<span class="kw">export async function</span> publishEvent&lt;<span class="cls">T</span> <span class="kw">extends</span> object&gt;(
+  topicName: <span class="typ">string</span>,
+  event: <span class="cls">T</span>,
+  attributes: <span class="cls">Record</span>&lt;<span class="typ">string</span>, <span class="typ">string</span>&gt; = {},
+): <span class="cls">Promise</span>&lt;<span class="typ">string</span>&gt; {
+  <span class="kw">const</span> topic   = pubsub.topic(topicName)
+  <span class="kw">const</span> payload = <span class="cls">Buffer</span>.from(<span class="cls">JSON</span>.stringify(event))
+  <span class="kw">return</span> topic.publish(payload, {
+    ...attributes,
+    publishedAt: <span class="kw">new</span> <span class="cls">Date</span>().toISOString(),
+  })
+}
+
+<span class="cmt">// Subscriber in notifications/subscribers.ts:</span>
+<span class="imp">import</span> { onMessagePublished } <span class="imp">from</span> <span class="str">'firebase-functions/v2/pubsub'</span>
+
+<span class="kw">export const</span> onProductEvent = onMessagePublished(
+  { topic: <span class="str">'product-events'</span>, region: <span class="str">'us-central1'</span> },
+  <span class="kw">async</span> (event) => {
+    <span class="kw">const</span> data = event.data.message.json <span class="kw">as</span> {
+      type: <span class="typ">string</span>; productId: <span class="typ">string</span>; sellerId: <span class="typ">string</span>
+    }
+    <span class="kw">if</span> (data.type === <span class="str">'product.created'</span>) {
+      <span class="kw">await</span> <span class="cls">NotificationService</span>.notifySeller(data.sellerId)
+    }
+  }
+)</pre>
+      </div>
+
+      <div class="cc cc-gcp">
+        <div class="cc-head"><span class="cd" style="background:var(--a2)"></span><span class="ct">Cloud Tasks — scheduled HTTP tasks</span><span class="cs2">Cloud Tasks</span></div>
+<pre><span class="imp">import</span> { CloudTasksClient } <span class="imp">from</span> <span class="str">'@google-cloud/tasks'</span>
+
+<span class="kw">const</span> tasksClient = <span class="kw">new</span> <span class="cls">CloudTasksClient</span>()
+
+<span class="kw">export async function</span> scheduleTask&lt;<span class="cls">T</span>&gt;(opts: {
+  queue:       <span class="typ">string</span>
+  handlerUrl:  <span class="typ">string</span>
+  payload:     <span class="cls">T</span>
+  delaySeconds?: <span class="typ">number</span>
+  dedupId?:    <span class="typ">string</span>
+}) {
+  <span class="kw">const</span> project  = process.env.GCLOUD_PROJECT!
+  <span class="kw">const</span> location = <span class="str">'us-central1'</span>
+  <span class="kw">const</span> parent   = tasksClient.queuePath(project, location, opts.queue)
+
+  <span class="kw">const</span> task: <span class="kw">any</span> = {
+    httpRequest: {
+      httpMethod: <span class="str">'POST'</span>,
+      url: opts.handlerUrl,
+      headers: { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
+      body: <span class="cls">Buffer</span>.from(<span class="cls">JSON</span>.stringify(opts.payload)).toString(<span class="str">'base64'</span>),
+      oidcToken: { serviceAccountEmail: process.env.SERVICE_ACCOUNT! },
+    },
+  }
+
+  <span class="kw">if</span> (opts.delaySeconds) {
+    task.scheduleTime = {
+      seconds: <span class="cls">Date</span>.now() / <span class="num">1000</span> + opts.delaySeconds
+    }
+  }
+  <span class="kw">if</span> (opts.dedupId) task.name = <span class="str">`${parent}/tasks/${opts.dedupId}`</span>
+
+  <span class="kw">return</span> tasksClient.createTask({ parent, task })
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FIRESTORE REPOS -->
+  <div class="tp" id="tp-repo">
+    <div class="code-grid">
+
+      <div class="cc cc-fb">
+        <div class="cc-head"><span class="cd" style="background:var(--a5)"></span><span class="ct">products.repository.ts — Firestore</span><span class="cs2">data layer</span></div>
+<pre><span class="imp">import</span> {
+  getFirestore, FieldValue, Timestamp,
+  type DocumentData, type QuerySnapshot,
+} <span class="imp">from</span> <span class="str">'firebase-admin/firestore'</span>
+<span class="imp">import type</span> { Product, CreateProductInput } <span class="imp">from</span> <span class="str">'./products.types'</span>
+
+<span class="kw">const</span> db = () => getFirestore()
+
+<span class="kw">export class</span> <span class="cls">ProductRepository</span> {
+
+  <span class="kw">static</span> col() { <span class="kw">return</span> db().collection(<span class="str">'products'</span>) }
+
+  <span class="kw">static async</span> findById(id: <span class="typ">string</span>): <span class="cls">Promise</span>&lt;<span class="cls">Product</span> | <span class="kw">null</span>&gt; {
+    <span class="kw">const</span> doc = <span class="kw">await</span> <span class="cls">ProductRepository</span>.col().doc(id).get()
+    <span class="kw">return</span> doc.exists ? <span class="cls">ProductRepository</span>.fromDoc(doc) : <span class="kw">null</span>
+  }
+
+  <span class="kw">static async</span> create(
+    data: <span class="cls">CreateProductInput</span>, uid: <span class="typ">string</span>
+  ): <span class="cls">Promise</span>&lt;<span class="cls">Product</span>&gt; {
+    <span class="kw">const</span> ref = <span class="cls">ProductRepository</span>.col().doc()
+    <span class="kw">const</span> doc = {
+      ...data,
+      id:        ref.id,
+      sellerId:  uid,
+      createdAt: <span class="cls">FieldValue</span>.serverTimestamp(),
+      updatedAt: <span class="cls">FieldValue</span>.serverTimestamp(),
+    }
+    <span class="kw">await</span> ref.set(doc)
+    <span class="kw">return</span> { ...doc, id: ref.id } <span class="kw">as</span> <span class="cls">Product</span>
+  }
+
+  <span class="kw">static async</span> listBySeller(
+    sellerId: <span class="typ">string</span>,
+    opts: { limit?: <span class="typ">number</span>; startAfter?: <span class="cls">Timestamp</span> } = {},
+  ): <span class="cls">Promise</span>&lt;<span class="cls">Product</span>[]&gt; {
+    <span class="kw">let</span> q = <span class="cls">ProductRepository</span>.col()
+      .where(<span class="str">'sellerId'</span>, <span class="str">'=='</span>, sellerId)
+      .orderBy(<span class="str">'createdAt'</span>, <span class="str">'desc'</span>)
+      .limit(opts.limit ?? <span class="num">20</span>)
+    <span class="kw">if</span> (opts.startAfter) q = q.startAfter(opts.startAfter)
+    <span class="kw">const</span> snap = <span class="kw">await</span> q.get()
+    <span class="kw">return</span> snap.docs.map(<span class="cls">ProductRepository</span>.fromDoc)
+  }
+
+  <span class="kw">static</span> fromDoc = (doc: <span class="cls">DocumentData</span>): <span class="cls">Product</span> =>
+    ({ id: doc.id, ...doc.data() } <span class="kw">as</span> <span class="cls">Product</span>)
+}</pre>
+      </div>
+
+      <div class="cc cc-fb">
+        <div class="cc-head"><span class="cd" style="background:var(--a5)"></span><span class="ct">Firestore transactions + batches</span><span class="cs2">atomic writes</span></div>
+<pre><span class="imp">import</span> { getFirestore, FieldValue } <span class="imp">from</span> <span class="str">'firebase-admin/firestore'</span>
+
+<span class="kw">export class</span> <span class="cls">OrderService</span> {
+
+  <span class="cmt">// Atomic: decrement stock + create order in one transaction</span>
+  <span class="kw">static async</span> purchase(
+    productId: <span class="typ">string</span>,
+    quantity:  <span class="typ">number</span>,
+    buyerId:   <span class="typ">string</span>,
+  ) {
+    <span class="kw">const</span> db = getFirestore()
+
+    <span class="kw">return</span> db.runTransaction(<span class="kw">async</span> (txn) => {
+      <span class="kw">const</span> productRef = db.collection(<span class="str">'products'</span>).doc(productId)
+      <span class="kw">const</span> product    = <span class="kw">await</span> txn.get(productRef)
+
+      <span class="kw">if</span> (!product.exists) <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">'Product not found'</span>)
+
+      <span class="kw">const</span> stock = product.data()!.stock
+      <span class="kw">if</span> (stock < quantity) <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">'Insufficient stock'</span>)
+
+      <span class="cmt">// Decrement stock atomically</span>
+      txn.update(productRef, {
+        stock: <span class="cls">FieldValue</span>.increment(-quantity),
+      })
+
+      <span class="cmt">// Create order document</span>
+      <span class="kw">const</span> orderRef = db.collection(<span class="str">'orders'</span>).doc()
+      txn.set(orderRef, {
+        productId, quantity, buyerId,
+        status:    <span class="str">'pending'</span>,
+        createdAt: <span class="cls">FieldValue</span>.serverTimestamp(),
+      })
+
+      <span class="kw">return</span> { orderId: orderRef.id }
+    })
+  }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECURITY RULES -->
+  <div class="tp" id="tp-rules">
+    <div class="code-grid">
+
+      <div class="cc cc-sec">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">firestore.rules — Security Rules</span><span class="cs2">critical</span></div>
+<pre><span class="cmt">// Firestore Security Rules — enforce at the database level</span>
+<span class="cmt">// These run on Google's servers — cannot be bypassed by clients</span>
+rules_version = <span class="str">'2'</span>;
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    <span class="cmt">// Helper functions</span>
+    <span class="fn">function</span> isAuthenticated() {
+      <span class="kw">return</span> request.auth != <span class="kw">null</span>;
+    }
+    <span class="fn">function</span> isOwner(userId) {
+      <span class="kw">return</span> isAuthenticated() && request.auth.uid == userId;
+    }
+    <span class="fn">function</span> hasRole(role) {
+      <span class="kw">return</span> isAuthenticated()
+        && request.auth.token.role == role;
+    }
+    <span class="fn">function</span> validProduct() {
+      <span class="kw">return</span> request.resource.data.keys().hasAll([<span class="str">'name'</span>, <span class="str">'price'</span>])
+        && request.resource.data.name is string
+        && request.resource.data.price is number
+        && request.resource.data.price > <span class="num">0</span>;
+    }
+
+    <span class="cmt">// Users collection</span>
+    match /users/{userId} {
+      allow read:   if isOwner(userId) || hasRole(<span class="str">'admin'</span>);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId)
+        && !request.resource.data.diff(
+             resource.data).affectedKeys()
+           .hasAny([<span class="str">'role'</span>, <span class="str">'uid'</span>]); <span class="cmt">// can't self-promote</span>
+      allow delete: if hasRole(<span class="str">'admin'</span>);
+    }
+
+    <span class="cmt">// Products collection</span>
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && validProduct()
+        && request.resource.data.sellerId == request.auth.uid;
+      allow update: if isOwner(resource.data.sellerId)
+        || hasRole(<span class="str">'admin'</span>);
+      allow delete: if isOwner(resource.data.sellerId)
+        || hasRole(<span class="str">'admin'</span>);
+    }
+
+    <span class="cmt">// Orders — users see own orders, admins see all</span>
+    match /orders/{orderId} {
+      allow read: if isOwner(resource.data.buyerId)
+        || isOwner(resource.data.sellerId)
+        || hasRole(<span class="str">'admin'</span>);
+      allow create: if isAuthenticated()
+        && request.resource.data.buyerId == request.auth.uid;
+      allow update: if hasRole(<span class="str">'admin'</span>); <span class="cmt">// only admins update</span>
+    }
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-sec">
+        <div class="cc-head"><span class="cd" style="background:var(--a4)"></span><span class="ct">Firebase Storage Rules</span><span class="cs2">storage</span></div>
+<pre><span class="cmt">// storage.rules — enforce file access at the CDN level</span>
+rules_version = <span class="str">'2'</span>;
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    <span class="cmt">// User profile images — owner read/write, public read</span>
+    match /users/{userId}/avatar/{filename} {
+      allow read:  if true;   <span class="cmt">// public CDN</span>
+      allow write: if request.auth != <span class="kw">null</span>
+        && request.auth.uid == userId
+        && request.resource.size < <span class="num">5</span> * <span class="num">1024</span> * <span class="num">1024</span>  <span class="cmt">// 5MB</span>
+        && request.resource.contentType.matches(<span class="str">'image/.*'</span>);
+    }
+
+    <span class="cmt">// Product images</span>
+    match /products/{productId}/{filename} {
+      allow read: if true;
+      allow write: if request.auth != <span class="kw">null</span>
+        && request.resource.size < <span class="num">10</span> * <span class="num">1024</span> * <span class="num">1024</span>
+        && request.resource.contentType.matches(<span class="str">'image/.*'</span>);
+    }
+
+    <span class="cmt">// Private documents — only owner</span>
+    match /private/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != <span class="kw">null</span>
+        && request.auth.uid == userId;
+    }
+  }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VERTEX AI -->
+  <div class="tp" id="tp-ai">
+    <div class="code-grid">
+
+      <div class="cc cc-ai">
+        <div class="cc-head"><span class="cd" style="background:var(--a7)"></span><span class="ct">ai.service.ts — Gemini API</span><span class="cs2">Vertex AI</span></div>
+<pre><span class="imp">import</span> { VertexAI, HarmCategory, HarmBlockThreshold }
+  <span class="imp">from</span> <span class="str">'@google-cloud/vertexai'</span>
+
+<span class="kw">const</span> vertex = <span class="kw">new</span> <span class="cls">VertexAI</span>({
+  project:  process.env.GCLOUD_PROJECT!,
+  location: <span class="str">'us-central1'</span>,
+})
+
+<span class="kw">const</span> model = vertex.getGenerativeModel({
+  model: <span class="str">'gemini-1.5-pro'</span>,
+  safetySettings: [
+    { category: <span class="cls">HarmCategory</span>.<span class="cls">HARM_CATEGORY_HARASSMENT</span>,
+      threshold: <span class="cls">HarmBlockThreshold</span>.<span class="cls">BLOCK_MEDIUM_AND_ABOVE</span> },
+  ],
+  generationConfig: {
+    maxOutputTokens: <span class="num">2048</span>,
+    temperature:     <span class="num">0.4</span>,
+    topP:            <span class="num">0.8</span>,
+  },
+})
+
+<span class="kw">export class</span> <span class="cls">AiService</span> {
+
+  <span class="kw">static async</span> generateProductDescription(
+    productName: <span class="typ">string</span>,
+    category:    <span class="typ">string</span>,
+  ): <span class="cls">Promise</span>&lt;<span class="typ">string</span>&gt; {
+    <span class="kw">const</span> prompt = <span class="str">`Write a compelling 2-paragraph product
+description for: ${productName} (Category: ${category}).
+Tone: professional, benefit-focused. No markdown.`</span>
+
+    <span class="kw">const</span> result = <span class="kw">await</span> model.generateContent(prompt)
+    <span class="kw">return</span> result.response.candidates?.[<span class="num">0</span>]
+      ?.content.parts[<span class="num">0</span>].text ?? <span class="str">''</span>
+  }
+
+  <span class="cmt">// Streaming — for long responses</span>
+  <span class="kw">static async</span>* streamResponse(prompt: <span class="typ">string</span>) {
+    <span class="kw">const</span> stream = <span class="kw">await</span> model.generateContentStream(prompt)
+    <span class="kw">for await</span> (<span class="kw">const</span> chunk <span class="kw">of</span> stream.stream) {
+      <span class="kw">const</span> text = chunk.candidates?.[<span class="num">0</span>]
+        ?.content.parts[<span class="num">0</span>].text
+      <span class="kw">if</span> (text) <span class="kw">yield</span> text
+    }
+  }
+
+  <span class="cmt">// Multimodal — image + text</span>
+  <span class="kw">static async</span> analyzeProductImage(imageUrl: <span class="typ">string</span>) {
+    <span class="kw">const</span> result = <span class="kw">await</span> model.generateContent([
+      { inlineData: { mimeType: <span class="str">'image/jpeg'</span>, data: imageUrl } },
+      <span class="str">'Describe this product image for a marketplace listing.'</span>,
+    ])
+    <span class="kw">return</span> result.response.candidates?.[<span class="num">0</span>]?.content.parts[<span class="num">0</span>].text
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-ai">
+        <div class="cc-head"><span class="cd" style="background:var(--a7)"></span><span class="ct">ai.functions.ts — streaming HTTP response</span><span class="cs2">Vertex AI · Cloud Run</span></div>
+<pre><span class="cmt">// Streaming Gemini response via Cloud Run (Cloud Functions
+// has 60s timeout — Cloud Run supports longer streaming)</span>
+<span class="imp">import</span> express <span class="imp">from</span> <span class="str">'express'</span>
+<span class="imp">import</span> { AiService } <span class="imp">from</span> <span class="str">'./ai.service'</span>
+<span class="imp">import</span> { requireAuth } <span class="imp">from</span> <span class="str">'../shared/auth.middleware'</span>
+
+<span class="kw">export const</span> streamAiResponse = <span class="kw">async</span> (
+  req: express.<span class="cls">Request</span>,
+  res: express.<span class="cls">Response</span>,
+) => {
+  <span class="kw">const</span> user = <span class="kw">await</span> requireAuth(req, res)
+  <span class="kw">if</span> (!user) <span class="kw">return</span>
+
+  <span class="kw">const</span> { prompt } = req.body
+  <span class="kw">if</span> (!prompt?.trim()) {
+    res.status(<span class="num">400</span>).json({ error: <span class="str">'Prompt required'</span> }); <span class="kw">return</span>
+  }
+
+  <span class="cmt">// SSE streaming — client reads chunks as they arrive</span>
+  res.setHeader(<span class="str">'Content-Type'</span>, <span class="str">'text/event-stream'</span>)
+  res.setHeader(<span class="str">'Cache-Control'</span>, <span class="str">'no-cache'</span>)
+  res.setHeader(<span class="str">'Connection'</span>, <span class="str">'keep-alive'</span>)
+
+  <span class="kw">for await</span> (<span class="kw">const</span> chunk <span class="kw">of</span> <span class="cls">AiService</span>.streamResponse(prompt)) {
+    res.write(<span class="str">`data: ${JSON.stringify({ text: chunk })}\n\n`</span>)
+  }
+  res.write(<span class="str">'data: [DONE]\n\n'</span>)
+  res.end()
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- INFRA + CONFIG -->
+  <div class="tp" id="tp-infra">
+    <div class="code-grid">
+
+      <div class="cc cc-fn">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">shared/firebase-admin.ts — singleton init</span><span class="cs2">infra</span></div>
+<pre><span class="imp">import</span> { initializeApp, getApps } <span class="imp">from</span> <span class="str">'firebase-admin/app'</span>
+
+<span class="cmt">// Initialize once — guard against double-init in warm instances</span>
+<span class="kw">if</span> (!getApps().length) {
+  initializeApp()  <span class="cmt">// auto-configured in GCP — no credentials needed</span>
+}
+
+<span class="cmt">// Export typed Firestore with converter helper</span>
+<span class="imp">import</span> { getFirestore } <span class="imp">from</span> <span class="str">'firebase-admin/firestore'</span>
+
+<span class="kw">const</span> db = getFirestore()
+db.settings({ ignoreUndefinedProperties: <span class="kw">true</span> })
+
+<span class="kw">export</span> { db }
+
+<span class="cmt">// Typed converter — eliminates manual casting</span>
+<span class="kw">export function</span> converter&lt;<span class="cls">T</span>&gt;() {
+  <span class="kw">return</span> {
+    toFirestore:   (data: <span class="cls">T</span>) => data <span class="kw">as</span> <span class="kw">any</span>,
+    fromFirestore: (snap: <span class="kw">any</span>): <span class="cls">T</span> => snap.data() <span class="kw">as</span> <span class="cls">T</span>,
+  }
+}
+
+<span class="cmt">// Usage: db.collection('products').withConverter(converter&lt;Product&gt;())</span></pre>
+      </div>
+
+      <div class="cc cc-fn">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">shared/logger.ts — Cloud Logging</span><span class="cs2">infra</span></div>
+<pre><span class="imp">import</span> { logger <span class="kw">as</span> functionsLogger } <span class="imp">from</span> <span class="str">'firebase-functions'</span>
+
+<span class="cmt">// Firebase Functions logger writes structured JSON to</span>
+<span class="cmt">// Google Cloud Logging automatically — no setup needed</span>
+<span class="kw">export const</span> logger = {
+  debug: (msg: <span class="typ">string</span>, meta: object = {}) =>
+    functionsLogger.debug(msg, meta),
+  info:  (msg: <span class="typ">string</span>, meta: object = {}) =>
+    functionsLogger.info(msg, meta),
+  warn:  (msg: <span class="typ">string</span>, meta: object = {}) =>
+    functionsLogger.warn(msg, meta),
+  error: (msg: <span class="typ">string</span>, meta: object = {}) =>
+    functionsLogger.error(msg, meta),
+}
+
+<span class="cmt">// Correlation ID middleware — trace logs across functions</span>
+<span class="imp">import</span> { Request, Response, NextFunction } <span class="imp">from</span> <span class="str">'express'</span>
+<span class="imp">import</span> { randomUUID } <span class="imp">from</span> <span class="str">'crypto'</span>
+
+<span class="kw">export function</span> correlationMiddleware(
+  req: Request, res: Response, next: NextFunction
+) {
+  <span class="kw">const</span> traceId = req.headers[<span class="str">'x-cloud-trace-context'</span>] as <span class="typ">string</span>
+    ?? randomUUID()
+  res.setHeader(<span class="str">'x-trace-id'</span>, traceId)
+  next()
+}
+
+<span class="cmt">// package.json scripts:</span>
+<span class="cmt">// "deploy":      "firebase deploy --only functions"</span>
+<span class="cmt">// "deploy:prod": "firebase use prod && firebase deploy"</span>
+<span class="cmt">// "emulate":     "firebase emulators:start"</span>
+<span class="cmt">// "logs":        "firebase functions:log"</span></pre>
+      </div>
+
+      <div class="cc cc-fn">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">shared/validate.ts — Zod guard</span><span class="cs2">infra</span></div>
+<pre><span class="imp">import</span> { z } <span class="imp">from</span> <span class="str">'zod'</span>
+<span class="imp">import type</span> { Response } <span class="imp">from</span> <span class="str">'express'</span>
+
+<span class="cmt">// Returns typed data or sends 422 and returns null</span>
+<span class="kw">export function</span> validate&lt;<span class="cls">T</span> <span class="kw">extends</span> z.ZodType&gt;(
+  schema:  <span class="cls">T</span>,
+  data:    <span class="kw">unknown</span>,
+  res:     <span class="cls">Response</span>,
+): z.infer&lt;<span class="cls">T</span>&gt; | <span class="kw">null</span> {
+  <span class="kw">const</span> result = schema.safeParse(data)
+  <span class="kw">if</span> (!result.success) {
+    res.status(<span class="num">422</span>).json({
+      success: <span class="kw">false</span>,
+      error:   <span class="str">'Validation failed'</span>,
+      details: result.error.flatten(),
+    })
+    <span class="kw">return null</span>
+  }
+  <span class="kw">return</span> result.data
+}
+
+<span class="cmt">// Environment config — validated at startup</span>
+<span class="kw">const</span> <span class="cls">EnvSchema</span> = z.object({
+  GCLOUD_PROJECT:   z.string(),
+  SERVICE_ACCOUNT:  z.string(),
+  ENVIRONMENT:      z.enum([<span class="str">'development'</span>, <span class="str">'staging'</span>, <span class="str">'production'</span>]),
+})
+
+<span class="kw">export const</span> env = <span class="cls">EnvSchema</span>.parse(process.env)</pre>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- DATA FLOWS -->
+<section class="section reveal" id="flows">
+  <p class="sec-label">04 — Data Flows</p>
+  <h2 class="sec-title">Every <span class="gt1">Event</span> Traced</h2>
+  <p class="sec-intro">Serverless systems are event graphs, not request pipelines. Every interaction triggers a chain of events across managed services.</p>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Authenticated HTTP request → Firestore</p>
+    <div class="flow-row">
+      <div class="fb fb-fn">Client request</div><div class="fa">→</div>
+      <div class="fb fb-fn">Cloud LB + Armor</div><div class="fa">→</div>
+      <div class="fb fb-fn">Cloud Function</div><div class="fa">→</div>
+      <div class="fb fb-se">verifyIdToken()</div><div class="fa">→</div>
+      <div class="fb fb-fn">Service.method()</div><div class="fa">→</div>
+      <div class="fb fb-fb">Firestore write</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Firestore write → event cascade</p>
+    <div class="flow-row">
+      <div class="fb fb-fb">Firestore doc created</div><div class="fa">→</div>
+      <div class="fb fb-fb">onDocumentCreated trigger</div><div class="fa">→</div>
+      <div class="fb fb-ps">Pub/Sub publish</div><div class="fa">→</div>
+      <div class="fb fb-ps">onMessagePublished</div><div class="fa">→</div>
+      <div class="fb fb-fn">FCM push notification</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">User registration flow</p>
+    <div class="flow-row">
+      <div class="fb fb-fb">Firebase Auth signup</div><div class="fa">→</div>
+      <div class="fb fb-se">beforeUserCreated trigger</div><div class="fa">→</div>
+      <div class="fb fb-fb">Create /users/{uid} doc</div><div class="fa">→</div>
+      <div class="fb fb-se">Set custom claims { role }</div><div class="fa">→</div>
+      <div class="fb fb-fb">JWT issued with RBAC</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Image upload → AI processing</p>
+    <div class="flow-row">
+      <div class="fb fb-fn">Client uploads to Storage</div><div class="fa">→</div>
+      <div class="fb fb-ps">onObjectFinalized trigger</div><div class="fa">→</div>
+      <div class="fb fb-ai">Vertex AI Vision analysis</div><div class="fa">→</div>
+      <div class="fb fb-fb">Update Firestore doc</div><div class="fa">→</div>
+      <div class="fb fb-fn">onSnapshot → client UI</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Delayed task — Cloud Tasks</p>
+    <div class="flow-row">
+      <div class="fb fb-fn">Order placed</div><div class="fa">→</div>
+      <div class="fb fb-cr">scheduleTask(delay: 3600s)</div><div class="fa">→</div>
+      <div class="fb fb-cr">Cloud Tasks queue</div><div class="fa">→ 1hr →</div>
+      <div class="fb fb-fn">HTTP handler → reminder email</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Realtime client subscription (no polling)</p>
+    <div class="flow-row">
+      <div class="fb fb-fn">Client SDK onSnapshot()</div><div class="fa">→</div>
+      <div class="fb fb-fb">Firestore persistent connection</div><div class="fa">→</div>
+      <div class="fb fb-fb">Any write to that doc</div><div class="fa">→</div>
+      <div class="fb fb-fb">Push delta to all listeners</div><div class="fa">→</div>
+      <div class="fb fb-fn">UI updates automatically</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Gemini streaming response</p>
+    <div class="flow-row">
+      <div class="fb fb-fn">POST /ai/stream</div><div class="fa">→</div>
+      <div class="fb fb-se">Auth verify</div><div class="fa">→</div>
+      <div class="fb fb-cr">Cloud Run handler</div><div class="fa">→</div>
+      <div class="fb fb-ai">Vertex AI stream()</div><div class="fa">→</div>
+      <div class="fb fb-cr">SSE chunks → client</div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- FEATURES -->
+<section class="section reveal" id="features">
+  <p class="sec-label">05 — Feature Matrix</p>
+  <h2 class="sec-title">Every Requirement <span class="gt2">Mapped</span></h2>
+  <p class="sec-intro">All backend requirements from the original brief — translated to serverless GCP + Firebase equivalents.</p>
+
+  <div class="svc-grid">
+
+    <div class="svc-card sc-fb">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(251,188,4,.1)">🔑</div>
+        <div><div class="svc-name" style="color:var(--a3)">Authentication + RBAC</div><div class="svc-tag">Firebase Auth · Custom Claims</div></div>
+      </div>
+      <div class="svc-desc">Firebase Auth replaces your entire JWT service. beforeUserCreated trigger sets custom claims (role) in the JWT. requireAuth() verifies + decodes in every function. Role checks on request.auth.token.role in Security Rules.</div>
+      <code class="svc-use">setCustomUserClaims()</code><code class="svc-use">verifyIdToken()</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(234,67,53,.1)">🔐</div>
+        <div><div class="svc-name" style="color:var(--a4)">Secrets management</div><div class="svc-tag">Secret Manager</div></div>
+      </div>
+      <div class="svc-desc">All secrets in Secret Manager — Stripe keys, SendGrid API keys, encryption keys. Functions access via secrets: ['SECRET_NAME'] binding (env var) or SDK call. IAM controls which service accounts can access which secrets.</div>
+      <code class="svc-use">runWith({secrets:[]})</code>
+    </div>
+
+    <div class="svc-card sc-fn">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(66,133,244,.1)">⚡</div>
+        <div><div class="svc-name" style="color:var(--a1)">Encryption at rest</div><div class="svc-tag">GCP CMEK · AES-256</div></div>
+      </div>
+      <div class="svc-desc">Firestore, Cloud Storage, and Pub/Sub are encrypted at rest with AES-256 by default. For field-level encryption of sensitive data (PII, payment info), use CMEK (Customer-Managed Encryption Keys) via Cloud KMS.</div>
+      <code class="svc-use">Cloud KMS</code><code class="svc-use">CMEK</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(52,168,83,.1)">📨</div>
+        <div><div class="svc-name" style="color:var(--a2)">Async task processing</div><div class="svc-tag">Pub/Sub · Cloud Tasks</div></div>
+      </div>
+      <div class="svc-desc">Pub/Sub for fire-and-forget events (at-least-once). Cloud Tasks for scheduled delays, deduplication, and rate-limited HTTP delivery. Both replace Celery + Redis worker queues entirely.</div>
+      <code class="svc-use">publishEvent()</code><code class="svc-use">scheduleTask()</code>
+    </div>
+
+    <div class="svc-card sc-fb">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(255,109,0,.1)">🔥</div>
+        <div><div class="svc-name" style="color:var(--a5)">Real-time communication</div><div class="svc-tag">Firestore onSnapshot · RTDB</div></div>
+      </div>
+      <div class="svc-desc">Firestore's onSnapshot() listener gives real-time updates to all connected clients when any document changes — no WebSocket server to manage. Firebase Realtime DB for presence, cursors, typing indicators at sub-10ms latency.</div>
+      <code class="svc-use">onSnapshot()</code><code class="svc-use">onValue()</code>
+    </div>
+
+    <div class="svc-card sc-fn">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(0,188,212,.1)">🏃</div>
+        <div><div class="svc-name" style="color:var(--a6)">WebSocket / streaming</div><div class="svc-tag">Cloud Run</div></div>
+      </div>
+      <div class="svc-desc">Cloud Functions have a 60-second timeout and no persistent connections. WebSocket servers and long-running streaming responses (Gemini SSE) run on Cloud Run — containerized, auto-scaling, same VPC.</div>
+      <code class="svc-use">Cloud Run service</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(234,67,53,.1)">🛡️</div>
+        <div><div class="svc-name" style="color:var(--a4)">Rate limiting + DDoS</div><div class="svc-tag">Cloud Armor · API Gateway</div></div>
+      </div>
+      <div class="svc-desc">Cloud Armor WAF rules at the Global Load Balancer — rate limiting, IP blocking, geographic restrictions, OWASP Top 10 protections. All before traffic reaches your functions. Zero application code needed.</div>
+      <code class="svc-use">WAF security policy</code>
+    </div>
+
+    <div class="svc-card sc-fb">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(255,109,0,.1)">📋</div>
+        <div><div class="svc-name" style="color:var(--a5)">Security Rules</div><div class="svc-tag">Firestore + Storage Rules</div></div>
+      </div>
+      <div class="svc-desc">Database-level access control that cannot be bypassed. Rules run on Google's servers — even if someone calls the Firestore SDK directly with a valid token, rules still apply. Eliminates entire classes of authorization bugs.</div>
+      <code class="svc-use">firestore.rules</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(124,77,255,.1)">🧠</div>
+        <div><div class="svc-name" style="color:var(--a7)">AI / ML integration</div><div class="svc-tag">Vertex AI · Gemini</div></div>
+      </div>
+      <div class="svc-desc">Gemini 1.5 Pro/Flash via Vertex AI SDK — text, multimodal, streaming. No API key needed inside GCP — uses ADC (Application Default Credentials). Vertex AI also hosts custom models and provides vector search.</div>
+      <code class="svc-use">generateContent()</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(52,168,83,.1)">⏱️</div>
+        <div><div class="svc-name" style="color:var(--a2)">Scheduled jobs (cron)</div><div class="svc-tag">Cloud Scheduler · onSchedule</div></div>
+      </div>
+      <div class="svc-desc">onSchedule() in Cloud Functions v2 — wraps Cloud Scheduler. Supports cron syntax and human-readable intervals. Runs in your region, uses your service account. Logs to Cloud Logging automatically.</div>
+      <code class="svc-use">onSchedule('every 6 hours')</code>
+    </div>
+
+    <div class="svc-card sc-gcp">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(66,133,244,.1)">📊</div>
+        <div><div class="svc-name" style="color:var(--a1)">Observability</div><div class="svc-tag">Cloud Logging · Monitoring · Trace</div></div>
+      </div>
+      <div class="svc-desc">Functions logger writes structured JSON to Cloud Logging. Cloud Monitoring provides dashboards, uptime checks, alerting. Cloud Trace shows latency breakdowns across function calls. Error Reporting groups and alerts on exceptions.</div>
+      <code class="svc-use">logger.info()</code><code class="svc-use">Cloud Monitoring</code>
+    </div>
+
+    <div class="svc-card sc-fb">
+      <div class="svc-header">
+        <div class="svc-icon-wrap" style="background:rgba(251,188,4,.1)">🧪</div>
+        <div><div class="svc-name" style="color:var(--a3)">Local development</div><div class="svc-tag">Firebase Emulator Suite</div></div>
+      </div>
+      <div class="svc-desc">Firebase Emulator Suite — local Firestore, Auth, Functions, Pub/Sub, Storage all running on localhost. Tests run against emulators — no cloud costs, no test data pollution. Rules are tested locally too.</div>
+      <code class="svc-use">firebase emulators:start</code>
+    </div>
+
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- PACKAGES / SDK -->
+<section class="section reveal" id="packages">
+  <p class="sec-label">06 — SDK Registry</p>
+  <h2 class="sec-title">The <span class="gt1">npm</span> Registry</h2>
+  <p class="sec-intro">Every package you need to build a complete GCP + Firebase backend. Pinned to production-stable versions.</p>
+
+  <div class="warn">
+    <strong>Node.js version:</strong> Cloud Functions v2 supports Node.js 20 (recommended) and 22. Set <code style="font-family:var(--fc);font-size:12px">"engines": {"node": "20"}</code> in package.json. Always specify the runtime explicitly — default may change.
+  </div>
+
+  <div class="pkg-wrap">
+    <table>
+      <thead>
+        <tr><th>Package</th><th>Version</th><th>Purpose</th><th>Layer</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="pn">firebase-admin</code></td><td class="pv">^12.x</td><td class="pd">Admin SDK — Firestore, Auth, Storage, FCM, Messaging server-side access</td><td><span class="lp t-fb">Firebase</span></td></tr>
+        <tr><td><code class="pn">firebase-functions</code></td><td class="pv">^6.x</td><td class="pd">Cloud Functions v2 — onRequest, onCall, onDocumentCreated, onSchedule, onMessagePublished</td><td><span class="lp t-fn">Functions</span></td></tr>
+        <tr><td><code class="pn">@google-cloud/pubsub</code></td><td class="pv">^4.x</td><td class="pd">Pub/Sub publisher — create topics, publish messages, manage subscriptions</td><td><span class="lp t-gcp">GCP</span></td></tr>
+        <tr><td><code class="pn">@google-cloud/tasks</code></td><td class="pv">^5.x</td><td class="pd">Cloud Tasks — create HTTP tasks with delay, dedup, rate limiting</td><td><span class="lp t-gcp">GCP</span></td></tr>
+        <tr><td><code class="pn">@google-cloud/secret-manager</code></td><td class="pv">^5.x</td><td class="pd">Secret Manager SDK — access versioned secrets at runtime</td><td><span class="lp t-sec">Security</span></td></tr>
+        <tr><td><code class="pn">@google-cloud/vertexai</code></td><td class="pv">^1.x</td><td class="pd">Vertex AI + Gemini API — text, multimodal, streaming, embeddings</td><td><span class="lp t-ai">AI</span></td></tr>
+        <tr><td><code class="pn">@google-cloud/storage</code></td><td class="pv">^7.x</td><td class="pd">Cloud Storage — signed URLs, bucket management, object operations</td><td><span class="lp t-gcp">GCP</span></td></tr>
+        <tr><td><code class="pn">@google-cloud/bigquery</code></td><td class="pv">^7.x</td><td class="pd">BigQuery — insert rows, run queries, stream events to analytics warehouse</td><td><span class="lp t-gcp">GCP</span></td></tr>
+        <tr><td><code class="pn">zod</code></td><td class="pv">^3.23</td><td class="pd">Runtime schema validation — request body, env vars, Firestore data shapes</td><td><span class="lp t-fn">Shared</span></td></tr>
+        <tr><td><code class="pn">express</code></td><td class="pv">^4.21</td><td class="pd">HTTP server for Cloud Run services — WebSocket, streaming AI responses, batch APIs</td><td><span class="lp t-fn">HTTP</span></td></tr>
+        <tr><td><code class="pn">firebase-tools</code></td><td class="pv">^13.x</td><td class="pd">Firebase CLI — deploy functions, manage emulators, rules deployment (dev dep)</td><td><span class="lp t-gcp" style="background:rgba(52,168,83,.08);color:var(--a2)">dev</span></td></tr>
+        <tr><td><code class="pn">typescript</code></td><td class="pv">^5.6</td><td class="pd">TypeScript compiler — strict mode, ESM output targeting Node 20</td><td><span class="lp t-gcp" style="background:rgba(52,168,83,.08);color:var(--a2)">dev</span></td></tr>
+        <tr><td><code class="pn">tsx</code></td><td class="pv">^4.x</td><td class="pd">TypeScript execution — run .ts files directly for scripts and migrations</td><td><span class="lp t-gcp" style="background:rgba(52,168,83,.08);color:var(--a2)">dev</span></td></tr>
+        <tr><td><code class="pn">vitest</code></td><td class="pv">^2.x</td><td class="pd">Fast unit testing — test services, repositories, validators against emulators</td><td><span class="lp t-gcp" style="background:rgba(52,168,83,.08);color:var(--a2)">test</span></td></tr>
+        <tr><td><code class="pn">@firebase/rules-unit-testing</code></td><td class="pv">^3.x</td><td class="pd">Security Rules testing library — test firestore.rules against emulator with typed assertions</td><td><span class="lp t-gcp" style="background:rgba(52,168,83,.08);color:var(--a2)">test</span></td></tr>
+        <tr>
+          <td colspan="4" style="padding:12px 14px;font-family:var(--fh);font-size:10px;color:var(--text3);font-weight:300;letter-spacing:.04em">
+            REPLACED BY GCP MANAGED SERVICES: JWT library → Firebase Auth · Redis → Firestore/RTDB · Celery/RabbitMQ → Pub/Sub + Cloud Tasks · Nginx → Cloud Load Balancer · Let's Encrypt → Managed TLS · Database server → Firestore · Cron daemon → Cloud Scheduler
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="ft-title"><span class="gt1">No servers.</span> Infinite scale.</div>
+  <p class="ft-sub">When the platform handles the infrastructure, you only write business logic.</p>
+  <p class="ft-copy">GCP · Firebase · Cloud Functions · Vertex AI — Cloud Architecture Field Guide · 2025</p>
+</footer>
+
+<script>
+function st(id) {
+  document.querySelectorAll('.tp').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b => b.classList.remove('on'));
+  document.getElementById('tp-' + id).classList.add('on');
+  event.currentTarget.classList.add('on');
+}
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('vis'); io.unobserve(e.target); }
+  });
+}, { threshold: 0.05 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+const secs = document.querySelectorAll('section[id]');
+const links = document.querySelectorAll('.nav-links a');
+const nio = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.style.color = '');
+      const l = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+      if (l) l.style.color = 'var(--a1)';
+    }
+  });
+}, { threshold: 0.3 });
+secs.forEach(s => nio.observe(s));
+</script>
+</body>
+</html>

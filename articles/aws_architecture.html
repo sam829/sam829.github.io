@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AWS — Cloud Architecture Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#07080b;--bg2:#0b0d12;--bg3:#0f1118;
+  --surf:#141720;--surf2:#191d28;
+  --bord:rgba(255,153,0,0.07);--bord2:rgba(255,153,0,0.16);
+  --a1:#ff9900;--a2:#232f3e;--a3:#00a8e1;--a4:#1a9c3e;
+  --a5:#d13212;--a6:#8c4fff;--a7:#e7157b;--a8:#01a88d;
+  --text:#e8ecf4;--text2:#5a6a80;--text3:#2a3548;
+  --fh:'Chakra Petch',sans-serif;--fb:'Newsreader',serif;--fc:'JetBrains Mono',monospace;
+  --r:6px;--rl:12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:16px;line-height:1.75;overflow-x:hidden}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--a1);border-radius:2px}
+
+/* GRID + CIRCUIT LINES */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(255,153,0,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,153,0,.03) 1px,transparent 1px),
+    linear-gradient(rgba(255,153,0,.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,153,0,.015) 1px,transparent 1px);
+  background-size:100px 100px,100px 100px,25px 25px,25px 25px;
+  pointer-events:none;z-index:0;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse at 10% 20%,rgba(255,153,0,.05) 0%,transparent 45%),
+    radial-gradient(ellipse at 90% 70%,rgba(0,168,225,.04) 0%,transparent 45%),
+    radial-gradient(ellipse at 50% 90%,rgba(140,79,255,.03) 0%,transparent 40%);
+  pointer-events:none;z-index:0;
+}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:rgba(7,8,11,.93);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--bord2);
+  height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 48px;
+}
+.nav-brand{display:flex;align-items:center;gap:14px}
+.nav-aws-badge{
+  font-family:var(--fh);font-size:11px;font-weight:700;
+  color:#0a0a0a;background:var(--a1);
+  padding:4px 10px;border-radius:3px;letter-spacing:.06em;
+}
+.nav-logo{font-family:var(--fh);font-size:13px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase}
+.nav-links{display:flex;gap:28px;list-style:none}
+.nav-links a{font-family:var(--fh);font-size:10px;font-weight:400;color:var(--text2);text-decoration:none;letter-spacing:.1em;text-transform:uppercase;transition:color .15s}
+.nav-links a:hover{color:var(--a1)}
+
+/* HERO */
+.hero{
+  position:relative;min-height:100vh;
+  display:grid;grid-template-columns:1fr 1fr;
+  padding-top:54px;overflow:hidden;z-index:1;
+  align-items:stretch;
+}
+.hero-left{
+  padding:70px 60px 70px 10vw;
+  border-right:1px solid var(--bord2);
+  display:flex;flex-direction:column;justify-content:center;
+}
+.hero-right{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:1px;background:var(--bord2);
+  border-left:1px solid var(--bord2);
+}
+
+.hero-eyebrow{
+  font-family:var(--fh);font-size:9px;font-weight:600;
+  letter-spacing:.28em;text-transform:uppercase;color:var(--a1);
+  margin-bottom:20px;display:flex;align-items:center;gap:10px;
+  opacity:0;animation:fadeIn .6s .1s forwards;
+}
+.hero-eyebrow::before{content:'';width:28px;height:1px;background:var(--a1)}
+
+.hero-title{
+  font-family:var(--fh);
+  font-size:clamp(44px,5.5vw,82px);
+  font-weight:700;line-height:.95;letter-spacing:-.02em;
+  margin-bottom:24px;
+  opacity:0;animation:fadeIn .7s .25s forwards;
+}
+.ht1{display:block;color:var(--text)}
+.ht2{display:block;color:var(--a1);font-style:italic}
+.ht3{
+  display:block;font-size:.32em;font-weight:300;
+  letter-spacing:.18em;text-transform:uppercase;
+  color:var(--text2);margin-top:10px;font-style:normal;
+}
+
+.hero-desc{
+  font-family:var(--fb);font-style:italic;
+  font-size:17px;color:var(--text2);max-width:460px;
+  line-height:1.65;margin-bottom:36px;
+  opacity:0;animation:fadeIn .7s .4s forwards;
+}
+
+.pill-grid{
+  display:flex;flex-wrap:wrap;gap:7px;
+  opacity:0;animation:fadeIn .7s .55s forwards;
+}
+.pill{
+  font-family:var(--fh);font-size:9px;font-weight:600;
+  padding:5px 11px;border-radius:3px;border:1px solid;
+  letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;
+}
+.p1{border-color:rgba(255,153,0,.5);color:var(--a1);background:rgba(255,153,0,.07)}
+.p2{border-color:rgba(0,168,225,.4);color:var(--a3);background:rgba(0,168,225,.06)}
+.p3{border-color:rgba(26,156,62,.4);color:var(--a4);background:rgba(26,156,62,.06)}
+.p4{border-color:rgba(209,50,18,.4);color:var(--a5);background:rgba(209,50,18,.06)}
+.p5{border-color:rgba(140,79,255,.4);color:var(--a6);background:rgba(140,79,255,.06)}
+.p6{border-color:rgba(231,21,123,.4);color:var(--a7);background:rgba(231,21,123,.06)}
+.p7{border-color:rgba(1,168,141,.4);color:var(--a8);background:rgba(1,168,141,.06)}
+
+/* SERVICE TILES — right hero */
+.svc-tile{
+  background:var(--bg2);
+  padding:24px 20px;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  min-height:150px;cursor:default;
+  transition:background .2s;
+  position:relative;overflow:hidden;
+  opacity:0;animation:fadeIn .6s forwards;
+}
+.svc-tile:hover{background:var(--surf)}
+.svc-tile::before{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+}
+.t1::before{background:var(--a1)}.t2::before{background:var(--a3)}
+.t3::before{background:var(--a4)}.t4::before{background:var(--a5)}
+.t5::before{background:var(--a6)}.t6::before{background:var(--a7)}
+.t7::before{background:var(--a8)}.t8::before{background:var(--a1)}
+.st1{animation-delay:.3s}.st2{animation-delay:.4s}.st3{animation-delay:.5s}
+.st4{animation-delay:.6s}.st5{animation-delay:.7s}.st6{animation-delay:.8s}
+.st7{animation-delay:.9s}.st8{animation-delay:1s}
+
+.svc-tile-num{font-family:var(--fh);font-size:28px;font-weight:700;opacity:.07;margin-bottom:auto}
+.svc-tile-name{font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:.04em;margin-bottom:3px}
+.svc-tile-sub{font-family:var(--fh);font-size:9px;color:var(--text2);font-weight:300;letter-spacing:.04em}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* MAIN */
+main{position:relative;z-index:1}
+.section{max-width:1160px;margin:0 auto;padding:80px 48px;border-top:1px solid var(--bord)}
+.sec-label{
+  font-family:var(--fh);font-size:9px;font-weight:600;
+  letter-spacing:.24em;text-transform:uppercase;color:var(--a1);
+  margin-bottom:10px;display:flex;align-items:center;gap:10px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--a1),transparent);opacity:.2}
+.sec-title{font-family:var(--fh);font-size:clamp(32px,4.5vw,56px);font-weight:700;line-height:1;letter-spacing:-.02em;margin-bottom:14px}
+.sec-intro{font-family:var(--fb);font-style:italic;font-size:17px;color:var(--text2);max-width:640px;line-height:1.65;margin-bottom:40px}
+
+/* ARCH LAYERS — horizontal bands */
+.layer-band{
+  display:flex;align-items:stretch;
+  border:1px solid var(--bord2);border-radius:var(--rl);
+  overflow:hidden;margin-bottom:8px;
+  transition:border-color .2s;cursor:default;
+}
+.layer-band:hover{border-color:rgba(255,153,0,.3)}
+.lb-num{
+  flex-shrink:0;width:48px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fh);font-size:20px;font-weight:700;
+  opacity:.2;background:var(--surf);
+  border-right:1px solid var(--bord);
+}
+.lb-body{flex:1;padding:14px 20px;background:var(--bg2)}
+.lb-title{font-family:var(--fh);font-size:13px;font-weight:700;margin-bottom:4px}
+.lb-desc{font-family:var(--fh);font-size:11px;color:var(--text2);font-weight:300;margin-bottom:8px}
+.lb-chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{
+  font-family:var(--fh);font-size:9px;font-weight:600;
+  padding:3px 8px;border-radius:3px;border:1px solid;
+  letter-spacing:.04em;text-transform:uppercase;
+}
+
+/* SERVICE CARDS */
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.sc{
+  background:var(--bg2);border:1px solid var(--bord);
+  border-radius:var(--rl);padding:20px;
+  transition:border-color .2s,transform .18s;cursor:default;
+}
+.sc:hover{border-color:var(--bord2);transform:translateY(-2px)}
+.sc-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.sc-icon{
+  width:36px;height:36px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.sc-name{font-family:var(--fh);font-size:13px;font-weight:700;letter-spacing:-.01em;margin-bottom:3px}
+.sc-cat{font-family:var(--fh);font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)}
+.sc-desc{font-family:var(--fh);font-size:11px;color:var(--text2);line-height:1.65;font-weight:300;margin-bottom:10px}
+.sc-use{font-family:var(--fc);font-size:10px;color:var(--text3);background:var(--surf);border:1px solid var(--bord);padding:3px 7px;border-radius:3px;display:inline-block;margin:2px 2px 0 0}
+
+/* FILE TREE */
+.tree-wrap{background:var(--bg2);border:1px solid var(--bord2);border-radius:var(--rl);overflow:hidden}
+.tree-hdr{background:var(--surf);padding:11px 18px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--bord)}
+.td{width:10px;height:10px;border-radius:50%}
+.td:nth-child(1){background:#ff5f57}.td:nth-child(2){background:#ffbd2e}.td:nth-child(3){background:#28c840}
+.tree-path{font-family:var(--fc);font-size:11px;color:var(--text2);margin-left:10px}
+.tree-body{padding:16px 20px;overflow-x:auto}
+.fr{display:flex;align-items:center;height:22px;border-radius:3px;padding:0 4px;transition:background .12s;cursor:default}
+.fr:hover{background:rgba(255,153,0,.05)}
+.fi{font-family:var(--fc);font-size:11px;margin-right:5px;flex-shrink:0}
+.fl{font-family:var(--fc);font-size:11.5px}
+.fl.d{color:var(--a1)}.fl.ts{color:var(--text)}.fl.cfg{color:var(--text2)}.fl.tf{color:var(--a8)}.fl.spec{color:var(--a4)}
+.atag{
+  margin-left:8px;font-size:9px;padding:1px 6px;border-radius:3px;
+  font-weight:600;font-family:var(--fh);letter-spacing:.06em;text-transform:uppercase;
+  border:1px solid;white-space:nowrap;
+}
+.t-lam{background:rgba(255,153,0,.09);color:var(--a1);border-color:rgba(255,153,0,.3)}
+.t-rds{background:rgba(0,168,225,.08);color:var(--a3);border-color:rgba(0,168,225,.25)}
+.t-sqs{background:rgba(26,156,62,.07);color:var(--a4);border-color:rgba(26,156,62,.22)}
+.t-cdk{background:rgba(140,79,255,.07);color:var(--a6);border-color:rgba(140,79,255,.22)}
+.t-sec{background:rgba(209,50,18,.07);color:var(--a5);border-color:rgba(209,50,18,.22)}
+
+/* CODE CARDS */
+.code-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:13px}
+.cc{background:var(--bg2);border:1px solid var(--bord2);border-radius:var(--rl);overflow:hidden;transition:border-color .2s,transform .2s;position:relative}
+.cc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity .2s}
+.cc:hover{border-color:rgba(255,153,0,.3);transform:translateY(-2px)}
+.cc:hover::before{opacity:1}
+.cc-l::before{background:linear-gradient(90deg,var(--a1),transparent)}
+.cc-r::before{background:linear-gradient(90deg,var(--a5),transparent)}
+.cc-d::before{background:linear-gradient(90deg,var(--a3),transparent)}
+.cc-s::before{background:linear-gradient(90deg,var(--a4),transparent)}
+.cc-c::before{background:linear-gradient(90deg,var(--a6),transparent)}
+.cc-e::before{background:linear-gradient(90deg,var(--a7),transparent)}
+.cc-i::before{background:linear-gradient(90deg,var(--a8),transparent)}
+
+.cc-head{background:var(--surf);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bord)}
+.cd{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ct{font-family:var(--fh);font-size:11px;font-weight:700;color:var(--text);letter-spacing:.02em}
+.cs2{font-family:var(--fh);font-size:9px;color:var(--text3);margin-left:auto;text-transform:uppercase;letter-spacing:.08em}
+
+pre{padding:14px;font-family:var(--fc);font-size:11px;line-height:1.9;overflow-x:auto;color:#c8d8f0;white-space:pre;background:transparent}
+.kw{color:#ff9900}.cls{color:#00a8e1}.fn{color:#1a9c3e}
+.str{color:#e7be6c}.dec{color:#e7157b}.cmt{color:var(--text3);font-style:italic}
+.typ{color:#8c4fff}.num{color:#d13212}.imp{color:#ff9900;font-style:italic}
+.ann{color:#01a88d}
+
+/* TABS */
+.tab-nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:20px}
+.tb{font-family:var(--fh);font-size:9px;font-weight:700;padding:6px 14px;border-radius:3px;border:1px solid var(--bord2);background:transparent;color:var(--text2);cursor:pointer;letter-spacing:.08em;text-transform:uppercase;transition:all .15s}
+.tb:hover{background:var(--surf);color:var(--text)}
+.tb.on{background:var(--a1);color:#000;border-color:var(--a1)}
+.tp{display:none}.tp.on{display:block}
+
+/* FLOW */
+.flow-section{margin-bottom:22px}
+.flow-lbl{font-family:var(--fh);font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--text3);margin-bottom:7px}
+.flow-row{display:flex;align-items:center;overflow-x:auto;padding-bottom:6px;gap:0;flex-wrap:nowrap}
+.fb{flex-shrink:0;padding:8px 12px;border-radius:5px;border:1px solid;font-family:var(--fh);font-size:10px;font-weight:700;text-align:center;white-space:nowrap;min-width:80px}
+.fa{flex-shrink:0;color:var(--text3);padding:0 6px;font-size:12px}
+.fb-l{background:rgba(255,153,0,.09);border-color:rgba(255,153,0,.4);color:var(--a1)}
+.fb-r{background:rgba(0,168,225,.07);border-color:rgba(0,168,225,.35);color:var(--a3)}
+.fb-d{background:rgba(26,156,62,.07);border-color:rgba(26,156,62,.3);color:var(--a4)}
+.fb-s{background:rgba(209,50,18,.07);border-color:rgba(209,50,18,.3);color:var(--a5)}
+.fb-c{background:rgba(140,79,255,.07);border-color:rgba(140,79,255,.28);color:var(--a6)}
+.fb-e{background:rgba(231,21,123,.07);border-color:rgba(231,21,123,.28);color:var(--a7)}
+.fb-i{background:rgba(1,168,141,.07);border-color:rgba(1,168,141,.28);color:var(--a8)}
+
+/* FEATURE CARDS */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.fc{background:var(--bg2);border:1px solid var(--bord);border-radius:var(--rl);padding:20px;transition:border-color .18s}
+.fc:hover{border-color:var(--bord2)}
+.fc-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:12px}
+.fc-title{font-family:var(--fh);font-size:13px;font-weight:700;margin-bottom:6px;letter-spacing:-.01em}
+.fc-desc{font-family:var(--fh);font-size:11px;color:var(--text2);line-height:1.65;margin-bottom:10px;font-weight:300}
+.fc-dep{font-family:var(--fc);font-size:10px;color:var(--text3);background:var(--surf);border:1px solid var(--bord);padding:3px 7px;border-radius:3px;display:inline-block;margin:2px 2px 0 0}
+
+/* TABLE */
+.pkg-wrap{background:var(--bg2);border:1px solid var(--bord2);border-radius:var(--rl);overflow:hidden;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 14px;font-family:var(--fh);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--bord)}
+td{padding:10px 14px;border-bottom:1px solid var(--bord);font-family:var(--fh);font-size:11px;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,153,0,.02)}
+.pn{font-family:var(--fc);font-size:11px;color:var(--a1)}
+.pv{font-family:var(--fc);font-size:10px;color:var(--text3)}
+.pd{color:var(--text2);font-size:11px;font-weight:300}
+.lp{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;font-family:var(--fh);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;border:1px solid}
+
+/* CALLOUTS */
+.note{background:rgba(255,153,0,.05);border:1px solid rgba(255,153,0,.18);border-left:3px solid var(--a1);border-radius:0 6px 6px 0;padding:12px 16px;font-family:var(--fh);font-size:12px;color:var(--text2);margin:16px 0;line-height:1.6;font-weight:300}
+.note strong{color:var(--a1);font-weight:700}
+.warn{background:rgba(0,168,225,.04);border:1px solid rgba(0,168,225,.15);border-left:3px solid var(--a3);border-radius:0 6px 6px 0;padding:12px 16px;font-family:var(--fh);font-size:12px;color:var(--text2);margin:16px 0;line-height:1.6;font-weight:300}
+.warn strong{color:var(--a3);font-weight:700}
+
+.dvdr{height:1px;background:linear-gradient(90deg,transparent,var(--bord2),transparent)}
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+.reveal.vis{opacity:1;transform:translateY(0)}
+.gt1{background:linear-gradient(120deg,var(--a1),#ffcc44);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gt2{background:linear-gradient(120deg,var(--a3),var(--a8));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gt3{background:linear-gradient(120deg,var(--a6),var(--a7));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+footer{position:relative;z-index:1;text-align:center;padding:60px 48px;border-top:1px solid var(--bord)}
+.ft-title{font-family:var(--fh);font-size:clamp(28px,5vw,58px);font-weight:700;letter-spacing:-.03em;margin-bottom:10px}
+.ft-sub{font-family:var(--fb);font-style:italic;color:var(--text2);font-size:16px;margin-bottom:28px}
+.ft-copy{font-family:var(--fh);font-size:10px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase}
+
+@media(max-width:900px){
+  nav{padding:0 16px}.nav-links{display:none}
+  .hero{grid-template-columns:1fr}
+  .hero-left{padding:90px 20px 40px;border-right:none;border-bottom:1px solid var(--bord2)}
+  .hero-right{grid-template-columns:repeat(4,1fr)}
+  .section{padding:56px 20px}
+  .code-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <span class="nav-aws-badge">AWS</span>
+    <span class="nav-logo">Cloud Architecture · Field Guide</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#layers">Architecture</a></li>
+    <li><a href="#services">Services</a></li>
+    <li><a href="#structure">Structure</a></li>
+    <li><a href="#patterns">Patterns</a></li>
+    <li><a href="#flows">Flows</a></li>
+    <li><a href="#sdk">SDK</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <p class="hero-eyebrow">Cloud Backend Engineering · Serverless · Event-driven</p>
+    <h1 class="hero-title">
+      <span class="ht1">AWS</span>
+      <span class="ht2">Architecture</span>
+      <span class="ht3">Lambda · RDS Aurora · SQS · Cognito · CDK</span>
+    </h1>
+    <p class="hero-desc">The world's most battle-tested cloud. A complete field guide to production AWS backend architecture — serverless-first, IaC from day one, and every managed service in its right place.</p>
+    <div class="pill-grid">
+      <span class="pill p1">Lambda</span>
+      <span class="pill p2">API Gateway</span>
+      <span class="pill p3">RDS Aurora</span>
+      <span class="pill p4">SQS + SNS</span>
+      <span class="pill p5">Cognito</span>
+      <span class="pill p6">DynamoDB</span>
+      <span class="pill p7">ElastiCache</span>
+      <span class="pill p1">EventBridge</span>
+      <span class="pill p2">Secrets Manager</span>
+      <span class="pill p3">CloudWatch</span>
+      <span class="pill p4">S3</span>
+      <span class="pill p5">CDK (IaC)</span>
+      <span class="pill p6">Bedrock AI</span>
+      <span class="pill p7">WAF + Shield</span>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="svc-tile t1 st1">
+      <span class="svc-tile-num">01</span>
+      <div class="svc-tile-name" style="color:var(--a1)">Lambda</div>
+      <div class="svc-tile-sub">Serverless compute</div>
+    </div>
+    <div class="svc-tile t2 st2">
+      <span class="svc-tile-num">02</span>
+      <div class="svc-tile-name" style="color:var(--a3)">API Gateway</div>
+      <div class="svc-tile-sub">HTTP + WebSocket</div>
+    </div>
+    <div class="svc-tile t3 st3">
+      <span class="svc-tile-num">03</span>
+      <div class="svc-tile-name" style="color:var(--a4)">RDS Aurora</div>
+      <div class="svc-tile-sub">Serverless PostgreSQL</div>
+    </div>
+    <div class="svc-tile t4 st4">
+      <span class="svc-tile-num">04</span>
+      <div class="svc-tile-name" style="color:var(--a5)">SQS + SNS</div>
+      <div class="svc-tile-sub">Async messaging</div>
+    </div>
+    <div class="svc-tile t5 st5">
+      <span class="svc-tile-num">05</span>
+      <div class="svc-tile-name" style="color:var(--a6)">Cognito</div>
+      <div class="svc-tile-sub">Identity + RBAC</div>
+    </div>
+    <div class="svc-tile t6 st6">
+      <span class="svc-tile-num">06</span>
+      <div class="svc-tile-name" style="color:var(--a7)">EventBridge</div>
+      <div class="svc-tile-sub">Event bus + rules</div>
+    </div>
+    <div class="svc-tile t7 st7">
+      <span class="svc-tile-num">07</span>
+      <div class="svc-tile-name" style="color:var(--a8)">DynamoDB</div>
+      <div class="svc-tile-sub">NoSQL at any scale</div>
+    </div>
+    <div class="svc-tile t8 st8">
+      <span class="svc-tile-num">08</span>
+      <div class="svc-tile-name" style="color:var(--a1)">CDK (IaC)</div>
+      <div class="svc-tile-sub">Infrastructure as code</div>
+    </div>
+  </div>
+</section>
+
+<main>
+
+<!-- ARCHITECTURE LAYERS -->
+<section class="section reveal" id="layers">
+  <p class="sec-label">01 — Architecture</p>
+  <h2 class="sec-title">The <span class="gt1">Layer</span> Contract</h2>
+  <p class="sec-intro">Six distinct layers, each owned by specific AWS services. Every architectural decision traces back to this stack — from the CDN edge down to the database.</p>
+
+  <div class="note">
+    <strong>The AWS philosophy:</strong> Use managed services for everything that isn't your core business logic. Lambda replaces servers. RDS Aurora replaces database administration. SQS/SNS replace message brokers. Cognito replaces auth services. You write business logic — AWS operates the infrastructure.
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+
+    <div class="layer-band">
+      <div class="lb-num">6</div>
+      <div class="lb-body">
+        <div class="lb-title" style="color:var(--a1)">Edge + CDN</div>
+        <div class="lb-desc">CloudFront for static assets and API caching. WAF + Shield for DDoS and OWASP Top 10. Route 53 for DNS + health checks. ACM for managed TLS.</div>
+        <div class="lb-chips">
+          <span class="chip" style="border-color:rgba(255,153,0,.4);color:var(--a1)">CloudFront</span>
+          <span class="chip" style="border-color:rgba(255,153,0,.4);color:var(--a1)">WAF + Shield</span>
+          <span class="chip" style="border-color:rgba(255,153,0,.4);color:var(--a1)">Route 53</span>
+          <span class="chip" style="border-color:rgba(255,153,0,.4);color:var(--a1)">ACM</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer-band">
+      <div class="lb-num">5</div>
+      <div class="lb-body">
+        <div class="lb-title" style="color:var(--a3)">API + Auth Gateway</div>
+        <div class="lb-desc">API Gateway (HTTP API v2) for REST endpoints and WebSocket. Cognito User Pools + JWT authorizers. Lambda authorizers for custom RBAC logic.</div>
+        <div class="lb-chips">
+          <span class="chip" style="border-color:rgba(0,168,225,.4);color:var(--a3)">API Gateway v2</span>
+          <span class="chip" style="border-color:rgba(0,168,225,.4);color:var(--a3)">Cognito</span>
+          <span class="chip" style="border-color:rgba(0,168,225,.4);color:var(--a3)">Lambda Authorizer</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer-band">
+      <div class="lb-num">4</div>
+      <div class="lb-body">
+        <div class="lb-title" style="color:var(--a6)">Compute — Lambda + ECS</div>
+        <div class="lb-desc">Lambda for stateless HTTP handlers, queue processors, and event handlers. ECS Fargate (via Docker) for long-running WebSocket servers, ML inference, and scheduled batch jobs.</div>
+        <div class="lb-chips">
+          <span class="chip" style="border-color:rgba(140,79,255,.4);color:var(--a6)">Lambda</span>
+          <span class="chip" style="border-color:rgba(140,79,255,.4);color:var(--a6)">ECS Fargate</span>
+          <span class="chip" style="border-color:rgba(140,79,255,.4);color:var(--a6)">Step Functions</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer-band">
+      <div class="lb-num">3</div>
+      <div class="lb-body">
+        <div class="lb-title" style="color:var(--a7)">Messaging + Events</div>
+        <div class="lb-desc">SQS for durable async task queues (at-least-once). SNS for fan-out pub/sub. EventBridge for scheduled rules and cross-service event routing. Step Functions for complex workflows.</div>
+        <div class="lb-chips">
+          <span class="chip" style="border-color:rgba(231,21,123,.4);color:var(--a7)">SQS</span>
+          <span class="chip" style="border-color:rgba(231,21,123,.4);color:var(--a7)">SNS</span>
+          <span class="chip" style="border-color:rgba(231,21,123,.4);color:var(--a7)">EventBridge</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer-band">
+      <div class="lb-num">2</div>
+      <div class="lb-body">
+        <div class="lb-title" style="color:var(--a4)">Data + Cache</div>
+        <div class="lb-desc">RDS Aurora PostgreSQL (Serverless v2) for relational data. DynamoDB for key-value at any scale. ElastiCache (Redis) for caching and rate limiting. S3 for object storage.</div>
+        <div class="lb-chips">
+          <span class="chip" style="border-color:rgba(26,156,62,.4);color:var(--a4)">RDS Aurora</span>
+          <span class="chip" style="border-color:rgba(26,156,62,.4);color:var(--a4)">DynamoDB</span>
+          <span class="chip" style="border-color:rgba(26,156,62,.4);color:var(--a4)">ElastiCache</span>
+          <span class="chip" style="border-color:rgba(26,156,62,.4);color:var(--a4)">S3</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer-band">
+      <div class="lb-num">1</div>
+      <div class="lb-body">
+        <div class="lb-title" style="color:var(--a8)">Security + Infrastructure</div>
+        <div class="lb-desc">Secrets Manager for all credentials. IAM roles with least-privilege per Lambda. KMS for encryption key management. VPC with private subnets for RDS/ElastiCache. CDK for all infrastructure as code.</div>
+        <div class="lb-chips">
+          <span class="chip" style="border-color:rgba(1,168,141,.4);color:var(--a8)">Secrets Manager</span>
+          <span class="chip" style="border-color:rgba(1,168,141,.4);color:var(--a8)">IAM</span>
+          <span class="chip" style="border-color:rgba(1,168,141,.4);color:var(--a8)">KMS</span>
+          <span class="chip" style="border-color:rgba(1,168,141,.4);color:var(--a8)">VPC</span>
+          <span class="chip" style="border-color:rgba(1,168,141,.4);color:var(--a8)">CDK</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- SERVICES MAP -->
+<section class="section reveal" id="services">
+  <p class="sec-label">02 — Service Selection</p>
+  <h2 class="sec-title">Service <span class="gt2">Reference</span></h2>
+  <p class="sec-intro">AWS has 200+ services. These are the ones that form a complete, production-grade backend — and exactly when to use each one versus the alternatives.</p>
+
+  <div class="svc-grid reveal">
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(255,153,0,.1)">⚡</div>
+        <div><div class="sc-name" style="color:var(--a1)">Lambda</div><div class="sc-cat">Serverless compute</div></div>
+      </div>
+      <div class="sc-desc">Stateless function execution — HTTP handlers, SQS consumers, S3 triggers, EventBridge rules. Up to 15-min timeout, 10GB memory. ARM64 (Graviton) for 20% better price/performance. Provisioned concurrency for cold start elimination.</div>
+      <code class="sc-use">HTTP API</code><code class="sc-use">SQS consumer</code><code class="sc-use">S3 trigger</code>
+    </div>
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(0,168,225,.1)">🌐</div>
+        <div><div class="sc-name" style="color:var(--a3)">API Gateway v2 (HTTP API)</div><div class="sc-cat">HTTP + WebSocket</div></div>
+      </div>
+      <div class="sc-desc">Use HTTP API v2 (not REST API v1) — 71% cheaper, lower latency, supports JWT authorizers natively. WebSocket API for real-time bidirectional. Lambda integrations. VPC Link for private backends.</div>
+      <code class="sc-use">JWT authorizer</code><code class="sc-use">WebSocket API</code>
+    </div>
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(26,156,62,.1)">🗄️</div>
+        <div><div class="sc-name" style="color:var(--a4)">RDS Aurora Serverless v2</div><div class="sc-cat">PostgreSQL / MySQL</div></div>
+      </div>
+      <div class="sc-desc">PostgreSQL-compatible, auto-scales 0.5–128 ACUs in seconds. RDS Proxy pools connections — critical for Lambda (which creates new connections on every cold start). Multi-AZ for automatic failover. Data API for HTTP-based SQL (no connection pooling needed).</div>
+      <code class="sc-use">RDS Proxy</code><code class="sc-use">Data API</code><code class="sc-use">Multi-AZ</code>
+    </div>
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(209,50,18,.1)">📨</div>
+        <div><div class="sc-name" style="color:var(--a5)">SQS + SNS</div><div class="sc-cat">Async messaging</div></div>
+      </div>
+      <div class="sc-desc">SQS Standard for at-least-once delivery. SQS FIFO for exactly-once ordered processing. SNS for fan-out — one publish → multiple SQS queues. Dead-letter queues (DLQ) for failed messages. Lambda SQS event source mapping with batch size and retry config.</div>
+      <code class="sc-use">Dead-letter queue</code><code class="sc-use">FIFO</code><code class="sc-use">Fan-out</code>
+    </div>
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(140,79,255,.1)">👤</div>
+        <div><div class="sc-name" style="color:var(--a6)">Cognito User Pools</div><div class="sc-cat">Identity + RBAC</div></div>
+      </div>
+      <div class="sc-desc">Managed user directory with email/password, Google/Apple social login, MFA, and device remembering. Issues JWTs (id + access + refresh tokens). Custom attributes for RBAC. Pre-signup and post-confirmation Lambda triggers. API Gateway JWT authorizer integrates natively.</div>
+      <code class="sc-use">JWT authorizer</code><code class="sc-use">Custom attributes</code>
+    </div>
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(231,21,123,.1)">🔔</div>
+        <div><div class="sc-name" style="color:var(--a7)">EventBridge</div><div class="sc-cat">Event bus + scheduler</div></div>
+      </div>
+      <div class="sc-desc">Default event bus for AWS service events. Custom event bus for your domain events. Rules route events to Lambda, SQS, Step Functions, API Gateway. EventBridge Scheduler for cron jobs and one-time scheduled tasks — replaces CloudWatch Events.</div>
+      <code class="sc-use">PutEvents()</code><code class="sc-use">Scheduler</code>
+    </div>
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(1,168,141,.1)">⚡</div>
+        <div><div class="sc-name" style="color:var(--a8)">DynamoDB</div><div class="sc-cat">NoSQL key-value</div></div>
+      </div>
+      <div class="sc-desc">Single-digit millisecond at any scale. On-demand billing — no capacity planning. Global tables for multi-region active-active. DynamoDB Streams for change data capture → Lambda triggers. Use for session storage, leaderboards, time-series — not for complex relational queries.</div>
+      <code class="sc-use">DynamoDB Streams</code><code class="sc-use">Global tables</code>
+    </div>
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(255,153,0,.1)">🏃</div>
+        <div><div class="sc-name" style="color:var(--a1)">ECS Fargate</div><div class="sc-cat">Containerized workloads</div></div>
+      </div>
+      <div class="sc-desc">For workloads Lambda can't handle: WebSocket servers, long-running ML inference, batch processing over 15 min. Serverless containers — no EC2 to manage. ALB integration for HTTP. Service discovery via Cloud Map. Use with ECR for container registry.</div>
+      <code class="sc-use">WebSocket server</code><code class="sc-use">Long tasks</code>
+    </div>
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(209,50,18,.1)">🔐</div>
+        <div><div class="sc-name" style="color:var(--a5)">Secrets Manager</div><div class="sc-cat">Credentials + rotation</div></div>
+      </div>
+      <div class="sc-desc">Store DB passwords, API keys, JWT secrets. Automatic rotation for RDS credentials — Lambda never sees the password, just fetches the current secret. IAM resource policies control which Lambda functions can access which secrets. Caching in Lambda with AWS Parameters and Secrets Lambda extension.</div>
+      <code class="sc-use">GetSecretValue()</code><code class="sc-use">Auto-rotation</code>
+    </div>
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(140,79,255,.1)">🔵</div>
+        <div><div class="sc-name" style="color:var(--a6)">CDK (Cloud Development Kit)</div><div class="sc-cat">Infrastructure as code</div></div>
+      </div>
+      <div class="sc-desc">TypeScript IaC — define Lambda, API Gateway, RDS, SQS, and all infrastructure as typed TypeScript classes. CDK synthesizes to CloudFormation. L2 constructs handle 80% of boilerplate. Constructs are composable and reusable across stacks. Always use CDK — never ClickOps.</div>
+      <code class="sc-use">cdk deploy</code><code class="sc-use">cdk synth</code>
+    </div>
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(1,168,141,.1)">💾</div>
+        <div><div class="sc-name" style="color:var(--a8)">ElastiCache (Redis)</div><div class="sc-cat">In-memory cache</div></div>
+      </div>
+      <div class="sc-desc">Redis 7 via Serverless mode — auto-scales, no cluster management. Use for: API response caching, session storage, rate limiting (INCR + EXPIRE), leaderboards, pub/sub. In VPC — Lambda must be in same VPC. Serverless mode supports IAM auth.</div>
+      <code class="sc-use">Serverless mode</code><code class="sc-use">IAM auth</code>
+    </div>
+
+    <div class="sc">
+      <div class="sc-head">
+        <div class="sc-icon" style="background:rgba(231,21,123,.1)">🧠</div>
+        <div><div class="sc-name" style="color:var(--a7)">Bedrock</div><div class="sc-cat">AI / foundation models</div></div>
+      </div>
+      <div class="sc-desc">Claude (Anthropic), Llama, Titan, Stable Diffusion via unified API. No separate API key — uses IAM role. Streaming via InvokeModelWithResponseStream. Knowledge Bases for RAG. Agents for multi-step reasoning. Guardrails for content safety.</div>
+      <code class="sc-use">InvokeModel()</code><code class="sc-use">Knowledge Bases</code>
+    </div>
+
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- FILE STRUCTURE -->
+<section class="section reveal" id="structure">
+  <p class="sec-label">03 — Project Structure</p>
+  <h2 class="sec-title">Monorepo <span class="gt3">Layout</span></h2>
+  <p class="sec-intro">Monorepo with separate packages for Lambda functions, CDK infrastructure, and shared types. Esbuild bundles each Lambda independently — small artifact, fast cold start.</p>
+
+  <div class="tree-wrap reveal">
+    <div class="tree-hdr">
+      <span class="td"></span><span class="td"></span><span class="td"></span>
+      <span class="tree-path">project-root /</span>
+    </div>
+    <div class="tree-body">
+
+      <div class="fr"><span class="fi" style="width:0">▾</span><span class="fl d">packages/</span></div>
+
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">functions/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Lambda handlers</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">src/</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">features/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— one dir per domain</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">auth/</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">handler.ts</span><span class="atag t-lam">Lambda</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— HTTP event handler</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">service.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— business logic</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">repository.ts</span><span class="atag t-rds">RDS</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">schema.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Drizzle ORM table</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">products/</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">handler.ts</span><span class="atag t-lam">Lambda</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">consumer.ts</span><span class="atag t-sqs">SQS</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— SQS event processor</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">service.ts</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">repository.ts</span><span class="atag t-rds">Drizzle</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">notifications/</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">consumer.ts</span><span class="atag t-sqs">SQS consumer</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">service.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— SES email, FCM push</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">ai/</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">handler.ts</span><span class="atag t-lam">Lambda</span></div>
+      <div class="fr"><span style="width:70px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">bedrock.service.ts</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— AWS Bedrock / Claude</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">shared/</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">db.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Drizzle + RDS Proxy singleton</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">auth.middleware.ts</span><span class="atag t-sec">Cognito</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">errors.ts</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">sqs.publisher.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— typed SQS message publisher</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">cache.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— ElastiCache Redis helper</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">logger.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Powertools structured logger</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">validate.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Zod validation helper</span></div>
+      <div class="fr"><span style="width:56px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">secrets.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Secrets Manager with caching</span></div>
+
+      <div style="height:8px"></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">infra/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— AWS CDK stacks</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">▾</span><span class="fl d">stacks/</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">ApiStack.ts</span><span class="atag t-cdk">CDK</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— API Gateway + Lambda</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">DatabaseStack.ts</span><span class="atag t-cdk">CDK</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— RDS Aurora + Proxy</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">MessagingStack.ts</span><span class="atag t-cdk">CDK</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— SQS + SNS + EventBridge</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">AuthStack.ts</span><span class="atag t-cdk">CDK</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Cognito User Pool</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">CacheStack.ts</span><span class="atag t-cdk">CDK</span><span style="margin-left:6px;font-size:10px;color:var(--text3);font-family:var(--fc)">— ElastiCache Serverless</span></div>
+      <div class="fr"><span style="width:42px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">VpcStack.ts</span><span class="atag t-cdk">CDK</span></div>
+      <div class="fr"><span style="width:28px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">bin/app.ts</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— CDK App entry</span></div>
+
+      <div style="height:8px"></div>
+      <div class="fr"><span style="width:14px;display:inline-block"></span><span class="fi">◦</span><span class="fl ts">types/</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— shared TypeScript types across packages</span></div>
+
+      <div style="height:8px"></div>
+      <div class="fr"><span class="fi" style="width:0">◦</span><span class="fl cfg">pnpm-workspace.yaml</span></div>
+      <div class="fr"><span class="fi" style="width:0">◦</span><span class="fl cfg">turbo.json</span><span style="margin-left:8px;font-size:10px;color:var(--text3);font-family:var(--fc)">— Turborepo build pipeline</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- CODE PATTERNS -->
+<section class="section reveal" id="patterns">
+  <p class="sec-label">04 — Code Patterns</p>
+  <h2 class="sec-title">TypeScript <span class="gt1">Blueprints</span></h2>
+  <p class="sec-intro">Production-ready TypeScript using AWS SDK v3, Drizzle ORM, AWS Lambda Powertools, and CDK v2. Every snippet is copy-paste ready.</p>
+
+  <div class="tab-nav">
+    <button class="tb on" onclick="st('lambda')">Lambda Handlers</button>
+    <button class="tb" onclick="st('db')">RDS + Drizzle</button>
+    <button class="tb" onclick="st('auth')">Cognito + Auth</button>
+    <button class="tb" onclick="st('sqs')">SQS + SNS</button>
+    <button class="tb" onclick="st('cache')">ElastiCache</button>
+    <button class="tb" onclick="st('ai')">Bedrock AI</button>
+    <button class="tb" onclick="st('cdk')">CDK Stacks</button>
+    <button class="tb" onclick="st('infra')">Powertools + Infra</button>
+  </div>
+
+  <!-- LAMBDA -->
+  <div class="tp on" id="tp-lambda">
+    <div class="code-grid">
+
+      <div class="cc cc-l">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">products/handler.ts — HTTP Lambda</span><span class="cs2">Lambda</span></div>
+<pre><span class="imp">import</span> { <span class="cls">APIGatewayProxyEventV2</span>, <span class="cls">APIGatewayProxyResultV2</span> }
+  <span class="imp">from</span> <span class="str">'aws-lambda'</span>
+<span class="imp">import</span> { logger }         <span class="imp">from</span> <span class="str">'../shared/logger'</span>
+<span class="imp">import</span> { requireAuth }    <span class="imp">from</span> <span class="str">'../shared/auth.middleware'</span>
+<span class="imp">import</span> { validate }       <span class="imp">from</span> <span class="str">'../shared/validate'</span>
+<span class="imp">import</span> { ProductService } <span class="imp">from</span> <span class="str">'./service'</span>
+<span class="imp">import</span> { z }             <span class="imp">from</span> <span class="str">'zod'</span>
+
+<span class="kw">const</span> CreateSchema = z.object({
+  name:  z.string().min(<span class="num">1</span>).max(<span class="num">200</span>),
+  price: z.number().positive(),
+  sku:   z.string().min(<span class="num">1</span>),
+})
+
+<span class="cmt">// Middy middleware wraps: Powertools tracer + logger</span>
+<span class="kw">export const</span> handler = <span class="kw">async</span> (
+  event: <span class="cls">APIGatewayProxyEventV2</span>
+): <span class="cls">Promise</span>&lt;<span class="cls">APIGatewayProxyResultV2</span>&gt; => {
+
+  <span class="kw">const</span> user = requireAuth(event)
+  <span class="kw">if</span> (!user) <span class="kw">return</span> { statusCode: <span class="num">401</span>, body: <span class="str">'Unauthorized'</span> }
+
+  <span class="kw">const</span> method = event.requestContext.http.method
+
+  <span class="kw">if</span> (method === <span class="str">'GET'</span>) {
+    <span class="kw">const</span> products = <span class="kw">await</span> <span class="cls">ProductService</span>.list(user.sub)
+    <span class="kw">return</span> json(<span class="num">200</span>, products)
+  }
+
+  <span class="kw">if</span> (method === <span class="str">'POST'</span>) {
+    <span class="kw">const</span> body = validate(CreateSchema, <span class="cls">JSON</span>.parse(event.body ?? <span class="str">'{}'</span>))
+    <span class="kw">if</span> (!body.success) <span class="kw">return</span> json(<span class="num">422</span>, body.error.flatten())
+    <span class="kw">const</span> product = <span class="kw">await</span> <span class="cls">ProductService</span>.create(body.data, user.sub)
+    <span class="kw">return</span> json(<span class="num">201</span>, product)
+  }
+
+  <span class="kw">return</span> json(<span class="num">405</span>, { error: <span class="str">'Method not allowed'</span> })
+}
+
+<span class="kw">const</span> json = (status: <span class="typ">number</span>, body: <span class="kw">unknown</span>) => ({
+  statusCode: status,
+  headers: { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
+  body: <span class="cls">JSON</span>.stringify(body),
+})</pre>
+      </div>
+
+      <div class="cc cc-l">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">products/consumer.ts — SQS Lambda</span><span class="cs2">SQS consumer</span></div>
+<pre><span class="imp">import</span> { <span class="cls">SQSEvent</span>, <span class="cls">SQSBatchResponse</span> } <span class="imp">from</span> <span class="str">'aws-lambda'</span>
+<span class="imp">import</span> { logger } <span class="imp">from</span> <span class="str">'../shared/logger'</span>
+
+<span class="cmt">// Partial batch failure — only retry failed messages</span>
+<span class="kw">export const</span> handler = <span class="kw">async</span> (
+  event: <span class="cls">SQSEvent</span>
+): <span class="cls">Promise</span>&lt;<span class="cls">SQSBatchResponse</span>&gt; => {
+  <span class="kw">const</span> failures: <span class="typ">string</span>[] = []
+
+  <span class="kw">await</span> <span class="cls">Promise</span>.allSettled(
+    event.Records.map(<span class="kw">async</span> (record) => {
+      <span class="kw">try</span> {
+        <span class="kw">const</span> msg = <span class="cls">JSON</span>.parse(record.body)
+        <span class="kw">await</span> processMessage(msg)
+        logger.info(<span class="str">'Message processed'</span>, { id: record.messageId })
+      } <span class="kw">catch</span> (err) {
+        logger.error(<span class="str">'Message failed'</span>, { id: record.messageId, err })
+        <span class="cmt">// Report partial failure — only this message retries</span>
+        failures.push(record.messageId)
+      }
+    })
+  )
+
+  <span class="kw">return</span> {
+    batchItemFailures: failures.map(id => ({
+      itemIdentifier: id,
+    })),
+  }
+}
+
+<span class="kw">async function</span> processMessage(msg: <span class="kw">unknown</span>) {
+  <span class="cmt">// Validate + handle the typed SQS message</span>
+  <span class="kw">const</span> parsed = <span class="cls">ProductEventSchema</span>.parse(msg)
+  <span class="kw">switch</span> (parsed.type) {
+    <span class="kw">case</span> <span class="str">'product.created'</span>:
+      <span class="kw">return</span> <span class="cls">NotificationService</span>.notifySeller(parsed.sellerId)
+    <span class="kw">default</span>:
+      logger.warn(<span class="str">'Unknown event type'</span>, { type: parsed.type })
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-l">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">Cognito Lambda triggers</span><span class="cs2">Cognito</span></div>
+<pre><span class="imp">import</span> { <span class="cls">PreSignUpTriggerEvent</span>, <span class="cls">PostConfirmationTriggerEvent</span> }
+  <span class="imp">from</span> <span class="str">'aws-lambda'</span>
+<span class="imp">import</span> { <span class="cls">CognitoIdentityProviderClient</span>,
+  <span class="cls">AdminAddUserToGroupCommand</span> }
+  <span class="imp">from</span> <span class="str">'@aws-sdk/client-cognito-identity-provider'</span>
+
+<span class="kw">const</span> cognito = <span class="kw">new</span> <span class="cls">CognitoIdentityProviderClient</span>({})
+
+<span class="cmt">// Block disposable email domains before signup</span>
+<span class="kw">export const</span> preSignUp = <span class="kw">async</span> (e: <span class="cls">PreSignUpTriggerEvent</span>) => {
+  <span class="kw">const</span> banned = [<span class="str">'mailinator.com'</span>, <span class="str">'tempmail.com'</span>]
+  <span class="kw">const</span> domain = e.request.userAttributes.email?.split(<span class="str">'@'</span>)[<span class="num">1</span>]
+  <span class="kw">if</span> (banned.includes(domain ?? <span class="str">''</span>))
+    <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">'Email domain not allowed'</span>)
+  <span class="kw">return</span> e
+}
+
+<span class="cmt">// Create user profile in RDS after confirmation</span>
+<span class="kw">export const</span> postConfirmation = <span class="kw">async</span> (
+  e: <span class="cls">PostConfirmationTriggerEvent</span>
+) => {
+  <span class="kw">const</span> { sub, email, name } = e.request.userAttributes
+
+  <span class="cmt">// Add to 'users' Cognito group (default role)</span>
+  <span class="kw">await</span> cognito.send(<span class="kw">new</span> <span class="cls">AdminAddUserToGroupCommand</span>({
+    UserPoolId: e.userPoolId,
+    Username:   e.userName,
+    GroupName:  <span class="str">'users'</span>,
+  }))
+
+  <span class="cmt">// Create DB record</span>
+  <span class="kw">await</span> <span class="cls">UserRepository</span>.create({ id: sub, email, name })
+  <span class="kw">return</span> e
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RDS + DRIZZLE -->
+  <div class="tp" id="tp-db">
+    <div class="code-grid">
+
+      <div class="cc cc-d">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">shared/db.ts — Drizzle + RDS Proxy</span><span class="cs2">RDS Aurora</span></div>
+<pre><span class="imp">import</span> { drizzle } <span class="imp">from</span> <span class="str">'drizzle-orm/node-postgres'</span>
+<span class="imp">import</span> { Pool }    <span class="imp">from</span> <span class="str">'pg'</span>
+<span class="imp">import</span> { getSecret } <span class="imp">from</span> <span class="str">'./secrets'</span>
+<span class="imp">import</span> * <span class="kw">as</span> schema <span class="imp">from</span> <span class="str">'./schema'</span>
+
+<span class="kw">let</span> db: ReturnType&lt;<span class="kw">typeof</span> drizzle&gt; | <span class="kw">null</span> = <span class="kw">null</span>
+
+<span class="cmt">// Lambda execution context reuses the connection pool</span>
+<span class="cmt">// RDS Proxy manages the actual PG connections</span>
+<span class="kw">export async function</span> getDb() {
+  <span class="kw">if</span> (db) <span class="kw">return</span> db
+
+  <span class="kw">const</span> secret = <span class="kw">await</span> getSecret(<span class="str">'rds/credentials'</span>)
+  <span class="kw">const</span> creds  = <span class="cls">JSON</span>.parse(secret)
+
+  <span class="kw">const</span> pool = <span class="kw">new</span> <span class="cls">Pool</span>({
+    <span class="cmt">// Connect to RDS Proxy endpoint — not direct RDS</span>
+    host:     process.env.RDS_PROXY_ENDPOINT,
+    user:     creds.username,
+    password: creds.password,
+    database: process.env.DB_NAME,
+    ssl:      { rejectUnauthorized: <span class="kw">true</span> },
+    max:      <span class="num">5</span>,  <span class="cmt">// Low — Lambda shares via proxy</span>
+    idleTimeoutMillis: <span class="num">30_000</span>,
+  })
+
+  db = drizzle(pool, { schema, logger: <span class="kw">false</span> })
+  <span class="kw">return</span> db
+}</pre>
+      </div>
+
+      <div class="cc cc-d">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">auth/schema.ts — Drizzle schema</span><span class="cs2">RDS</span></div>
+<pre><span class="imp">import</span> { pgTable, text, timestamp, pgEnum }
+  <span class="imp">from</span> <span class="str">'drizzle-orm/pg-core'</span>
+
+<span class="kw">export const</span> roleEnum = pgEnum(<span class="str">'user_role'</span>, [
+  <span class="str">'admin'</span>, <span class="str">'moderator'</span>, <span class="str">'user'</span>,
+])
+
+<span class="kw">export const</span> users = pgTable(<span class="str">'users'</span>, {
+  id:        text(<span class="str">'id'</span>).primaryKey(),      <span class="cmt">// Cognito sub</span>
+  email:     text(<span class="str">'email'</span>).notNull().unique(),
+  name:      text(<span class="str">'name'</span>).notNull(),
+  role:      roleEnum(<span class="str">'role'</span>).default(<span class="str">'user'</span>).notNull(),
+  createdAt: timestamp(<span class="str">'created_at'</span>).defaultNow().notNull(),
+  updatedAt: timestamp(<span class="str">'updated_at'</span>).defaultNow().notNull(),
+})
+
+<span class="kw">export const</span> products = pgTable(<span class="str">'products'</span>, {
+  id:        text(<span class="str">'id'</span>).primaryKey()
+              .$defaultFn(() => crypto.randomUUID()),
+  name:      text(<span class="str">'name'</span>).notNull(),
+  price:     text(<span class="str">'price'</span>).notNull(),
+  sku:       text(<span class="str">'sku'</span>).notNull().unique(),
+  sellerId:  text(<span class="str">'seller_id'</span>).references(() => users.id),
+  createdAt: timestamp(<span class="str">'created_at'</span>).defaultNow().notNull(),
+})
+
+<span class="kw">export type</span> <span class="cls">User</span>    = <span class="kw">typeof</span> users.<span class="fn">$inferSelect</span>
+<span class="kw">export type</span> <span class="cls">NewUser</span> = <span class="kw">typeof</span> users.<span class="fn">$inferInsert</span></pre>
+      </div>
+
+      <div class="cc cc-d">
+        <div class="cc-head"><span class="cd" style="background:var(--a3)"></span><span class="ct">products/repository.ts — Drizzle queries</span><span class="cs2">data</span></div>
+<pre><span class="imp">import</span> { eq, ilike, desc } <span class="imp">from</span> <span class="str">'drizzle-orm'</span>
+<span class="imp">import</span> { getDb }           <span class="imp">from</span> <span class="str">'../shared/db'</span>
+<span class="imp">import</span> { products }        <span class="imp">from</span> <span class="str">'./schema'</span>
+<span class="imp">import type</span> { <span class="cls">NewProduct</span> } <span class="imp">from</span> <span class="str">'./schema'</span>
+
+<span class="kw">export class</span> <span class="cls">ProductRepository</span> {
+
+  <span class="kw">static async</span> findById(id: <span class="typ">string</span>) {
+    <span class="kw">const</span> db = <span class="kw">await</span> getDb()
+    <span class="kw">return</span> db.query.products.findFirst({
+      where: eq(products.id, id),
+    })
+  }
+
+  <span class="kw">static async</span> listBySeller(
+    sellerId: <span class="typ">string</span>,
+    opts: { search?: <span class="typ">string</span>; limit?: <span class="typ">number</span> } = {},
+  ) {
+    <span class="kw">const</span> db = <span class="kw">await</span> getDb()
+    <span class="kw">return</span> db.select().from(products)
+      .where(
+        opts.search
+          ? ilike(products.name, <span class="str">`%${opts.search}%`</span>)
+          : eq(products.sellerId, sellerId)
+      )
+      .orderBy(desc(products.createdAt))
+      .limit(opts.limit ?? <span class="num">20</span>)
+  }
+
+  <span class="kw">static async</span> create(data: <span class="cls">NewProduct</span>) {
+    <span class="kw">const</span> db = <span class="kw">await</span> getDb()
+    <span class="kw">const</span> [row] = <span class="kw">await</span> db
+      .insert(products)
+      .values(data)
+      .returning()
+    <span class="kw">return</span> row
+  }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- COGNITO + AUTH -->
+  <div class="tp" id="tp-auth">
+    <div class="code-grid">
+
+      <div class="cc cc-c">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">shared/auth.middleware.ts — Cognito JWT</span><span class="cs2">auth</span></div>
+<pre><span class="imp">import</span> { <span class="cls">APIGatewayProxyEventV2</span> } <span class="imp">from</span> <span class="str">'aws-lambda'</span>
+<span class="imp">import</span> { <span class="cls">CognitoJwtVerifier</span> }      <span class="imp">from</span> <span class="str">'aws-jwt-verify'</span>
+
+<span class="kw">const</span> verifier = <span class="cls">CognitoJwtVerifier</span>.create({
+  userPoolId:  process.env.USER_POOL_ID!,
+  tokenUse:    <span class="str">'access'</span>,
+  clientId:    process.env.USER_POOL_CLIENT_ID!,
+})
+
+<span class="kw">export interface</span> <span class="cls">AuthContext</span> {
+  sub:      <span class="typ">string</span>
+  email:    <span class="typ">string</span>
+  groups:   <span class="typ">string</span>[]
+  username: <span class="typ">string</span>
+}
+
+<span class="kw">export async function</span> requireAuth(
+  event: <span class="cls">APIGatewayProxyEventV2</span>,
+): <span class="cls">Promise</span>&lt;<span class="cls">AuthContext</span> | <span class="kw">null</span>&gt; {
+  <span class="kw">const</span> token = event.headers.authorization
+    ?.replace(<span class="str">'Bearer '</span>, <span class="str">''</span>)
+  <span class="kw">if</span> (!token) <span class="kw">return null</span>
+
+  <span class="kw">try</span> {
+    <span class="kw">const</span> payload = <span class="kw">await</span> verifier.verify(token)
+    <span class="kw">return</span> {
+      sub:      payload.sub,
+      email:    payload.email <span class="kw">as</span> <span class="typ">string</span>,
+      groups:   (payload[<span class="str">'cognito:groups'</span>] ?? []) <span class="kw">as</span> <span class="typ">string</span>[],
+      username: payload.username <span class="kw">as</span> <span class="typ">string</span>,
+    }
+  } <span class="kw">catch</span> {
+    <span class="kw">return null</span>
+  }
+}
+
+<span class="cmt">// RBAC check — Cognito groups = roles</span>
+<span class="kw">export function</span> requireGroup(
+  ctx: <span class="cls">AuthContext</span>,
+  ...groups: <span class="typ">string</span>[]
+): <span class="typ">boolean</span> {
+  <span class="kw">return</span> groups.some(g => ctx.groups.includes(g))
+}</pre>
+      </div>
+
+      <div class="cc cc-c">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">API Gateway JWT authorizer via CDK</span><span class="cs2">CDK · API GW</span></div>
+<pre><span class="cmt">// In ApiStack.ts — attach Cognito authorizer to HTTP API</span>
+<span class="imp">import</span> { <span class="cls">HttpUserPoolAuthorizer</span> }
+  <span class="imp">from</span> <span class="str">'aws-cdk-lib/aws-apigatewayv2-authorizers'</span>
+<span class="imp">import</span> { <span class="cls">HttpLambdaIntegration</span> }
+  <span class="imp">from</span> <span class="str">'aws-cdk-lib/aws-apigatewayv2-integrations'</span>
+
+<span class="kw">const</span> authorizer = <span class="kw">new</span> <span class="cls">HttpUserPoolAuthorizer</span>(
+  <span class="str">'CognitoAuth'</span>,
+  userPool,
+  { userPoolClients: [userPoolClient] },
+)
+
+<span class="cmt">// All routes protected by Cognito JWT by default</span>
+api.addRoutes({
+  path:         <span class="str">'/products'</span>,
+  methods:      [<span class="cls">HttpMethod</span>.<span class="cls">GET</span>, <span class="cls">HttpMethod</span>.<span class="cls">POST</span>],
+  integration:  <span class="kw">new</span> <span class="cls">HttpLambdaIntegration</span>(<span class="str">'Products'</span>, productsFn),
+  authorizer,
+})
+
+<span class="cmt">// Public routes — no authorizer</span>
+api.addRoutes({
+  path:        <span class="str">'/health'</span>,
+  methods:     [<span class="cls">HttpMethod</span>.<span class="cls">GET</span>],
+  integration: <span class="kw">new</span> <span class="cls">HttpLambdaIntegration</span>(<span class="str">'Health'</span>, healthFn),
+})
+
+<span class="cmt">// Admin routes — Lambda authorizer checks group membership</span>
+api.addRoutes({
+  path:        <span class="str">'/admin/users'</span>,
+  methods:     [<span class="cls">HttpMethod</span>.<span class="cls">GET</span>],
+  integration: <span class="kw">new</span> <span class="cls">HttpLambdaIntegration</span>(<span class="str">'Admin'</span>, adminFn),
+  authorizer:  lambdaAuthorizer, <span class="cmt">// custom group check</span>
+})</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SQS + SNS -->
+  <div class="tp" id="tp-sqs">
+    <div class="code-grid">
+
+      <div class="cc cc-r">
+        <div class="cc-head"><span class="cd" style="background:var(--a5)"></span><span class="ct">shared/sqs.publisher.ts — typed publisher</span><span class="cs2">SQS</span></div>
+<pre><span class="imp">import</span> { <span class="cls">SQSClient</span>, <span class="cls">SendMessageCommand</span>,
+  <span class="cls">SendMessageBatchCommand</span> }
+  <span class="imp">from</span> <span class="str">'@aws-sdk/client-sqs'</span>
+
+<span class="kw">const</span> sqs = <span class="kw">new</span> <span class="cls">SQSClient</span>({ region: process.env.AWS_REGION })
+
+<span class="cmt">// Type-safe message publisher</span>
+<span class="kw">export async function</span> publishToQueue&lt;<span class="cls">T</span> <span class="kw">extends</span> object&gt;(
+  queueUrl:     <span class="typ">string</span>,
+  message:      <span class="cls">T</span>,
+  opts: {
+    delaySeconds?:    <span class="typ">number</span>
+    dedupId?:         <span class="typ">string</span>  <span class="cmt">// FIFO only</span>
+    groupId?:         <span class="typ">string</span>  <span class="cmt">// FIFO only</span>
+  } = {},
+) {
+  <span class="kw">return</span> sqs.send(<span class="kw">new</span> <span class="cls">SendMessageCommand</span>({
+    QueueUrl:               queueUrl,
+    MessageBody:            <span class="cls">JSON</span>.stringify(message),
+    DelaySeconds:           opts.delaySeconds,
+    MessageDeduplicationId: opts.dedupId,
+    MessageGroupId:         opts.groupId,
+    MessageAttributes: {
+      eventType: {
+        DataType:    <span class="str">'String'</span>,
+        StringValue: (message <span class="kw">as</span> <span class="kw">any</span>).type ?? <span class="str">'unknown'</span>,
+      },
+    },
+  }))
+}
+
+<span class="cmt">// In a service:</span>
+<span class="kw">await</span> publishToQueue(process.env.ORDERS_QUEUE_URL!, {
+  type:    <span class="str">'order.placed'</span>,
+  orderId: order.id,
+  userId:  user.sub,
+  amount:  order.total,
+})</pre>
+      </div>
+
+      <div class="cc cc-r">
+        <div class="cc-head"><span class="cd" style="background:var(--a5)"></span><span class="ct">SNS fan-out + EventBridge</span><span class="cs2">SNS · EventBridge</span></div>
+<pre><span class="imp">import</span> { <span class="cls">SNSClient</span>, <span class="cls">PublishCommand</span> } <span class="imp">from</span> <span class="str">'@aws-sdk/client-sns'</span>
+<span class="imp">import</span> { <span class="cls">EventBridgeClient</span>, <span class="cls">PutEventsCommand</span> }
+  <span class="imp">from</span> <span class="str">'@aws-sdk/client-eventbridge'</span>
+
+<span class="kw">const</span> sns = <span class="kw">new</span> <span class="cls">SNSClient</span>({})
+<span class="kw">const</span> eb  = <span class="kw">new</span> <span class="cls">EventBridgeClient</span>({})
+
+<span class="cmt">// SNS — fan-out to multiple SQS queues</span>
+<span class="kw">export async function</span> publishToTopic(
+  topicArn: <span class="typ">string</span>,
+  message:  <span class="kw">unknown</span>,
+  subject?: <span class="typ">string</span>,
+) {
+  <span class="kw">return</span> sns.send(<span class="kw">new</span> <span class="cls">PublishCommand</span>({
+    TopicArn: topicArn,
+    Message:  <span class="cls">JSON</span>.stringify(message),
+    Subject:  subject,
+  }))
+}
+
+<span class="cmt">// EventBridge — domain events, cross-account routing</span>
+<span class="kw">export async function</span> putDomainEvent&lt;<span class="cls">T</span>&gt;(
+  source:     <span class="typ">string</span>,
+  detailType: <span class="typ">string</span>,
+  detail:     <span class="cls">T</span>,
+) {
+  <span class="kw">return</span> eb.send(<span class="kw">new</span> <span class="cls">PutEventsCommand</span>({
+    Entries: [{
+      Source:       source,
+      DetailType:   detailType,
+      Detail:       <span class="cls">JSON</span>.stringify(detail),
+      EventBusName: process.env.EVENT_BUS_NAME,
+    }],
+  }))
+}
+
+<span class="cmt">// Example usage:</span>
+<span class="cmt">// await putDomainEvent('myapp.orders', 'OrderPlaced', { orderId, ... })</span>
+<span class="cmt">// EventBridge rule routes to Lambda, SQS, or Step Functions</span></pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ELASTICACHE -->
+  <div class="tp" id="tp-cache">
+    <div class="code-grid">
+
+      <div class="cc cc-i">
+        <div class="cc-head"><span class="cd" style="background:var(--a8)"></span><span class="ct">shared/cache.ts — ElastiCache Redis</span><span class="cs2">ElastiCache</span></div>
+<pre><span class="imp">import</span> { createClient } <span class="imp">from</span> <span class="str">'redis'</span>
+
+<span class="kw">let</span> client: <span class="cls">ReturnType</span>&lt;<span class="kw">typeof</span> createClient&gt; | <span class="kw">null</span> = <span class="kw">null</span>
+
+<span class="kw">async function</span> getClient() {
+  <span class="kw">if</span> (client?.isReady) <span class="kw">return</span> client
+
+  client = createClient({
+    <span class="cmt">// ElastiCache Serverless endpoint</span>
+    url:  <span class="str">`rediss://${process.env.CACHE_ENDPOINT}:6379`</span>,
+    socket: { tls: <span class="kw">true</span>, rejectUnauthorized: <span class="kw">true</span> },
+  })
+  <span class="kw">await</span> client.connect()
+  <span class="kw">return</span> client
+}
+
+<span class="cmt">// Generic typed cache-aside helper</span>
+<span class="kw">export async function</span> cached&lt;<span class="cls">T</span>&gt;(
+  key:     <span class="typ">string</span>,
+  ttlSec:  <span class="typ">number</span>,
+  fetcher: () => <span class="cls">Promise</span>&lt;<span class="cls">T</span>&gt;,
+): <span class="cls">Promise</span>&lt;<span class="cls">T</span>&gt; {
+  <span class="kw">const</span> c   = <span class="kw">await</span> getClient()
+  <span class="kw">const</span> hit = <span class="kw">await</span> c.get(key)
+  <span class="kw">if</span> (hit) <span class="kw">return</span> <span class="cls">JSON</span>.parse(hit) <span class="kw">as</span> <span class="cls">T</span>
+
+  <span class="kw">const</span> value = <span class="kw">await</span> fetcher()
+  <span class="kw">await</span> c.setEx(key, ttlSec, <span class="cls">JSON</span>.stringify(value))
+  <span class="kw">return</span> value
+}
+
+<span class="cmt">// Rate limiting with Redis INCR + EXPIRE</span>
+<span class="kw">export async function</span> checkRateLimit(
+  key:         <span class="typ">string</span>,
+  maxRequests: <span class="typ">number</span>,
+  windowSec:   <span class="typ">number</span>,
+): <span class="cls">Promise</span>&lt;<span class="typ">boolean</span>&gt; {
+  <span class="kw">const</span> c     = <span class="kw">await</span> getClient()
+  <span class="kw">const</span> count = <span class="kw">await</span> c.incr(key)
+  <span class="kw">if</span> (count === <span class="num">1</span>) <span class="kw">await</span> c.expire(key, windowSec)
+  <span class="kw">return</span> count <= maxRequests
+}</pre>
+      </div>
+
+      <div class="cc cc-i">
+        <div class="cc-head"><span class="cd" style="background:var(--a8)"></span><span class="ct">shared/secrets.ts — Secrets Manager</span><span class="cs2">secrets</span></div>
+<pre><span class="imp">import</span> { <span class="cls">SecretsManagerClient</span>, <span class="cls">GetSecretValueCommand</span> }
+  <span class="imp">from</span> <span class="str">'@aws-sdk/client-secrets-manager'</span>
+
+<span class="kw">const</span> sm    = <span class="kw">new</span> <span class="cls">SecretsManagerClient</span>({})
+<span class="kw">const</span> cache = <span class="kw">new</span> <span class="cls">Map</span>&lt;<span class="typ">string</span>, <span class="typ">string</span>&gt;()
+
+<span class="kw">export async function</span> getSecret(name: <span class="typ">string</span>): <span class="cls">Promise</span>&lt;<span class="typ">string</span>&gt; {
+  <span class="cmt">// Cache in Lambda execution context (warm instances)</span>
+  <span class="kw">if</span> (cache.has(name)) <span class="kw">return</span> cache.get(name)!
+
+  <span class="kw">const</span> { SecretString } = <span class="kw">await</span> sm.send(
+    <span class="kw">new</span> <span class="cls">GetSecretValueCommand</span>({ SecretId: name })
+  )
+
+  <span class="kw">if</span> (!SecretString) <span class="kw">throw new</span> <span class="cls">Error</span>(<span class="str">`Secret ${name} is empty`</span>)
+  cache.set(name, SecretString)
+  <span class="kw">return</span> SecretString
+}
+
+<span class="cmt">// Or use the Lambda Extension for zero-latency secrets:</span>
+<span class="cmt">// Set env vars at function level — extension fetches them</span>
+<span class="cmt">// before your handler runs and caches for 5 minutes.</span>
+<span class="cmt">//</span>
+<span class="cmt">// In CDK:</span>
+<span class="cmt">// fn.addEnvironment('MY_SECRET',</span>
+<span class="cmt">//   Secret.fromSecretsManager(mySecret).secretValue.toString())</span>
+<span class="cmt">//</span>
+<span class="cmt">// Then: process.env.MY_SECRET — no SDK call needed.</span></pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BEDROCK AI -->
+  <div class="tp" id="tp-ai">
+    <div class="code-grid">
+
+      <div class="cc cc-e">
+        <div class="cc-head"><span class="cd" style="background:var(--a7)"></span><span class="ct">ai/bedrock.service.ts — Claude on AWS</span><span class="cs2">Bedrock</span></div>
+<pre><span class="imp">import</span> { <span class="cls">BedrockRuntimeClient</span>,
+  <span class="cls">InvokeModelCommand</span>,
+  <span class="cls">InvokeModelWithResponseStreamCommand</span> }
+  <span class="imp">from</span> <span class="str">'@aws-sdk/client-bedrock-runtime'</span>
+
+<span class="kw">const</span> bedrock = <span class="kw">new</span> <span class="cls">BedrockRuntimeClient</span>({
+  region: <span class="str">'us-east-1'</span>,  <span class="cmt">// Bedrock model availability varies by region</span>
+})
+
+<span class="kw">export class</span> <span class="cls">BedrockService</span> {
+
+  <span class="cmt">// Claude 3.5 Sonnet via Bedrock — IAM auth, no API key</span>
+  <span class="kw">static async</span> generate(
+    prompt:   <span class="typ">string</span>,
+    maxTokens = <span class="num">2048</span>,
+  ): <span class="cls">Promise</span>&lt;<span class="typ">string</span>&gt; {
+    <span class="kw">const</span> { body } = <span class="kw">await</span> bedrock.send(
+      <span class="kw">new</span> <span class="cls">InvokeModelCommand</span>({
+        modelId:     <span class="str">'anthropic.claude-3-5-sonnet-20241022-v2:0'</span>,
+        contentType: <span class="str">'application/json'</span>,
+        accept:      <span class="str">'application/json'</span>,
+        body: <span class="cls">JSON</span>.stringify({
+          anthropic_version: <span class="str">'bedrock-2023-05-31'</span>,
+          max_tokens:        maxTokens,
+          messages: [{ role: <span class="str">'user'</span>, content: prompt }],
+        }),
+      })
+    )
+    <span class="kw">const</span> res = <span class="cls">JSON</span>.parse(<span class="kw">new</span> <span class="cls">TextDecoder</span>().decode(body))
+    <span class="kw">return</span> res.content[<span class="num">0</span>].text
+  }
+
+  <span class="cmt">// Streaming — for Lambda response streaming or SSE</span>
+  <span class="kw">static async</span>* stream(prompt: <span class="typ">string</span>) {
+    <span class="kw">const</span> { body } = <span class="kw">await</span> bedrock.send(
+      <span class="kw">new</span> <span class="cls">InvokeModelWithResponseStreamCommand</span>({
+        modelId: <span class="str">'anthropic.claude-3-5-sonnet-20241022-v2:0'</span>,
+        contentType: <span class="str">'application/json'</span>,
+        body: <span class="cls">JSON</span>.stringify({
+          anthropic_version: <span class="str">'bedrock-2023-05-31'</span>,
+          max_tokens: <span class="num">4096</span>,
+          messages: [{ role: <span class="str">'user'</span>, content: prompt }],
+          stream: <span class="kw">true</span>,
+        }),
+      })
+    )
+    <span class="kw">for await</span> (<span class="kw">const</span> chunk <span class="kw">of</span> body!) {
+      <span class="kw">const</span> parsed = <span class="cls">JSON</span>.parse(
+        <span class="kw">new</span> <span class="cls">TextDecoder</span>().decode(chunk.chunk?.bytes)
+      )
+      <span class="kw">if</span> (parsed.type === <span class="str">'content_block_delta'</span>)
+        <span class="kw">yield</span> parsed.delta?.text ?? <span class="str">''</span>
+    }
+  }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CDK STACKS -->
+  <div class="tp" id="tp-cdk">
+    <div class="code-grid">
+
+      <div class="cc cc-c">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">stacks/ApiStack.ts — CDK Lambda + APIGW</span><span class="cs2">CDK v2</span></div>
+<pre><span class="imp">import</span> * <span class="kw">as</span> cdk    <span class="imp">from</span> <span class="str">'aws-cdk-lib'</span>
+<span class="imp">import</span> * <span class="kw">as</span> lambda <span class="imp">from</span> <span class="str">'aws-cdk-lib/aws-lambda'</span>
+<span class="imp">import</span> * <span class="kw">as</span> apigwv2 <span class="imp">from</span> <span class="str">'aws-cdk-lib/aws-apigatewayv2'</span>
+<span class="imp">import</span> { <span class="cls">NodejsFunction</span> } <span class="imp">from</span> <span class="str">'aws-cdk-lib/aws-lambda-nodejs'</span>
+
+<span class="kw">export class</span> <span class="cls">ApiStack</span> <span class="kw">extends</span> cdk.<span class="cls">Stack</span> {
+  <span class="kw">constructor</span>(scope: cdk.<span class="cls">App</span>, id: <span class="typ">string</span>, props: <span class="cls">ApiProps</span>) {
+    <span class="kw">super</span>(scope, id, props)
+
+    <span class="kw">const</span> productsFn = <span class="kw">new</span> <span class="cls">NodejsFunction</span>(<span class="kw">this</span>, <span class="str">'ProductsFn'</span>, {
+      entry:       <span class="str">'packages/functions/src/features/products/handler.ts'</span>,
+      handler:     <span class="str">'handler'</span>,
+      runtime:     lambda.<span class="cls">Runtime</span>.<span class="cls">NODEJS_20_X</span>,
+      architecture:lambda.<span class="cls">Architecture</span>.<span class="cls">ARM_64</span>,  <span class="cmt">// Graviton — cheaper</span>
+      memorySize:  <span class="num">512</span>,
+      timeout:     cdk.<span class="cls">Duration</span>.seconds(<span class="num">29</span>),
+      vpc:         props.vpc,                   <span class="cmt">// must be in VPC for RDS</span>
+      vpcSubnets:  { subnetType: ec2.<span class="cls">SubnetType</span>.<span class="cls">PRIVATE_WITH_EGRESS</span> },
+      environment: {
+        RDS_PROXY_ENDPOINT: props.rdsProxy.endpoint,
+        DB_NAME:            <span class="str">'myapp'</span>,
+        CACHE_ENDPOINT:     props.cacheEndpoint,
+      },
+      bundling: { minify: <span class="kw">true</span>, sourceMap: <span class="kw">true</span>, externalModules: [] },
+    })
+
+    <span class="cmt">// Grant least-privilege access to Secrets Manager</span>
+    props.dbSecret.grantRead(productsFn)
+
+    <span class="kw">const</span> api = <span class="kw">new</span> apigwv2.<span class="cls">HttpApi</span>(<span class="kw">this</span>, <span class="str">'Api'</span>, {
+      corsPreflight: {
+        allowOrigins: [<span class="str">'https://myapp.com'</span>],
+        allowMethods: [apigwv2.<span class="cls">CorsHttpMethod</span>.<span class="cls">ANY</span>],
+        allowHeaders: [<span class="str">'Authorization'</span>, <span class="str">'Content-Type'</span>],
+      },
+    })
+
+    <span class="kw">new</span> cdk.<span class="cls">CfnOutput</span>(<span class="kw">this</span>, <span class="str">'ApiUrl'</span>, { value: api.url! })
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-c">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">stacks/DatabaseStack.ts — RDS Aurora</span><span class="cs2">CDK · RDS</span></div>
+<pre><span class="imp">import</span> * <span class="kw">as</span> rds  <span class="imp">from</span> <span class="str">'aws-cdk-lib/aws-rds'</span>
+<span class="imp">import</span> * <span class="kw">as</span> ec2  <span class="imp">from</span> <span class="str">'aws-cdk-lib/aws-ec2'</span>
+
+<span class="kw">export class</span> <span class="cls">DatabaseStack</span> <span class="kw">extends</span> cdk.<span class="cls">Stack</span> {
+  <span class="kw">public readonly</span> cluster:  rds.<span class="cls">DatabaseCluster</span>
+  <span class="kw">public readonly</span> proxy:    rds.<span class="cls">DatabaseProxy</span>
+  <span class="kw">public readonly</span> secret:   secretsmanager.<span class="cls">ISecret</span>
+
+  <span class="kw">constructor</span>(scope: cdk.<span class="cls">App</span>, id: <span class="typ">string</span>, props: <span class="cls">DbProps</span>) {
+    <span class="kw">super</span>(scope, id, props)
+
+    <span class="kw">this</span>.cluster = <span class="kw">new</span> rds.<span class="cls">DatabaseCluster</span>(<span class="kw">this</span>, <span class="str">'Cluster'</span>, {
+      engine: rds.<span class="cls">DatabaseClusterEngine</span>.auroraPostgres({
+        version: rds.<span class="cls">AuroraPostgresEngineVersion</span>.<span class="cls">VER_16_1</span>,
+      }),
+      serverlessV2MinCapacity: <span class="num">0.5</span>,
+      serverlessV2MaxCapacity: <span class="num">128</span>,
+      writer: rds.<span class="cls">ClusterInstance</span>.serverlessV2(<span class="str">'writer'</span>, {
+        publiclyAccessible: <span class="kw">false</span>,
+      }),
+      readers: [
+        rds.<span class="cls">ClusterInstance</span>.serverlessV2(<span class="str">'reader'</span>, {
+          scaleWithWriter: <span class="kw">true</span>,
+        }),
+      ],
+      vpc: props.vpc,
+      storageEncrypted: <span class="kw">true</span>,        <span class="cmt">// KMS encryption</span>
+      deletionProtection: <span class="kw">true</span>,       <span class="cmt">// prod safeguard</span>
+      backup: { retention: cdk.<span class="cls">Duration</span>.days(<span class="num">7</span>) },
+    })
+
+    <span class="cmt">// RDS Proxy — connection pooling for Lambda</span>
+    <span class="kw">this</span>.proxy = <span class="kw">this</span>.cluster.addProxy(<span class="str">'Proxy'</span>, {
+      secrets:            [<span class="kw">this</span>.cluster.secret!],
+      vpc:                props.vpc,
+      requireTLS:         <span class="kw">true</span>,
+      iamAuth:            <span class="kw">true</span>,       <span class="cmt">// IAM instead of password</span>
+    })
+    <span class="kw">this</span>.secret = <span class="kw">this</span>.cluster.secret!
+  }
+}</pre>
+      </div>
+
+      <div class="cc cc-c">
+        <div class="cc-head"><span class="cd" style="background:var(--a6)"></span><span class="ct">stacks/MessagingStack.ts — SQS + SNS</span><span class="cs2">CDK · SQS</span></div>
+<pre><span class="imp">import</span> * <span class="kw">as</span> sqs <span class="imp">from</span> <span class="str">'aws-cdk-lib/aws-sqs'</span>
+<span class="imp">import</span> * <span class="kw">as</span> sns <span class="imp">from</span> <span class="str">'aws-cdk-lib/aws-sns'</span>
+<span class="imp">import</span> * <span class="kw">as</span> sub <span class="imp">from</span> <span class="str">'aws-cdk-lib/aws-sns-subscriptions'</span>
+<span class="imp">import</span> { <span class="cls">SqsEventSource</span> }
+  <span class="imp">from</span> <span class="str">'aws-cdk-lib/aws-lambda-event-sources'</span>
+
+<span class="kw">export class</span> <span class="cls">MessagingStack</span> <span class="kw">extends</span> cdk.<span class="cls">Stack</span> {
+  <span class="kw">constructor</span>(scope: cdk.<span class="cls">App</span>, id: <span class="typ">string</span>, props: cdk.<span class="cls">StackProps</span>) {
+    <span class="kw">super</span>(scope, id, props)
+
+    <span class="cmt">// DLQ — catches failed messages after 3 retries</span>
+    <span class="kw">const</span> dlq = <span class="kw">new</span> sqs.<span class="cls">Queue</span>(<span class="kw">this</span>, <span class="str">'DLQ'</span>, {
+      retentionPeriod: cdk.<span class="cls">Duration</span>.days(<span class="num">14</span>),
+      encryption: sqs.<span class="cls">QueueEncryption</span>.<span class="cls">KMS_MANAGED</span>,
+    })
+
+    <span class="kw">const</span> ordersQueue = <span class="kw">new</span> sqs.<span class="cls">Queue</span>(<span class="kw">this</span>, <span class="str">'OrdersQueue'</span>, {
+      visibilityTimeout: cdk.<span class="cls">Duration</span>.seconds(<span class="num">30</span>),
+      encryption:        sqs.<span class="cls">QueueEncryption</span>.<span class="cls">KMS_MANAGED</span>,
+      deadLetterQueue:   { queue: dlq, maxReceiveCount: <span class="num">3</span> },
+    })
+
+    <span class="cmt">// SNS topic → fan-out to multiple queues</span>
+    <span class="kw">const</span> ordersTopic = <span class="kw">new</span> sns.<span class="cls">Topic</span>(<span class="kw">this</span>, <span class="str">'OrdersTopic'</span>)
+    ordersTopic.addSubscription(<span class="kw">new</span> sub.<span class="cls">SqsSubscription</span>(ordersQueue))
+
+    <span class="cmt">// Wire consumer Lambda to SQS with partial batch failure</span>
+    consumerFn.addEventSource(<span class="kw">new</span> <span class="cls">SqsEventSource</span>(ordersQueue, {
+      batchSize:                    <span class="num">10</span>,
+      maxBatchingWindow:            cdk.<span class="cls">Duration</span>.seconds(<span class="num">5</span>),
+      reportBatchItemFailures:      <span class="kw">true</span>,  <span class="cmt">// partial failure</span>
+      maxConcurrency:               <span class="num">50</span>,
+    }))
+  }
+}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POWERTOOLS + INFRA -->
+  <div class="tp" id="tp-infra">
+    <div class="code-grid">
+
+      <div class="cc cc-l">
+        <div class="cc-head"><span class="cd" style="background:var(--a1)"></span><span class="ct">shared/logger.ts — Lambda Powertools</span><span class="cs2">observability</span></div>
+<pre><span class="imp">import</span> { <span class="cls">Logger</span> } <span class="imp">from</span> <span class="str">'@aws-lambda-powertools/logger'</span>
+<span class="imp">import</span> { <span class="cls">Tracer</span> } <span class="imp">from</span> <span class="str">'@aws-lambda-powertools/tracer'</span>
+<span class="imp">import</span> { <span class="cls">Metrics</span>, <span class="cls">MetricUnit</span> }
+  <span class="imp">from</span> <span class="str">'@aws-lambda-powertools/metrics'</span>
+
+<span class="cmt">// Lambda Powertools — structured logging, tracing, metrics</span>
+<span class="cmt">// All auto-correlated via X-Ray trace ID</span>
+<span class="kw">export const</span> logger = <span class="kw">new</span> <span class="cls">Logger</span>({
+  serviceName: process.env.SERVICE_NAME ?? <span class="str">'api'</span>,
+  logLevel:    process.env.LOG_LEVEL <span class="kw">as</span> <span class="kw">any</span> ?? <span class="str">'INFO'</span>,
+})
+
+<span class="kw">export const</span> tracer = <span class="kw">new</span> <span class="cls">Tracer</span>({
+  serviceName: process.env.SERVICE_NAME ?? <span class="str">'api'</span>,
+  captureHTTPsRequests: <span class="kw">true</span>,
+})
+
+<span class="kw">export const</span> metrics = <span class="kw">new</span> <span class="cls">Metrics</span>({
+  namespace:   <span class="str">'MyApp'</span>,
+  serviceName: process.env.SERVICE_NAME ?? <span class="str">'api'</span>,
+})
+
+<span class="cmt">// Usage in handler:</span>
+<span class="cmt">// logger.info('Order placed', { orderId, userId })</span>
+<span class="cmt">// tracer.getSegment()?.addAnnotation('orderId', orderId)</span>
+<span class="cmt">// metrics.addMetric('OrdersPlaced', MetricUnit.Count, 1)</span>
+
+<span class="cmt">// drizzle-kit scripts:</span>
+<span class="cmt">// "db:generate": "drizzle-kit generate"</span>
+<span class="cmt">// "db:migrate":  "drizzle-kit migrate"</span>
+<span class="cmt">// "db:studio":   "drizzle-kit studio"</span>
+<span class="cmt">// "deploy":      "cdk deploy --all"</span>
+<span class="cmt">// "test":        "vitest run"</span></pre>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+<div class="dvdr"></div>
+
+<!-- DATA FLOWS -->
+<section class="section reveal" id="flows">
+  <p class="sec-label">05 — Data Flows</p>
+  <h2 class="sec-title">Every <span class="gt2">Request</span> Traced</h2>
+  <p class="sec-intro">From CloudFront edge to RDS row — every hop across managed services, with the AWS service at each step.</p>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Authenticated HTTP request → RDS</p>
+    <div class="flow-row">
+      <div class="fb fb-l">Client</div><div class="fa">→</div>
+      <div class="fb fb-l">CloudFront + WAF</div><div class="fa">→</div>
+      <div class="fb fb-r">API Gateway v2</div><div class="fa">→</div>
+      <div class="fb fb-r">JWT authorizer (Cognito)</div><div class="fa">→</div>
+      <div class="fb fb-l">Lambda handler</div><div class="fa">→</div>
+      <div class="fb fb-d">RDS Proxy → Aurora</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Order placed → async processing</p>
+    <div class="flow-row">
+      <div class="fb fb-l">Lambda creates order</div><div class="fa">→</div>
+      <div class="fb fb-d">INSERT into RDS</div><div class="fa">→</div>
+      <div class="fb fb-s">publishToQueue(SQS)</div><div class="fa">→</div>
+      <div class="fb fb-s">Consumer Lambda</div><div class="fa">→</div>
+      <div class="fb fb-e">SNS → email + push</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Cache-aside with ElastiCache</p>
+    <div class="flow-row">
+      <div class="fb fb-l">Lambda request</div><div class="fa">→</div>
+      <div class="fb fb-i">Redis GET(key)</div><div class="fa">→ hit →</div>
+      <div class="fb fb-l">return cached</div>
+    </div>
+  </div>
+  <div class="flow-row" style="margin-top:6px;margin-bottom:22px">
+    <div class="fb fb-i" style="opacity:.4">Redis miss</div><div class="fa">→</div>
+    <div class="fb fb-d">RDS Proxy query</div><div class="fa">→</div>
+    <div class="fb fb-i">Redis SETEX(300s)</div><div class="fa">→</div>
+    <div class="fb fb-l">return fresh</div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">User registration flow</p>
+    <div class="flow-row">
+      <div class="fb fb-r">Cognito SignUp</div><div class="fa">→</div>
+      <div class="fb fb-l">preSignUp Lambda trigger</div><div class="fa">→</div>
+      <div class="fb fb-r">Email verify</div><div class="fa">→</div>
+      <div class="fb fb-l">postConfirmation trigger</div><div class="fa">→</div>
+      <div class="fb fb-d">INSERT user into RDS</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">EventBridge scheduled job</p>
+    <div class="flow-row">
+      <div class="fb fb-e">EventBridge rule (cron)</div><div class="fa">→</div>
+      <div class="fb fb-l">Lambda scheduled handler</div><div class="fa">→</div>
+      <div class="fb fb-d">Batch RDS cleanup</div><div class="fa">→</div>
+      <div class="fb fb-l">Powertools metrics logged</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">Bedrock AI streaming response</p>
+    <div class="flow-row">
+      <div class="fb fb-l">API Gateway WebSocket</div><div class="fa">→</div>
+      <div class="fb fb-l">Lambda streaming</div><div class="fa">→</div>
+      <div class="fb fb-e">Bedrock.stream()</div><div class="fa">→</div>
+      <div class="fb fb-l">Chunks via API GW WS</div><div class="fa">→</div>
+      <div class="fb fb-r">Client receives SSE</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <p class="flow-lbl">SQS DLQ + retry</p>
+    <div class="flow-row">
+      <div class="fb fb-s">Consumer Lambda fails</div><div class="fa">→</div>
+      <div class="fb fb-s">SQS makes message visible (30s)</div><div class="fa">→</div>
+      <div class="fb fb-s">3 attempts exhausted</div><div class="fa">→</div>
+      <div class="fb fb-s">DLQ — 14 day retention</div><div class="fa">→</div>
+      <div class="fb fb-l">CloudWatch alarm</div>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- FEATURES -->
+<section class="section reveal" id="features">
+  <p class="sec-label">06 — Feature Matrix</p>
+  <h2 class="sec-title">Every Requirement <span class="gt3">Covered</span></h2>
+  <p class="sec-intro">All backend requirements mapped to AWS-idiomatic managed services — nothing to operate, everything managed.</p>
+
+  <div class="feat-grid">
+    <div class="fc" style="border-color:rgba(255,153,0,.2)">
+      <div class="fc-icon" style="background:rgba(255,153,0,.1)">⚡</div>
+      <div class="fc-title" style="color:var(--a1)">Lambda compute</div>
+      <div class="fc-desc">ARM64 (Graviton3) for 20% better price-perf. Provisioned concurrency for cold start elimination on critical paths. Power Tuning tool to find optimal memory. Snapstart for Java. Up to 10GB memory, 15-min timeout.</div>
+      <code class="fc-dep">aws-lambda</code>
+    </div>
+    <div class="fc" style="border-color:rgba(140,79,255,.2)">
+      <div class="fc-icon" style="background:rgba(140,79,255,.1)">👤</div>
+      <div class="fc-title" style="color:var(--a6)">Auth + RBAC via Cognito</div>
+      <div class="fc-desc">User Pools with email/password + Google/Apple federation. Groups = roles (admins, users, moderators). API Gateway JWT authorizer validates tokens natively — no Lambda needed for auth. preSignUp + postConfirmation triggers for custom logic.</div>
+      <code class="fc-dep">aws-jwt-verify</code>
+    </div>
+    <div class="fc" style="border-color:rgba(26,156,62,.2)">
+      <div class="fc-icon" style="background:rgba(26,156,62,.1)">🗄️</div>
+      <div class="fc-title" style="color:var(--a4)">RDS Aurora + RDS Proxy</div>
+      <div class="fc-desc">Serverless v2 auto-scales 0.5–128 ACUs. RDS Proxy is mandatory for Lambda — it pools connections so each Lambda invocation doesn't create a new PG connection. IAM auth via Proxy eliminates password rotation complexity.</div>
+      <code class="fc-dep">drizzle-orm</code>
+      <code class="fc-dep">pg</code>
+    </div>
+    <div class="fc" style="border-color:rgba(209,50,18,.2)">
+      <div class="fc-icon" style="background:rgba(209,50,18,.1)">📨</div>
+      <div class="fc-title" style="color:var(--a5)">SQS + SNS async</div>
+      <div class="fc-desc">SQS Standard for most queues. FIFO for ordered, exactly-once processing (payments, inventory). Dead-letter queues catch failures after 3 retries — 14-day retention for replay. Partial batch failure reporting — only failed messages retry.</div>
+      <code class="fc-dep">@aws-sdk/client-sqs</code>
+    </div>
+    <div class="fc" style="border-color:rgba(1,168,141,.2)">
+      <div class="fc-icon" style="background:rgba(1,168,141,.1)">💾</div>
+      <div class="fc-title" style="color:var(--a8)">ElastiCache Serverless</div>
+      <div class="fc-desc">Redis 7 with no cluster management. Serverless mode auto-scales. IAM auth — no Redis password. In VPC for network isolation. Used for API caching, rate limiting (INCR+EXPIRE), session storage, and leaderboards.</div>
+      <code class="fc-dep">redis</code>
+    </div>
+    <div class="fc" style="border-color:rgba(255,153,0,.2)">
+      <div class="fc-icon" style="background:rgba(255,153,0,.1)">🔐</div>
+      <div class="fc-title" style="color:var(--a1)">Secrets Manager</div>
+      <div class="fc-desc">All credentials in Secrets Manager — RDS passwords auto-rotate every 30 days. Lambda functions access via IAM resource policy (no hardcoded ARNs in code). Lambda Extension for zero-latency secret injection at startup.</div>
+      <code class="fc-dep">@aws-sdk/client-secrets-manager</code>
+    </div>
+    <div class="fc" style="border-color:rgba(231,21,123,.2)">
+      <div class="fc-icon" style="background:rgba(231,21,123,.1)">🔔</div>
+      <div class="fc-title" style="color:var(--a7)">EventBridge scheduler</div>
+      <div class="fc-desc">Replaces cron daemons and CloudWatch Events. Cron syntax or rate expressions. One-time scheduled events with deduplication. Routes to Lambda, SQS, Step Functions, API destinations. DLQ for failed invocations.</div>
+      <code class="fc-dep">@aws-sdk/client-eventbridge</code>
+    </div>
+    <div class="fc" style="border-color:rgba(140,79,255,.2)">
+      <div class="fc-icon" style="background:rgba(140,79,255,.1)">🛡️</div>
+      <div class="fc-title" style="color:var(--a6)">WAF + Shield + CloudFront</div>
+      <div class="fc-desc">WAF on CloudFront — rate limiting, OWASP Top 10, IP reputation lists, geo-blocking. Shield Standard included. Shield Advanced for DDoS response team. All HTTPS via ACM-managed TLS. CloudFront caches static assets globally.</div>
+      <code class="fc-dep">CDK WAFv2Construct</code>
+    </div>
+    <div class="fc" style="border-color:rgba(26,156,62,.2)">
+      <div class="fc-icon" style="background:rgba(26,156,62,.1)">🧠</div>
+      <div class="fc-title" style="color:var(--a4)">Bedrock AI</div>
+      <div class="fc-desc">Claude 3.5 Sonnet, Llama 3, Titan, Stable Diffusion — all via unified Bedrock API. IAM auth — no API keys. Knowledge Bases for RAG with S3 data sources. Agents for multi-step tool use. Guardrails for content filtering.</div>
+      <code class="fc-dep">@aws-sdk/client-bedrock-runtime</code>
+    </div>
+    <div class="fc" style="border-color:rgba(0,168,225,.2)">
+      <div class="fc-icon" style="background:rgba(0,168,225,.1)">🌐</div>
+      <div class="fc-title" style="color:var(--a3)">API Gateway WebSocket</div>
+      <div class="fc-desc">WebSocket API for real-time bidirectional. Lambda handles $connect, $disconnect, and custom route handlers. Connection IDs stored in DynamoDB. @connections API sends messages back to specific clients. No persistent server needed.</div>
+      <code class="fc-dep">API Gateway WS API</code>
+    </div>
+    <div class="fc" style="border-color:rgba(1,168,141,.2)">
+      <div class="fc-icon" style="background:rgba(1,168,141,.1)">📊</div>
+      <div class="fc-title" style="color:var(--a8)">Lambda Powertools</div>
+      <div class="fc-desc">Structured JSON logging to CloudWatch Logs. X-Ray distributed tracing across all Lambda + AWS SDK calls. Custom CloudWatch metrics. All correlated via trace ID. Alarm on DLQ depth, Lambda errors, RDS connections, and latency P99.</div>
+      <code class="fc-dep">@aws-lambda-powertools/logger</code>
+    </div>
+    <div class="fc" style="border-color:rgba(140,79,255,.2)">
+      <div class="fc-icon" style="background:rgba(140,79,255,.1)">🏗️</div>
+      <div class="fc-title" style="color:var(--a6)">CDK (IaC)</div>
+      <div class="fc-desc">All infrastructure as TypeScript. NodejsFunction handles esbuild bundling per Lambda. CDK Pipelines for CI/CD — deploy to dev/staging/prod via CodePipeline. cdk diff before every deploy. Never use ClickOps — if it's not in CDK, it doesn't exist.</div>
+      <code class="fc-dep">aws-cdk-lib</code>
+    </div>
+  </div>
+</section>
+
+<div class="dvdr"></div>
+
+<!-- SDK TABLE -->
+<section class="section reveal" id="sdk">
+  <p class="sec-label">07 — SDK Registry</p>
+  <h2 class="sec-title">The <span class="gt1">npm</span> Registry</h2>
+  <p class="sec-intro">Pinned to production-stable versions. AWS SDK v3 — modular, tree-shakable, smaller Lambda bundles than v2.</p>
+
+  <div class="warn">
+    <strong>AWS SDK v3:</strong> Import only what you need — <code style="font-family:var(--fc);font-size:11px">@aws-sdk/client-sqs</code>, not the monolithic v2 <code style="font-family:var(--fc);font-size:11px">aws-sdk</code>. Each client is a separate package — esbuild bundles only the code your Lambda actually uses. Average Lambda bundle drops from 8MB to under 500KB.
+  </div>
+
+  <div class="pkg-wrap">
+    <table>
+      <thead>
+        <tr><th>Package</th><th>Version</th><th>Purpose</th><th>Layer</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="pn">aws-lambda</code></td><td class="pv">types</td><td class="pd">TypeScript types for all Lambda event types — APIGatewayProxyEventV2, SQSEvent, S3Event, etc.</td><td><span class="lp t-lam">Lambda</span></td></tr>
+        <tr><td><code class="pn">@aws-sdk/client-cognito-identity-provider</code></td><td class="pv">^3.x</td><td class="pd">Admin operations — AdminAddUserToGroup, AdminDisableUser, ListUsersInGroup</td><td><span class="lp t-sec">Auth</span></td></tr>
+        <tr><td><code class="pn">aws-jwt-verify</code></td><td class="pv">^4.x</td><td class="pd">Cognito JWT verification in Lambda — CognitoJwtVerifier with JWKS caching</td><td><span class="lp t-sec">Auth</span></td></tr>
+        <tr><td><code class="pn">@aws-sdk/client-rds-data</code></td><td class="pv">^3.x</td><td class="pd">RDS Data API — HTTP-based SQL without connection pooling (alternative to RDS Proxy)</td><td><span class="lp t-rds">RDS</span></td></tr>
+        <tr><td><code class="pn">drizzle-orm</code></td><td class="pv">^0.41</td><td class="pd">Type-safe ORM for PostgreSQL — schema definition, typed queries, migrations via drizzle-kit</td><td><span class="lp t-rds">RDS</span></td></tr>
+        <tr><td><code class="pn">pg</code></td><td class="pv">^8.13</td><td class="pd">PostgreSQL driver — used by Drizzle, connects via RDS Proxy</td><td><span class="lp t-rds">RDS</span></td></tr>
+        <tr><td><code class="pn">drizzle-kit</code></td><td class="pv">^0.30</td><td class="pd">Migration generator, schema introspection, Drizzle Studio GUI</td><td><span class="lp t-rds">dev</span></td></tr>
+        <tr><td><code class="pn">@aws-sdk/client-sqs</code></td><td class="pv">^3.x</td><td class="pd">SQS send, receive, delete, batch operations</td><td><span class="lp t-sqs">SQS</span></td></tr>
+        <tr><td><code class="pn">@aws-sdk/client-sns</code></td><td class="pv">^3.x</td><td class="pd">SNS publish, topic management, subscriptions</td><td><span class="lp t-sqs">SNS</span></td></tr>
+        <tr><td><code class="pn">@aws-sdk/client-eventbridge</code></td><td class="pv">^3.x</td><td class="pd">PutEvents for domain event publishing, manage rules and targets</td><td><span class="lp t-sqs">Events</span></td></tr>
+        <tr><td><code class="pn">@aws-sdk/client-secrets-manager</code></td><td class="pv">^3.x</td><td class="pd">GetSecretValue — fetch credentials, API keys, JWT secrets at runtime</td><td><span class="lp t-sec">Secrets</span></td></tr>
+        <tr><td><code class="pn">@aws-sdk/client-s3</code></td><td class="pv">^3.x</td><td class="pd">S3 object CRUD, presigned URLs for direct client upload/download</td><td><span class="lp t-cdk">Storage</span></td></tr>
+        <tr><td><code class="pn">@aws-sdk/client-bedrock-runtime</code></td><td class="pv">^3.x</td><td class="pd">InvokeModel, InvokeModelWithResponseStream — Claude, Llama, Titan via Bedrock</td><td><span class="lp t-sec">AI</span></td></tr>
+        <tr><td><code class="pn">redis</code></td><td class="pv">^4.7</td><td class="pd">ElastiCache Redis client — get/set/incr/expire, pub/sub, pipeline</td><td><span class="lp t-cdk">Cache</span></td></tr>
+        <tr><td><code class="pn">@aws-lambda-powertools/logger</code></td><td class="pv">^2.x</td><td class="pd">Structured CloudWatch Logs — JSON, log levels, correlation IDs, sampling</td><td><span class="lp t-lam">Ops</span></td></tr>
+        <tr><td><code class="pn">@aws-lambda-powertools/tracer</code></td><td class="pv">^2.x</td><td class="pd">AWS X-Ray distributed tracing — annotate segments, capture HTTP calls</td><td><span class="lp t-lam">Ops</span></td></tr>
+        <tr><td><code class="pn">@aws-lambda-powertools/metrics</code></td><td class="pv">^2.x</td><td class="pd">Custom CloudWatch metrics — business KPIs, SLI/SLO tracking</td><td><span class="lp t-lam">Ops</span></td></tr>
+        <tr><td><code class="pn">aws-cdk-lib</code></td><td class="pv">^2.170</td><td class="pd">CDK v2 — all AWS constructs in one package, L1/L2/L3 constructs</td><td><span class="lp t-cdk">IaC</span></td></tr>
+        <tr><td><code class="pn">zod</code></td><td class="pv">^3.23</td><td class="pd">Runtime schema validation — request body, SQS message shapes, environment variables</td><td><span class="lp t-lam">Shared</span></td></tr>
+        <tr><td><code class="pn">vitest</code></td><td class="pv">^2.x</td><td class="pd">Unit tests — Lambda handlers and services via AWS SDK mocking (aws-sdk-client-mock)</td><td><span class="lp t-sqs" style="background:rgba(209,50,18,.07);color:var(--a5);border-color:rgba(209,50,18,.22)">test</span></td></tr>
+        <tr><td><code class="pn">aws-sdk-client-mock</code></td><td class="pv">^4.x</td><td class="pd">Mock AWS SDK v3 clients in tests — mockClient(SQSClient).on(SendMessageCommand)</td><td><span class="lp t-sqs" style="background:rgba(209,50,18,.07);color:var(--a5);border-color:rgba(209,50,18,.22)">test</span></td></tr>
+        <tr>
+          <td colspan="4" style="padding:12px 14px;font-family:var(--fh);font-size:10px;color:var(--text3);font-weight:300;letter-spacing:.04em">
+            REPLACED BY AWS MANAGED SERVICES: JWT library → Cognito + aws-jwt-verify · Redis server → ElastiCache Serverless · Celery/workers → SQS Lambda triggers · Nginx → CloudFront + API Gateway · Cron daemon → EventBridge Scheduler · Database server → RDS Aurora Serverless v2 · Secret storage → Secrets Manager · Auth service → Cognito User Pools
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="ft-title"><span class="gt1">Managed.</span> Scaled. <span class="gt2">Operated.</span></div>
+  <p class="ft-sub">When AWS runs the infrastructure, your engineers write business logic.</p>
+  <p class="ft-copy">AWS · Lambda · Aurora · SQS · Cognito · CDK — Cloud Architecture Field Guide · 2025</p>
+</footer>
+
+<script>
+function st(id){
+  document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tp-'+id).classList.add('on');
+  event.currentTarget.classList.add('on');
+}
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');io.unobserve(e.target);}});
+},{threshold:0.05});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+const secs=document.querySelectorAll('section[id]');
+const links=document.querySelectorAll('.nav-links a');
+const nio=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){
+    links.forEach(a=>a.style.color='');
+    const l=document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+    if(l)l.style.color='var(--a1)';
+  }});
+},{threshold:0.3});
+secs.forEach(s=>nio.observe(s));
+</script>
+</body>
+</html>

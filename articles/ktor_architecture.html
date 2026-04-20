@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ktor + Kotlin — Backend Architecture Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Literata:ital,wght@0,300;0,400;1,300;1,400&family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:      #05080f;
+  --bg2:     #080d18;
+  --bg3:     #0c1220;
+  --surf:    #101828;
+  --surf2:   #162035;
+  --border:  rgba(126,193,255,0.06);
+  --border2: rgba(126,193,255,0.14);
+  --k1: #7ec1ff;   /* Kotlin blue */
+  --k2: #b39ddb;   /* Kotlin violet */
+  --k3: #4dd0e1;   /* teal */
+  --k4: #a5d6a7;   /* green */
+  --k5: #ffb74d;   /* amber */
+  --k6: #ef9a9a;   /* rose */
+  --k7: #f06292;   /* pink */
+  --text:  #dce8f5;
+  --text2: #6a849c;
+  --text3: #2e4460;
+  --fh: 'Space Grotesk', sans-serif;
+  --fb: 'Literata', serif;
+  --fc: 'Fira Code', monospace;
+  --r: 10px;
+  --rl: 18px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--fb);
+  font-size:17px;
+  line-height:1.75;
+  overflow-x:hidden;
+}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--k1);border-radius:2px}
+
+/* BLUEPRINT GRID */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(126,193,255,0.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(126,193,255,0.025) 1px,transparent 1px),
+    linear-gradient(rgba(126,193,255,0.012) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(126,193,255,0.012) 1px,transparent 1px);
+  background-size:100px 100px,100px 100px,20px 20px,20px 20px;
+  pointer-events:none;z-index:0;
+}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:rgba(5,8,15,0.92);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border2);
+  height:58px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 48px;
+}
+.nav-logo{
+  font-family:var(--fh);font-size:13px;font-weight:700;
+  letter-spacing:0.15em;color:var(--k1);text-transform:uppercase;
+  display:flex;align-items:center;gap:12px;
+}
+.nav-logo-icon{
+  width:28px;height:28px;
+  background:linear-gradient(135deg,var(--k1),var(--k2));
+  border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-style:normal;
+}
+.nav-links{display:flex;gap:32px;list-style:none}
+.nav-links a{
+  font-family:var(--fh);font-size:11px;font-weight:500;
+  color:var(--text2);text-decoration:none;letter-spacing:0.06em;
+  text-transform:uppercase;transition:color .2s;
+}
+.nav-links a:hover{color:var(--k1)}
+
+/* HERO */
+.hero{
+  position:relative;min-height:100vh;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  text-align:center;padding:130px 48px 100px;overflow:hidden;z-index:1;
+}
+.hero-orb{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none}
+.orb1{width:700px;height:700px;background:rgba(126,193,255,0.05);top:-200px;left:-250px;animation:drift1 20s ease-in-out infinite}
+.orb2{width:500px;height:500px;background:rgba(179,157,219,0.07);bottom:-150px;right:-180px;animation:drift2 16s ease-in-out infinite}
+.orb3{width:350px;height:350px;background:rgba(77,208,225,0.04);top:40%;left:55%;animation:drift3 24s ease-in-out infinite}
+@keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(80px,50px)}}
+@keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-60px,-80px)}}
+@keyframes drift3{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.4)}}
+
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(126,193,255,0.08);border:1px solid rgba(126,193,255,0.2);
+  border-radius:100px;padding:6px 16px;margin-bottom:32px;
+  font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:0.15em;
+  color:var(--k1);text-transform:uppercase;
+  opacity:0;animation:fadeUp .8s .1s forwards;
+}
+.badge-dot{width:6px;height:6px;background:var(--k1);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+
+.hero-title{
+  font-family:var(--fh);font-size:clamp(48px,8vw,108px);
+  font-weight:700;line-height:.95;letter-spacing:-0.04em;
+  margin-bottom:8px;
+  opacity:0;animation:fadeUp .8s .3s forwards;
+}
+.hero-title span{
+  background:linear-gradient(135deg,var(--k1) 0%,var(--k2) 50%,var(--k3) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-sub{
+  font-family:var(--fh);font-size:clamp(16px,2vw,22px);font-weight:300;
+  color:var(--text2);letter-spacing:0.18em;text-transform:uppercase;
+  margin-bottom:28px;
+  opacity:0;animation:fadeUp .8s .5s forwards;
+}
+.hero-desc{
+  max-width:720px;font-size:19px;line-height:1.7;color:var(--text2);
+  margin:0 auto 56px;font-style:italic;
+  opacity:0;animation:fadeUp .8s .7s forwards;
+}
+.hero-tags{
+  display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:56px;
+  opacity:0;animation:fadeUp .8s .9s forwards;
+}
+.htag{
+  background:var(--surf);border:1px solid var(--border2);
+  border-radius:6px;padding:5px 14px;
+  font-family:var(--fc);font-size:12px;color:var(--text2);
+  transition:all .2s;cursor:default;
+}
+.htag:hover{background:var(--surf2);color:var(--k1);border-color:rgba(126,193,255,0.3)}
+
+.hero-scroll{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  opacity:0;animation:fadeUp .8s 1.1s forwards;
+  font-family:var(--fh);font-size:11px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--text3);
+}
+.scroll-line{width:1px;height:40px;background:linear-gradient(to bottom,transparent,var(--k1));animation:scrollline 2s ease-in-out infinite}
+@keyframes scrollline{0%,100%{opacity:.3;transform:scaleY(.5)}50%{opacity:1;transform:scaleY(1)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* MAIN */
+main{position:relative;z-index:1}
+
+/* SECTIONS */
+.section{padding:120px 48px;max-width:1320px;margin:0 auto}
+.section-label{
+  font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--k1);margin-bottom:16px;
+  display:flex;align-items:center;gap:10px;
+}
+.section-label::before{content:'';flex:0 0 30px;height:1px;background:var(--k1)}
+.section-title{
+  font-family:var(--fh);font-size:clamp(32px,4vw,54px);font-weight:700;
+  line-height:1;letter-spacing:-.025em;margin-bottom:24px;
+}
+.section-intro{font-size:18px;color:var(--text2);max-width:700px;line-height:1.75;margin-bottom:60px;font-style:italic}
+.grad-k{
+  background:linear-gradient(90deg,var(--k1),var(--k2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.grad-g{
+  background:linear-gradient(90deg,var(--k4),var(--k3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.grad-o{
+  background:linear-gradient(90deg,var(--k5),var(--k6));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+
+/* DIVIDER */
+.divider{
+  height:1px;background:linear-gradient(to right,transparent,var(--border2) 30%,var(--border2) 70%,transparent);
+  margin:0 48px;
+}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(36px);transition:opacity .7s,transform .7s}
+.reveal.visible{opacity:1;transform:none}
+
+/* ═══════════════════════════
+   ARCHITECTURE FLOW DIAGRAM
+═══════════════════════════ */
+.arch-flow{
+  display:grid;
+  grid-template-columns:1fr 60px 1fr 60px 1fr 60px 1fr;
+  gap:0;align-items:center;
+  margin-bottom:64px;
+  overflow-x:auto;padding-bottom:16px;
+}
+.arch-layer{
+  background:var(--surf);border:1px solid var(--border2);
+  border-radius:var(--rl);padding:28px 22px;
+  position:relative;cursor:pointer;
+  transition:all .3s;min-width:180px;
+}
+.arch-layer:hover{background:var(--surf2);transform:translateY(-4px)}
+.arch-layer.active-layer{border-color:var(--k1);box-shadow:0 0 30px rgba(126,193,255,0.15)}
+.layer-icon{font-size:26px;margin-bottom:10px}
+.layer-name{font-family:var(--fh);font-size:14px;font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.layer-desc{font-size:13px;color:var(--text2);line-height:1.5}
+.arch-arrow{display:flex;align-items:center;justify-content:center;position:relative}
+.arch-arrow::after{
+  content:'→';font-size:20px;
+  color:var(--k1);opacity:.5;
+  animation:arrowPulse 2s ease-in-out infinite;
+}
+@keyframes arrowPulse{0%,100%{opacity:.3;transform:translateX(-4px)}50%{opacity:.9;transform:translateX(4px)}}
+
+/* ═══════════════════════════
+   FOLDER TREE
+═══════════════════════════ */
+.tree-wrap{
+  background:var(--surf);border:1px solid var(--border2);
+  border-radius:var(--rl);overflow:hidden;
+  font-family:var(--fc);font-size:13px;
+}
+.tree-header{
+  background:var(--surf2);border-bottom:1px solid var(--border2);
+  padding:14px 22px;display:flex;align-items:center;gap:10px;
+}
+.tree-dots{display:flex;gap:6px}
+.tree-dot{width:12px;height:12px;border-radius:50%}
+.tree-title{font-family:var(--fh);font-size:12px;font-weight:600;letter-spacing:.1em;color:var(--text2);text-transform:uppercase;margin-left:auto;margin-right:auto}
+.tree-body{padding:24px 28px;overflow-x:auto}
+.tree-line{
+  display:flex;align-items:center;gap:0;
+  padding:2.5px 0;white-space:nowrap;
+  transition:background .15s;border-radius:4px;cursor:pointer;
+}
+.tree-line:hover{background:rgba(126,193,255,0.05)}
+.tree-indent{display:inline-block;width:20px;flex-shrink:0}
+.tree-icon{margin-right:8px;font-size:13px;flex-shrink:0}
+.tree-name{color:var(--text);font-weight:400}
+.tree-name.folder{color:var(--k1);font-weight:500}
+.tree-name.dart{color:var(--k3)}
+.tree-name.config{color:var(--k5)}
+.tree-name.test{color:var(--k4)}
+.tree-name.comment{color:var(--text3);font-style:italic;margin-left:12px;font-size:12px}
+
+/* ═══════════════════════════
+   TABS
+═══════════════════════════ */
+.tabs{margin-bottom:40px}
+.tab-bar{
+  display:flex;gap:4px;border-bottom:1px solid var(--border2);
+  margin-bottom:0;overflow-x:auto;padding-bottom:0;
+}
+.tab-btn{
+  font-family:var(--fh);font-size:12px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;
+  background:none;border:none;cursor:pointer;
+  color:var(--text2);padding:14px 20px;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:all .2s;white-space:nowrap;
+}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--k1);border-bottom-color:var(--k1)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ═══════════════════════════
+   CODE BLOCKS
+═══════════════════════════ */
+.code-block{
+  background:#060c16;border:1px solid var(--border2);
+  border-radius:var(--r);overflow:hidden;margin:24px 0;
+}
+.code-header{
+  background:var(--surf2);padding:10px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+}
+.code-lang{font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--k2);text-transform:uppercase}
+.code-file{font-family:var(--fc);font-size:12px;color:var(--text3)}
+.code-copy{
+  background:none;border:1px solid var(--border2);border-radius:4px;
+  padding:3px 10px;font-family:var(--fh);font-size:10px;letter-spacing:.08em;
+  color:var(--text2);cursor:pointer;text-transform:uppercase;transition:all .2s;
+}
+.code-copy:hover{background:var(--surf);color:var(--k1);border-color:var(--k1)}
+pre{padding:24px 28px;overflow-x:auto;line-height:1.65}
+code{font-family:var(--fc);font-size:13.5px}
+.kw{color:#bb9af7}
+.fn{color:#7dcfff}
+.st{color:#9ece6a}
+.cm{color:#414868;font-style:italic}
+.ty{color:#ff9e64}
+.nu{color:#ff9e64}
+.an{color:#e0af68}
+.op{color:#89ddff}
+
+/* ═══════════════════════════
+   FEATURE CARDS
+═══════════════════════════ */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;margin-top:16px}
+.feat-card{
+  background:var(--surf);border:1px solid var(--border2);border-radius:var(--rl);
+  padding:28px;transition:all .3s;position:relative;overflow:hidden;
+}
+.feat-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(126,193,255,0.03) 0%,transparent 60%);
+  pointer-events:none;
+}
+.feat-card:hover{transform:translateY(-4px);box-shadow:0 20px 60px rgba(0,0,0,.4);border-color:rgba(126,193,255,0.25)}
+.fc-icon{font-size:30px;margin-bottom:14px}
+.fc-title{font-family:var(--fh);font-size:16px;font-weight:700;margin-bottom:10px;color:var(--k1)}
+.fc-desc{font-size:14.5px;color:var(--text2);line-height:1.65;margin-bottom:14px}
+.fc-pkgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.fc-pkg{
+  background:rgba(126,193,255,0.07);border:1px solid rgba(126,193,255,0.15);
+  border-radius:4px;padding:2px 9px;
+  font-family:var(--fc);font-size:11px;color:var(--k3);
+}
+
+/* ═══════════════════════════
+   LAYER DETAIL CARDS
+═══════════════════════════ */
+.layer-detail{
+  background:var(--surf);border:1px solid var(--border2);
+  border-radius:var(--rl);padding:40px;margin-bottom:24px;
+  position:relative;overflow:hidden;
+}
+.layer-detail::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(to right,var(--k1),var(--k2));
+}
+.ld-header{display:flex;align-items:flex-start;gap:20px;margin-bottom:28px}
+.ld-num{
+  font-family:var(--fh);font-size:48px;font-weight:700;
+  line-height:1;color:var(--text3);flex-shrink:0;
+}
+.ld-title{font-family:var(--fh);font-size:24px;font-weight:700;margin-bottom:6px}
+.ld-subtitle{font-size:15px;color:var(--text2);font-style:italic}
+.ld-body{font-size:16px;color:var(--text2);line-height:1.8;margin-bottom:24px}
+.ld-items{display:flex;flex-wrap:wrap;gap:8px}
+.ld-item{
+  background:rgba(126,193,255,0.06);border:1px solid var(--border2);
+  border-radius:6px;padding:6px 14px;
+  font-family:var(--fc);font-size:12px;color:var(--text);
+}
+
+/* ═══════════════════════════
+   PRINCIPLE GRID
+═══════════════════════════ */
+.principle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+.p-card{
+  background:var(--surf);border:1px solid var(--border2);border-radius:var(--rl);
+  padding:32px 28px;transition:all .3s;
+}
+.p-card:hover{transform:translateY(-3px);background:var(--surf2)}
+.p-letter{
+  font-family:var(--fh);font-size:56px;font-weight:700;line-height:1;
+  margin-bottom:12px;
+}
+.p-title{font-family:var(--fh);font-size:16px;font-weight:700;margin-bottom:10px}
+.p-desc{font-size:14.5px;color:var(--text2);line-height:1.65}
+
+/* ═══════════════════════════
+   PACKAGE TABLE
+═══════════════════════════ */
+.pkg-table{width:100%;border-collapse:collapse}
+.pkg-table th{
+  font-family:var(--fh);font-size:11px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--text2);
+  padding:14px 20px;text-align:left;border-bottom:1px solid var(--border2);
+}
+.pkg-table td{padding:14px 20px;border-bottom:1px solid var(--border);vertical-align:top}
+.pkg-table tbody tr:hover{background:rgba(126,193,255,0.03)}
+.pkg-name{color:var(--k1);font-family:var(--fc);font-size:13px}
+.pkg-version{color:var(--k5);font-family:var(--fc);font-size:12px;white-space:nowrap}
+.pkg-desc{font-size:14px;color:var(--text2);line-height:1.5}
+.layer-pill{
+  display:inline-flex;align-items:center;
+  border-radius:4px;padding:2px 10px;
+  font-family:var(--fh);font-size:10px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;white-space:nowrap;
+}
+.tag-routing{background:rgba(126,193,255,0.12);color:var(--k1);border:1px solid rgba(126,193,255,0.25)}
+.tag-data{background:rgba(165,214,167,0.12);color:var(--k4);border:1px solid rgba(165,214,167,0.25)}
+.tag-security{background:rgba(239,154,154,0.12);color:var(--k6);border:1px solid rgba(239,154,154,0.25)}
+.tag-di{background:rgba(179,157,219,0.12);color:var(--k2);border:1px solid rgba(179,157,219,0.25)}
+.tag-rt{background:rgba(77,208,225,0.12);color:var(--k3);border:1px solid rgba(77,208,225,0.25)}
+.tag-dev{background:rgba(255,183,77,0.12);color:var(--k5);border:1px solid rgba(255,183,77,0.25)}
+.tag-infra{background:rgba(240,98,146,0.12);color:var(--k7);border:1px solid rgba(240,98,146,0.25)}
+
+/* ═══════════════════════════
+   REQUEST LIFECYCLE DIAGRAM
+═══════════════════════════ */
+.lifecycle{
+  display:flex;flex-direction:column;gap:0;
+  border:1px solid var(--border2);border-radius:var(--rl);overflow:hidden;
+}
+.lc-step{
+  display:flex;align-items:flex-start;gap:20px;
+  padding:24px 28px;border-bottom:1px solid var(--border);
+  transition:background .2s;cursor:default;
+  position:relative;
+}
+.lc-step:last-child{border-bottom:none}
+.lc-step:hover{background:rgba(126,193,255,0.04)}
+.lc-num{
+  flex-shrink:0;width:32px;height:32px;
+  background:rgba(126,193,255,0.1);border:1px solid rgba(126,193,255,0.25);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--fh);font-size:12px;font-weight:700;color:var(--k1);
+}
+.lc-content{flex:1}
+.lc-title{font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:4px}
+.lc-desc{font-size:14px;color:var(--text2);line-height:1.6}
+.lc-tag{
+  flex-shrink:0;align-self:center;
+  background:var(--surf2);border:1px solid var(--border2);
+  border-radius:4px;padding:3px 10px;
+  font-family:var(--fc);font-size:11px;color:var(--text2);
+}
+
+/* ═══════════════════════════
+   HIGHLIGHT BOX
+═══════════════════════════ */
+.highlight-box{
+  background:linear-gradient(135deg,rgba(126,193,255,0.06),rgba(179,157,219,0.06));
+  border:1px solid rgba(126,193,255,0.2);border-radius:var(--rl);
+  padding:28px 32px;margin:28px 0;
+  position:relative;overflow:hidden;
+}
+.highlight-box::before{
+  content:'';position:absolute;top:0;left:0;bottom:0;width:3px;
+  background:linear-gradient(to bottom,var(--k1),var(--k2));
+}
+.hb-label{font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--k1);margin-bottom:10px}
+.hb-text{font-size:15.5px;color:var(--text2);line-height:1.75}
+
+/* ═══════════════════════════
+   FOOTER
+═══════════════════════════ */
+footer{
+  border-top:1px solid var(--border2);
+  padding:80px 48px;text-align:center;position:relative;z-index:1;
+}
+.footer-title{font-family:var(--fh);font-size:32px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px}
+.footer-sub{font-size:16px;color:var(--text2);font-style:italic;max-width:600px;margin:0 auto 28px}
+.footer-copy{font-family:var(--fh);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--text3)}
+
+/* GRID 2COL */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+@media(max-width:900px){
+  .grid-2{grid-template-columns:1fr}
+  .arch-flow{grid-template-columns:1fr;gap:8px}
+  .arch-arrow{display:none}
+  nav{padding:0 20px}
+  .nav-links{gap:16px}
+  .section{padding:80px 24px}
+}
+
+/* STAT BOXES */
+.stat-row{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:48px}
+.stat-box{
+  flex:1;min-width:160px;
+  background:var(--surf);border:1px solid var(--border2);border-radius:var(--rl);
+  padding:24px 20px;text-align:center;
+}
+.stat-num{font-family:var(--fh);font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.stat-label{font-size:13px;color:var(--text2);margin-top:6px;font-family:var(--fh)}
+
+/* ANNOTATION */
+.anno{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(224,175,104,0.12);border:1px solid rgba(224,175,104,0.25);
+  border-radius:3px;padding:1px 8px;
+  font-family:var(--fc);font-size:12px;color:#e0af68;
+}
+
+/* FLOW CONNECTOR LINES */
+.flow-section{position:relative;padding-left:32px}
+.flow-section::before{
+  content:'';position:absolute;left:0;top:16px;bottom:16px;
+  width:2px;background:linear-gradient(to bottom,var(--k1),transparent);
+  border-radius:1px;
+}
+.flow-node{
+  position:relative;padding:20px 24px;
+  background:var(--surf);border:1px solid var(--border2);border-radius:var(--r);
+  margin-bottom:12px;transition:all .2s;
+}
+.flow-node::before{
+  content:'';position:absolute;left:-31px;top:50%;transform:translateY(-50%);
+  width:10px;height:10px;border-radius:50%;
+  background:var(--k1);border:2px solid var(--bg);
+}
+.flow-node:hover{background:var(--surf2);border-color:rgba(126,193,255,.3)}
+.fn-title{font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:4px;color:var(--k1)}
+.fn-desc{font-size:13.5px;color:var(--text2);line-height:1.6}
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">K</div>
+    Ktor Backend
+  </div>
+  <ul class="nav-links">
+    <li><a href="#structure">Structure</a></li>
+    <li><a href="#layers">Layers</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#lifecycle">Lifecycle</a></li>
+    <li><a href="#principles">Principles</a></li>
+    <li><a href="#packages">Packages</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-orb orb1"></div>
+  <div class="hero-orb orb2"></div>
+  <div class="hero-orb orb3"></div>
+
+  <div class="hero-badge"><span class="badge-dot"></span> Production Architecture Guide — 2025</div>
+  <h1 class="hero-title"><span>Ktor</span> + Kotlin</h1>
+  <p class="hero-sub">Backend Architecture Field Guide</p>
+  <p class="hero-desc">A battle-tested, scalable backend architecture using Ktor, Kotlin coroutines, Exposed ORM, Koin DI, and WebSockets — covering JWT auth, request encryption, caching, real-time communication, and clean layered design.</p>
+  <div class="hero-tags">
+    <span class="htag">Ktor 3.x</span>
+    <span class="htag">Kotlin Coroutines</span>
+    <span class="htag">Exposed ORM</span>
+    <span class="htag">Koin DI</span>
+    <span class="htag">JWT Auth</span>
+    <span class="htag">WebSockets</span>
+    <span class="htag">Redis Cache</span>
+    <span class="htag">PostgreSQL</span>
+    <span class="htag">AES-256</span>
+    <span class="htag">Rate Limiting</span>
+    <span class="htag">SOLID + KISS</span>
+  </div>
+  <div class="hero-scroll">Scroll to explore <div class="scroll-line"></div></div>
+</section>
+
+<main>
+
+<!-- ═══════════════ ARCHITECTURE FLOW ═══════════════ -->
+<section class="section reveal" id="structure">
+  <p class="section-label">01 — Overview</p>
+  <h2 class="section-title">Layer Architecture <span class="grad-k">at a Glance</span></h2>
+  <p class="section-intro">A clean, unidirectional dependency graph: HTTP hits Routing → UseCase orchestrates domain logic → Repository abstracts data → Database/Cache persists.</p>
+
+  <div class="arch-flow">
+    <div class="arch-layer" style="border-top:3px solid var(--k1)">
+      <div class="layer-icon">🌐</div>
+      <div class="layer-name" style="color:var(--k1)">Presentation</div>
+      <div class="layer-desc">Routes, Plugins, Request/Response DTOs. HTTP boundary only.</div>
+    </div>
+    <div class="arch-arrow"></div>
+    <div class="arch-layer" style="border-top:3px solid var(--k3)">
+      <div class="layer-icon">⚙️</div>
+      <div class="layer-name" style="color:var(--k3)">Application</div>
+      <div class="layer-desc">Use Cases / Service layer. Orchestrates domain. No I/O here.</div>
+    </div>
+    <div class="arch-arrow"></div>
+    <div class="arch-layer" style="border-top:3px solid var(--k4)">
+      <div class="layer-icon">🏛️</div>
+      <div class="layer-name" style="color:var(--k4)">Domain</div>
+      <div class="layer-desc">Pure Kotlin entities, repository interfaces, business rules.</div>
+    </div>
+    <div class="arch-arrow"></div>
+    <div class="arch-layer" style="border-top:3px solid var(--k2)">
+      <div class="layer-icon">🗄️</div>
+      <div class="layer-name" style="color:var(--k2)">Data / Infra</div>
+      <div class="layer-desc">Exposed tables, Redis cache, external API clients, repo impls.</div>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-num" style="color:var(--k1)">4</div><div class="stat-label">Architecture Layers</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--k3)">100%</div><div class="stat-label">Coroutine-native</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--k4)">0</div><div class="stat-label">Blocking I/O</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--k2)">∞</div><div class="stat-label">Horizontal Scale</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--k5)">AES-256</div><div class="stat-label">Payload Encryption</div></div>
+  </div>
+
+  <!-- FOLDER TREE -->
+  <div class="tree-wrap reveal">
+    <div class="tree-header">
+      <div class="tree-dots">
+        <div class="tree-dot" style="background:#ff5f57"></div>
+        <div class="tree-dot" style="background:#febc2e"></div>
+        <div class="tree-dot" style="background:#28c840"></div>
+      </div>
+      <div class="tree-title">Project Structure</div>
+    </div>
+    <div class="tree-body">
+
+<div class="tree-line"><span class="tree-icon">📁</span><span class="tree-name folder">ktor-backend/</span></div>
+
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">src/main/kotlin/com/app/</span></div>
+
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">core/</span><span class="tree-name comment">// cross-cutting: DI, config, extensions, security utils</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">di/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">AppModule.kt</span><span class="tree-name comment">// Koin root module</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">DatabaseModule.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">CacheModule.kt</span><span class="tree-name comment">// Redis / in-process</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">RepositoryModule.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">security/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">JwtService.kt</span><span class="tree-name comment">// sign, verify, refresh</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">EncryptionService.kt</span><span class="tree-name comment">// AES-256-GCM</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">PasswordHasher.kt</span><span class="tree-name comment">// Argon2id</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">config/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name config">AppConfig.kt</span><span class="tree-name comment">// typed env-driven config</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name config">DatabaseConfig.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">extensions/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">CallExtensions.kt</span><span class="tree-name comment">// respond helpers, validated body</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">ResultExtensions.kt</span><span class="tree-name comment">// kotlin.Result → HTTP</span></div>
+
+<br/>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">domain/</span><span class="tree-name comment">// pure Kotlin — zero framework deps</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">model/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">User.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">AuthToken.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">repository/</span><span class="tree-name comment">// interfaces only</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">UserRepository.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">AuthRepository.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">error/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">AppError.kt</span><span class="tree-name comment">// sealed class hierarchy</span></div>
+
+<br/>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">application/</span><span class="tree-name comment">// use cases — orchestration only</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">auth/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">LoginUseCase.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">RegisterUseCase.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">RefreshTokenUseCase.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">user/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">GetUserProfileUseCase.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">UpdateUserUseCase.kt</span></div>
+
+<br/>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">data/</span><span class="tree-name comment">// implementations, Exposed tables, Redis</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">database/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">UserTable.kt</span><span class="tree-name comment">// Exposed Table DSL</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">UserRepositoryImpl.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">DatabaseFactory.kt</span><span class="tree-name comment">// HikariCP pool + migrations</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">cache/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">RedisClient.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">CacheRepository.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">remote/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">HttpClientProvider.kt</span><span class="tree-name comment">// Ktor client for external APIs</span></div>
+
+<br/>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">presentation/</span><span class="tree-name comment">// Ktor routing, plugins, WebSocket handlers</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">plugins/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">Authentication.kt</span><span class="tree-name comment">// JWT bearer install</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">Serialization.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">RateLimit.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">Compression.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">StatusPages.kt</span><span class="tree-name comment">// global error → HTTP</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">CORS.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">EncryptionPlugin.kt</span><span class="tree-name comment">// AES body intercept</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">routes/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">AuthRoutes.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">UserRoutes.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">WebSocketRoutes.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">dto/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">AuthRequest.kt</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">ApiResponse.kt</span><span class="tree-name comment">// sealed wrapper</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">Application.kt</span><span class="tree-name comment">// entry point</span></div>
+
+<br/>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">realtime/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">ConnectionManager.kt</span><span class="tree-name comment">// WebSocket session registry</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">WsMessage.kt</span><span class="tree-name comment">// sealed event types</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name dart">BroadcastChannel.kt</span><span class="tree-name comment">// coroutine channels for fan-out</span></div>
+
+<br/>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">src/main/resources/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📄</span><span class="tree-name config">application.conf</span><span class="tree-name comment">// HOCON: server, database, jwt, redis</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">db/migration/</span><span class="tree-name comment">// Flyway versioned SQL migrations</span></div>
+
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">src/test/kotlin/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">unit/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">integration/</span></div>
+<div class="tree-line"><span class="tree-indent"></span><span class="tree-indent"></span><span class="tree-icon">📁</span><span class="tree-name folder">e2e/</span><span class="tree-name comment">// testApplication { } block</span></div>
+
+<div class="tree-line"><span class="tree-icon">📄</span><span class="tree-name config">build.gradle.kts</span></div>
+<div class="tree-line"><span class="tree-icon">📄</span><span class="tree-name config">docker-compose.yml</span></div>
+<div class="tree-line"><span class="tree-icon">📄</span><span class="tree-name config">Dockerfile</span></div>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ LAYERS ═══════════════ -->
+<section class="section reveal" id="layers">
+  <p class="section-label">02 — Layer Breakdown</p>
+  <h2 class="section-title">Every Layer <span class="grad-g">Explained</span></h2>
+  <p class="section-intro">Each layer has one job, one direction of knowledge, and strict boundaries enforced by Kotlin visibility modifiers and Koin scoping.</p>
+
+  <div class="layer-detail reveal">
+    <div class="layer-detail" style="border-left:3px solid var(--k1);padding-left:36px;">
+      <div class="ld-header">
+        <div class="ld-num" style="color:var(--k1)">01</div>
+        <div>
+          <div class="ld-title">Presentation Layer <span style="font-size:18px">🌐</span></div>
+          <div class="ld-subtitle">Ktor routing, plugins, DTOs — the HTTP boundary</div>
+        </div>
+      </div>
+      <div class="ld-body">Owns everything HTTP. Routes receive requests, validate + deserialize via kotlinx.serialization <span class="anno">@Serializable</span> DTOs, call use cases, and map results back to <code style="font-family:var(--fc);font-size:13px;color:var(--k3)">ApiResponse&lt;T&gt;</code>. No business logic lives here. Plugins (Authentication, RateLimit, CORS, StatusPages) are installed once in <code style="font-family:var(--fc);font-size:13px;color:var(--k3)">Application.kt</code> — features just use them.</div>
+      <div class="ld-items">
+        <span class="ld-item">Route extensions</span>
+        <span class="ld-item">Request DTOs</span>
+        <span class="ld-item">Response DTOs</span>
+        <span class="ld-item">Plugin install</span>
+        <span class="ld-item">WebSocket handlers</span>
+        <span class="ld-item">StatusPages error mapping</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer-detail reveal" style="border-left:3px solid var(--k3);padding-left:36px;margin-top:20px">
+    <div class="ld-header">
+      <div class="ld-num" style="color:var(--k3)">02</div>
+      <div>
+        <div class="ld-title">Application Layer <span style="font-size:18px">⚙️</span></div>
+        <div class="ld-subtitle">Use Cases — orchestrate, never implement</div>
+      </div>
+    </div>
+    <div class="ld-body">Use cases are <span class="anno">suspend fun invoke()</span> single-purpose classes. They coordinate across repositories, apply business rules, and return <code style="font-family:var(--fc);font-size:13px;color:var(--k3)">Result&lt;T&gt;</code>. A use case never touches Exposed, Redis, or any I/O directly — it holds repository interfaces. Every use case is independently unit-testable with mocks.</div>
+    <div class="ld-items">
+      <span class="ld-item">LoginUseCase</span>
+      <span class="ld-item">RegisterUseCase</span>
+      <span class="ld-item">RefreshTokenUseCase</span>
+      <span class="ld-item">GetUserProfileUseCase</span>
+      <span class="ld-item">UpdateUserUseCase</span>
+      <span class="ld-item">…per feature</span>
+    </div>
+  </div>
+
+  <div class="layer-detail reveal" style="border-left:3px solid var(--k4);padding-left:36px;margin-top:20px">
+    <div class="ld-header">
+      <div class="ld-num" style="color:var(--k4)">03</div>
+      <div>
+        <div class="ld-title">Domain Layer <span style="font-size:18px">🏛️</span></div>
+        <div class="ld-subtitle">Pure Kotlin — zero Ktor, zero Exposed, zero annotations</div>
+      </div>
+    </div>
+    <div class="ld-body">The safest layer: data classes for entities, sealed classes for errors, interfaces for repositories. Nothing here changes when you swap PostgreSQL for MongoDB or Ktor for Spring. This is the stable core the application is built around. AppError sealed hierarchy means the presentation layer maps one-to-one from domain error → HTTP status without stringly-typed exceptions.</div>
+    <div class="ld-items">
+      <span class="ld-item">User (entity)</span>
+      <span class="ld-item">AuthToken (entity)</span>
+      <span class="ld-item">UserRepository (interface)</span>
+      <span class="ld-item">AuthRepository (interface)</span>
+      <span class="ld-item">AppError (sealed)</span>
+    </div>
+  </div>
+
+  <div class="layer-detail reveal" style="border-left:3px solid var(--k2);padding-left:36px;margin-top:20px">
+    <div class="ld-header">
+      <div class="ld-num" style="color:var(--k2)">04</div>
+      <div>
+        <div class="ld-title">Data / Infrastructure Layer <span style="font-size:18px">🗄️</span></div>
+        <div class="ld-subtitle">Exposed ORM, HikariCP, Redis, Flyway, external HTTP</div>
+      </div>
+    </div>
+    <div class="ld-body">Implements domain repository interfaces. <code style="font-family:var(--fc);font-size:13px;color:var(--k3)">UserRepositoryImpl</code> extends <code style="font-family:var(--fc);font-size:13px;color:var(--k3)">UserRepository</code> and uses Exposed DSL inside <code style="font-family:var(--fc);font-size:13px;color:var(--k3)">dbQuery { }</code> (dispatches to IO dispatcher). Redis is accessed via a <code style="font-family:var(--fc);font-size:13px;color:var(--k3)">CacheRepository</code> interface — domain never sees Lettuce or Jedis. HikariCP manages the connection pool. Flyway handles versioned schema migrations at startup.</div>
+    <div class="ld-items">
+      <span class="ld-item">UserTable (Exposed)</span>
+      <span class="ld-item">UserRepositoryImpl</span>
+      <span class="ld-item">DatabaseFactory (HikariCP)</span>
+      <span class="ld-item">RedisClient (Lettuce)</span>
+      <span class="ld-item">CacheRepositoryImpl</span>
+      <span class="ld-item">Flyway migrations</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ FEATURES ═══════════════ -->
+<section class="section reveal" id="features">
+  <p class="section-label">03 — Features Deep Dive</p>
+  <h2 class="section-title">Every Concern <span class="grad-o">Covered</span></h2>
+  <p class="section-intro">From JWT auth to AES payload encryption, WebSocket real-time, rate limiting, and structured error handling — nothing is an afterthought.</p>
+
+  <!-- TABS -->
+  <div class="tabs reveal">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="showTab('auth')">🔐 Auth & JWT</button>
+      <button class="tab-btn" onclick="showTab('encryption')">🔒 Encryption</button>
+      <button class="tab-btn" onclick="showTab('cache')">⚡ Caching</button>
+      <button class="tab-btn" onclick="showTab('realtime')">🔄 Real-time</button>
+      <button class="tab-btn" onclick="showTab('ratelimit')">🛡️ Rate Limit</button>
+      <button class="tab-btn" onclick="showTab('errors')">⚠️ Error Handling</button>
+    </div>
+
+    <!-- AUTH -->
+    <div class="tab-panel active" id="tab-auth">
+      <div class="highlight-box" style="margin-top:28px">
+        <div class="hb-label">Strategy</div>
+        <div class="hb-text">Access token (short-lived, 15 min) + Refresh token (long-lived, 30 days, stored in Redis as a blacklist-friendly set). HMAC-SHA256 signing via nimbus-jose-jwt. No symmetric secret in code — loaded from environment. Token rotation invalidates old refresh token on use.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Kotlin</span>
+          <span class="code-file">core/security/JwtService.kt</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="kw">class</span> <span class="ty">JwtService</span>(<span class="kw">private val</span> config: <span class="ty">AppConfig</span>) {
+
+    <span class="kw">private val</span> algorithm = <span class="ty">Algorithm</span>.HMAC256(config.jwtSecret)
+    <span class="kw">private val</span> verifier = <span class="ty">JWT</span>.require(algorithm)
+        .withIssuer(config.jwtIssuer)
+        .build()
+
+    <span class="kw">fun</span> <span class="fn">generateAccessToken</span>(userId: <span class="ty">String</span>): <span class="ty">String</span> =
+        <span class="ty">JWT</span>.create()
+            .withSubject(userId)
+            .withIssuer(config.jwtIssuer)
+            .withExpiresAt(<span class="ty">Date</span>(<span class="ty">System</span>.currentTimeMillis() + <span class="nu">15</span> * <span class="nu">60_000</span>))
+            .withClaim(<span class="st">"type"</span>, <span class="st">"access"</span>)
+            .sign(algorithm)
+
+    <span class="kw">fun</span> <span class="fn">generateRefreshToken</span>(userId: <span class="ty">String</span>): <span class="ty">String</span> =
+        <span class="ty">JWT</span>.create()
+            .withSubject(userId)
+            .withIssuer(config.jwtIssuer)
+            .withExpiresAt(<span class="ty">Date</span>(<span class="ty">System</span>.currentTimeMillis() + <span class="nu">30L</span> * <span class="nu">24</span> * <span class="nu">3600_000</span>))
+            .withClaim(<span class="st">"type"</span>, <span class="st">"refresh"</span>)
+            .withJWTId(<span class="ty">UUID</span>.randomUUID().toString()) <span class="cm">// jti for blacklist</span>
+            .sign(algorithm)
+
+    <span class="kw">fun</span> <span class="fn">verify</span>(token: <span class="ty">String</span>): <span class="ty">DecodedJWT</span> = verifier.verify(token)
+}</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Kotlin</span>
+          <span class="code-file">presentation/plugins/Authentication.kt</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="kw">fun</span> <span class="ty">Application</span>.<span class="fn">configureAuthentication</span>(jwtService: <span class="ty">JwtService</span>) {
+    install(<span class="ty">Authentication</span>) {
+        jwt(<span class="st">"auth-jwt"</span>) {
+            realm = <span class="st">"ktor-backend"</span>
+            verifier(jwtService.verifier)
+            validate { credential ->
+                <span class="kw">if</span> (credential.payload.getClaim(<span class="st">"type"</span>).asString() == <span class="st">"access"</span>)
+                    <span class="ty">JWTPrincipal</span>(credential.payload) <span class="kw">else null</span>
+            }
+            challenge { _, _ ->
+                call.respond(<span class="ty">HttpStatusCode</span>.Unauthorized,
+                    <span class="ty">ApiResponse</span>.Error(<span class="st">"Invalid or expired token"</span>))
+            }
+        }
+    }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- ENCRYPTION -->
+    <div class="tab-panel" id="tab-encryption">
+      <div class="highlight-box" style="margin-top:28px">
+        <div class="hb-label">Strategy</div>
+        <div class="hb-text">AES-256-GCM authenticated encryption. Each request body is encrypted client-side; the Ktor plugin decrypts before the route handler sees the body. The symmetric key is shared via an initial Diffie-Hellman ECDH handshake, stored per-session. GCM provides both confidentiality and integrity — no separate HMAC needed.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Kotlin</span>
+          <span class="code-file">core/security/EncryptionService.kt</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="kw">class</span> <span class="ty">EncryptionService</span> {
+
+    <span class="kw">fun</span> <span class="fn">encrypt</span>(plaintext: <span class="ty">ByteArray</span>, key: <span class="ty">SecretKey</span>): <span class="ty">ByteArray</span> {
+        <span class="kw">val</span> cipher = <span class="ty">Cipher</span>.getInstance(<span class="st">"AES/GCM/NoPadding"</span>)
+        <span class="kw">val</span> iv = <span class="ty">ByteArray</span>(<span class="nu">12</span>).also { <span class="ty">SecureRandom</span>().nextBytes(it) }
+        cipher.init(<span class="ty">Cipher</span>.ENCRYPT_MODE, key, <span class="ty">GCMParameterSpec</span>(<span class="nu">128</span>, iv))
+        <span class="kw">val</span> ciphertext = cipher.doFinal(plaintext)
+        <span class="cm">// prepend IV for transport: [12 bytes IV | ciphertext]</span>
+        <span class="kw">return</span> iv + ciphertext
+    }
+
+    <span class="kw">fun</span> <span class="fn">decrypt</span>(payload: <span class="ty">ByteArray</span>, key: <span class="ty">SecretKey</span>): <span class="ty">ByteArray</span> {
+        <span class="kw">val</span> iv = payload.copyOfRange(<span class="nu">0</span>, <span class="nu">12</span>)
+        <span class="kw">val</span> ciphertext = payload.copyOfRange(<span class="nu">12</span>, payload.size)
+        <span class="kw">val</span> cipher = <span class="ty">Cipher</span>.getInstance(<span class="st">"AES/GCM/NoPadding"</span>)
+        cipher.init(<span class="ty">Cipher</span>.DECRYPT_MODE, key, <span class="ty">GCMParameterSpec</span>(<span class="nu">128</span>, iv))
+        <span class="kw">return</span> cipher.doFinal(ciphertext)
+    }
+}</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Kotlin</span>
+          <span class="code-file">presentation/plugins/EncryptionPlugin.kt</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="kw">val</span> <span class="ty">EncryptionPlugin</span> = createRouteScopedPlugin(<span class="st">"EncryptionPlugin"</span>) {
+    onCall { call ->
+        <span class="kw">val</span> sessionKey = call.getSessionKey() <span class="cm">// resolved from header</span>
+        <span class="kw">if</span> (sessionKey != <span class="kw">null</span>) {
+            <span class="kw">val</span> rawBody = call.receiveChannel().toByteArray()
+            <span class="kw">val</span> decrypted = encryptionService.decrypt(rawBody, sessionKey)
+            call.setEncryptedBody(decrypted) <span class="cm">// replaces receive channel</span>
+        }
+    }
+    onCallRespond { call, body ->
+        <span class="kw">val</span> sessionKey = call.getSessionKey()
+        <span class="kw">if</span> (sessionKey != <span class="kw">null</span> && body <span class="kw">is</span> <span class="ty">ByteArray</span>) {
+            transformBody { encryptionService.encrypt(body, sessionKey) }
+        }
+    }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- CACHE -->
+    <div class="tab-panel" id="tab-cache">
+      <div class="highlight-box" style="margin-top:28px">
+        <div class="hb-label">Strategy</div>
+        <div class="hb-text">Redis (via Lettuce coroutine client) as the primary cache. Cache-aside pattern: read cache → on miss, query Postgres → write to cache with TTL. Cache keys are structured as <code style="font-family:var(--fc);font-size:13px">"entity:id"</code> — e.g. <code style="font-family:var(--fc);font-size:13px">"user:42"</code>. Cache invalidation is explicit on write operations. For list queries, use short TTLs (30s) rather than complex invalidation logic.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Kotlin</span>
+          <span class="code-file">data/cache/CacheRepository.kt</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="kw">interface</span> <span class="ty">CacheRepository</span> {
+    <span class="kw">suspend fun</span> <span class="fn">get</span>(key: <span class="ty">String</span>): <span class="ty">String</span>?
+    <span class="kw">suspend fun</span> <span class="fn">set</span>(key: <span class="ty">String</span>, value: <span class="ty">String</span>, ttlSeconds: <span class="ty">Long</span> = <span class="nu">3600</span>)
+    <span class="kw">suspend fun</span> <span class="fn">delete</span>(key: <span class="ty">String</span>)
+    <span class="kw">suspend fun</span> <span class="fn">exists</span>(key: <span class="ty">String</span>): <span class="ty">Boolean</span>
+}
+
+<span class="cm">// Usage in repository impl — cache-aside</span>
+<span class="kw">override suspend fun</span> <span class="fn">findById</span>(id: <span class="ty">Long</span>): <span class="ty">User</span>? {
+    <span class="kw">val</span> key = <span class="st">"user:$id"</span>
+    cache.get(key)?.let { <span class="kw">return</span> json.decodeFromString(it) }
+
+    <span class="kw">return</span> dbQuery {
+        <span class="ty">UserTable</span>.selectAll().where { <span class="ty">UserTable</span>.id eq id }
+            .map { it.toUser() }.singleOrNull()
+    }?.also { user ->
+        cache.set(key, json.encodeToString(user), ttlSeconds = <span class="nu">3600</span>)
+    }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- REALTIME -->
+    <div class="tab-panel" id="tab-realtime">
+      <div class="highlight-box" style="margin-top:28px">
+        <div class="hb-label">Strategy</div>
+        <div class="hb-text">Ktor's built-in WebSocket support + a <code style="font-family:var(--fc);font-size:13px">ConnectionManager</code> singleton that maps userId → WebSocketSession. Coroutine <code style="font-family:var(--fc);font-size:13px">Channel</code> fan-out broadcasts events to all connected clients. Sealed <code style="font-family:var(--fc);font-size:13px">WsMessage</code> types are serialized as JSON with a <code style="font-family:var(--fc);font-size:13px">type</code> discriminator. Automatic reconnect is handled client-side; server sends periodic ping frames.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Kotlin</span>
+          <span class="code-file">realtime/ConnectionManager.kt</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="kw">class</span> <span class="ty">ConnectionManager</span> {
+    <span class="kw">private val</span> sessions = <span class="ty">ConcurrentHashMap</span>&lt;<span class="ty">String</span>, <span class="ty">DefaultWebSocketSession</span>&gt;()
+
+    <span class="kw">suspend fun</span> <span class="fn">connect</span>(userId: <span class="ty">String</span>, session: <span class="ty">DefaultWebSocketSession</span>) {
+        sessions[userId] = session
+    }
+
+    <span class="kw">fun</span> <span class="fn">disconnect</span>(userId: <span class="ty">String</span>) { sessions.remove(userId) }
+
+    <span class="kw">suspend fun</span> <span class="fn">sendTo</span>(userId: <span class="ty">String</span>, message: <span class="ty">WsMessage</span>) {
+        sessions[userId]?.send(<span class="ty">Frame</span>.Text(json.encodeToString(message)))
+    }
+
+    <span class="kw">suspend fun</span> <span class="fn">broadcast</span>(message: <span class="ty">WsMessage</span>) {
+        <span class="kw">val</span> frame = <span class="ty">Frame</span>.Text(json.encodeToString(message))
+        sessions.values.forEach { session ->
+            <span class="kw">try</span> { session.send(frame) }
+            <span class="kw">catch</span> (_: <span class="ty">Exception</span>) { <span class="cm">/* session closed, ignored */</span> }
+        }
+    }
+}
+
+<span class="cm">// Sealed event types — exhaustive when()</span>
+<span class="an">@Serializable</span>
+<span class="an">@JsonClassDiscriminator</span>(<span class="st">"type"</span>)
+<span class="kw">sealed class</span> <span class="ty">WsMessage</span> {
+    <span class="an">@Serializable @SerialName</span>(<span class="st">"notification"</span>)
+    <span class="kw">data class</span> <span class="ty">Notification</span>(<span class="kw">val</span> title: <span class="ty">String</span>, <span class="kw">val</span> body: <span class="ty">String</span>) : <span class="ty">WsMessage</span>()
+    <span class="an">@Serializable @SerialName</span>(<span class="st">"data_update"</span>)
+    <span class="kw">data class</span> <span class="ty">DataUpdate</span>(<span class="kw">val</span> entity: <span class="ty">String</span>, <span class="kw">val</span> id: <span class="ty">String</span>) : <span class="ty">WsMessage</span>()
+    <span class="an">@Serializable @SerialName</span>(<span class="st">"ping"</span>)
+    <span class="kw">object</span> <span class="ty">Ping</span> : <span class="ty">WsMessage</span>()
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- RATE LIMIT -->
+    <div class="tab-panel" id="tab-ratelimit">
+      <div class="highlight-box" style="margin-top:28px">
+        <div class="hb-label">Strategy</div>
+        <div class="hb-text">Ktor's built-in <code style="font-family:var(--fc);font-size:13px">RateLimit</code> plugin (1.0+) with token-bucket algorithm. Separate limit tiers: strict for auth endpoints (5 req/min), standard for API (100 req/min), relaxed for public reads (300 req/min). Key is resolved from JWT userId for authenticated requests, falling back to IP for anonymous — preventing bypass via multiple accounts.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Kotlin</span>
+          <span class="code-file">presentation/plugins/RateLimit.kt</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="kw">fun</span> <span class="ty">Application</span>.<span class="fn">configureRateLimit</span>() {
+    install(<span class="ty">RateLimit</span>) {
+
+        register(<span class="ty">RateLimitName</span>(<span class="st">"auth"</span>)) {
+            rateLimiter(limit = <span class="nu">5</span>, refillPeriod = <span class="nu">1</span>.minutes)
+            requestKey { call -> call.request.origin.remoteHost }
+        }
+
+        register(<span class="ty">RateLimitName</span>(<span class="st">"api"</span>)) {
+            rateLimiter(limit = <span class="nu">100</span>, refillPeriod = <span class="nu">1</span>.minutes)
+            requestKey { call ->
+                call.principal&lt;<span class="ty">JWTPrincipal</span>&gt;()?.subject
+                    ?: call.request.origin.remoteHost
+            }
+        }
+
+        register(<span class="ty">RateLimitName</span>(<span class="st">"public"</span>)) {
+            rateLimiter(limit = <span class="nu">300</span>, refillPeriod = <span class="nu">1</span>.minutes)
+            requestKey { call -> call.request.origin.remoteHost }
+        }
+    }
+}
+
+<span class="cm">// Usage in routes</span>
+rateLimit(<span class="ty">RateLimitName</span>(<span class="st">"auth"</span>)) {
+    post(<span class="st">"/login"</span>) { authController.login(call) }
+    post(<span class="st">"/register"</span>) { authController.register(call) }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- ERRORS -->
+    <div class="tab-panel" id="tab-errors">
+      <div class="highlight-box" style="margin-top:28px">
+        <div class="hb-label">Strategy</div>
+        <div class="hb-text">Sealed <code style="font-family:var(--fc);font-size:13px">AppError</code> hierarchy flows from domain to presentation. The global <code style="font-family:var(--fc);font-size:13px">StatusPages</code> plugin maps every <code style="font-family:var(--fc);font-size:13px">AppError</code> subtype to an HTTP status and a consistent <code style="font-family:var(--fc);font-size:13px">ApiResponse.Error</code> JSON body. No raw exceptions escape to clients. Use cases return <code style="font-family:var(--fc);font-size:13px">Result&lt;T&gt;</code> — routes call <code style="font-family:var(--fc);font-size:13px">.respondResult()</code> extension. One error handling file to rule them all.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Kotlin</span>
+          <span class="code-file">domain/error/AppError.kt</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><code><span class="kw">sealed class</span> <span class="ty">AppError</span>(<span class="kw">override val</span> message: <span class="ty">String</span>) : <span class="ty">Exception</span>(message) {
+    <span class="kw">data class</span> <span class="ty">NotFound</span>(<span class="kw">val</span> resource: <span class="ty">String</span>) : <span class="ty">AppError</span>(<span class="st">"$resource not found"</span>)
+    <span class="kw">data class</span> <span class="ty">Unauthorized</span>(<span class="kw">val</span> reason: <span class="ty">String</span> = <span class="st">"Unauthorized"</span>) : <span class="ty">AppError</span>(reason)
+    <span class="kw">data class</span> <span class="ty">Forbidden</span>(<span class="kw">val</span> reason: <span class="ty">String</span> = <span class="st">"Forbidden"</span>) : <span class="ty">AppError</span>(reason)
+    <span class="kw">data class</span> <span class="ty">Conflict</span>(<span class="kw">val</span> resource: <span class="ty">String</span>) : <span class="ty">AppError</span>(<span class="st">"$resource already exists"</span>)
+    <span class="kw">data class</span> <span class="ty">Validation</span>(<span class="kw">val</span> fields: <span class="ty">Map</span>&lt;<span class="ty">String</span>, <span class="ty">String</span>&gt;) : <span class="ty">AppError</span>(<span class="st">"Validation failed"</span>)
+    <span class="kw">data class</span> <span class="ty">Internal</span>(<span class="kw">val</span> cause: <span class="ty">Throwable</span>) : <span class="ty">AppError</span>(<span class="st">"Internal server error"</span>)
+}
+
+<span class="cm">// StatusPages plugin — single location</span>
+exception&lt;<span class="ty">AppError</span>&gt; { call, error ->
+    <span class="kw">val</span> status = <span class="kw">when</span> (error) {
+        <span class="kw">is</span> <span class="ty">AppError</span>.<span class="ty">NotFound</span>     -> <span class="ty">HttpStatusCode</span>.NotFound
+        <span class="kw">is</span> <span class="ty">AppError</span>.<span class="ty">Unauthorized</span>  -> <span class="ty">HttpStatusCode</span>.Unauthorized
+        <span class="kw">is</span> <span class="ty">AppError</span>.<span class="ty">Forbidden</span>    -> <span class="ty">HttpStatusCode</span>.Forbidden
+        <span class="kw">is</span> <span class="ty">AppError</span>.<span class="ty">Conflict</span>     -> <span class="ty">HttpStatusCode</span>.Conflict
+        <span class="kw">is</span> <span class="ty">AppError</span>.<span class="ty">Validation</span>   -> <span class="ty">HttpStatusCode</span>.UnprocessableEntity
+        <span class="kw">is</span> <span class="ty">AppError</span>.<span class="ty">Internal</span>    -> <span class="ty">HttpStatusCode</span>.InternalServerError
+    }
+    call.respond(status, <span class="ty">ApiResponse</span>.Error(error.message))
+}</code></pre>
+      </div>
+    </div>
+  </div><!-- /tabs -->
+
+  <!-- FEATURE CARDS -->
+  <div class="feat-grid reveal">
+
+    <div class="feat-card">
+      <div class="fc-icon">🔐</div>
+      <div class="fc-title">JWT Authentication</div>
+      <div class="fc-desc">Access + refresh token pair. HMAC-SHA256 signed. Refresh tokens stored as JTI set in Redis — rotated on use, invalidated on logout. Ktor Authentication plugin with custom <code style="font-family:var(--fc);font-size:12px">jwt("auth-jwt")</code> scheme.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">ktor-auth-jwt</span><span class="fc-pkg">java-jwt</span></div>
+    </div>
+
+    <div class="feat-card">
+      <div class="fc-icon">🔒</div>
+      <div class="fc-title">AES-256-GCM Payload Encryption</div>
+      <div class="fc-desc">Route-scoped Ktor plugin intercepts request body pre-handler and response body post-handler. Keys exchanged via ECDH on session init. GCM mode provides authenticated encryption — no extra HMAC.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">JDK javax.crypto</span><span class="fc-pkg">Bouncy Castle</span></div>
+    </div>
+
+    <div class="feat-card">
+      <div class="fc-icon">🗃️</div>
+      <div class="fc-title">Exposed ORM + HikariCP</div>
+      <div class="fc-desc">Type-safe SQL DSL — no reflection, no annotation processors. HikariCP connection pool. All DB ops inside <code style="font-family:var(--fc);font-size:12px">dbQuery { }</code> that dispatches to <code style="font-family:var(--fc);font-size:12px">Dispatchers.IO</code>. Never blocks the event loop.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">exposed-core ^0.55</span><span class="fc-pkg">HikariCP</span><span class="fc-pkg">Flyway</span></div>
+    </div>
+
+    <div class="feat-card">
+      <div class="fc-icon">⚡</div>
+      <div class="fc-title">Redis Caching (Cache-Aside)</div>
+      <div class="fc-desc">Lettuce async/coroutine Redis client. Cache-aside pattern in repository layer. Structured keys: <code style="font-family:var(--fc);font-size:12px">"entity:id"</code>. Explicit invalidation on mutations. TTLs prevent stale data accumulation.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">lettuce-core</span><span class="fc-pkg">kotlin-redis</span></div>
+    </div>
+
+    <div class="feat-card">
+      <div class="fc-icon">🔄</div>
+      <div class="fc-title">WebSocket Real-time</div>
+      <div class="fc-desc">Ktor native WebSockets. ConnectionManager maps userId → session in ConcurrentHashMap. Sealed WsMessage types with JSON discriminator. Coroutine Channel fan-out for pub/sub-style broadcast across connected users.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">ktor-websockets</span><span class="fc-pkg">kotlinx-coroutines</span></div>
+    </div>
+
+    <div class="feat-card">
+      <div class="fc-icon">🛡️</div>
+      <div class="fc-title">Rate Limiting</div>
+      <div class="fc-desc">Ktor built-in RateLimit plugin with named tiers: auth (5/min), api (100/min), public (300/min). Key resolves to JWT userId for authed requests, IP for anonymous — prevents multi-account bypass.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">ktor-rate-limit</span></div>
+    </div>
+
+    <div class="feat-card">
+      <div class="fc-icon">🧩</div>
+      <div class="fc-title">Dependency Injection (Koin)</div>
+      <div class="fc-desc">Koin modules per concern — DatabaseModule, CacheModule, RepositoryModule, UseCaseModule. <code style="font-family:var(--fc);font-size:12px">single { }</code> for singletons, <code style="font-family:var(--fc);font-size:12px">factory { }</code> for use cases. Zero reflection overhead vs Spring. Ktor integration via <code style="font-family:var(--fc);font-size:12px">koin-ktor</code>.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">koin-ktor ^4.x</span><span class="fc-pkg">koin-logger-slf4j</span></div>
+    </div>
+
+    <div class="feat-card">
+      <div class="fc-icon">🔑</div>
+      <div class="fc-title">Argon2id Password Hashing</div>
+      <div class="fc-desc">Argon2id (memory-hard, PHC winner) for all stored passwords. Configured with secure defaults: memory=65536 KB, iterations=3, parallelism=4. Never store plain or bcrypt-hashed passwords for new systems.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">bouncy-castle</span></div>
+    </div>
+
+    <div class="feat-card">
+      <div class="fc-icon">📐</div>
+      <div class="fc-title">Request Validation</div>
+      <div class="fc-desc">Ktor RequestValidation plugin with custom validators per DTO. Validation errors become <code style="font-family:var(--fc);font-size:12px">AppError.Validation(fields)</code> — mapped to 422 Unprocessable Entity with field-level error messages in the response body.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">ktor-request-validation</span></div>
+    </div>
+
+    <div class="feat-card">
+      <div class="fc-icon">🗺️</div>
+      <div class="fc-title">Schema Migrations (Flyway)</div>
+      <div class="fc-desc">Versioned SQL migrations in <code style="font-family:var(--fc);font-size:12px">resources/db/migration/</code>. Run at startup before the server accepts connections. Immutable migration files — never edit a deployed migration. Rollback via new down migrations.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">flyway-core</span><span class="fc-pkg">flyway-database-postgresql</span></div>
+    </div>
+
+    <div class="feat-card">
+      <div class="fc-icon">📊</div>
+      <div class="fc-title">Structured Logging</div>
+      <div class="fc-desc">SLF4J + Logback with structured JSON output in production. Each request logs traceId (UUID), userId, method, path, status, duration. MDC for correlation IDs across async coroutine boundaries via coroutine MDC integration.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">logback-classic</span><span class="fc-pkg">ktor-call-logging</span></div>
+    </div>
+
+    <div class="feat-card">
+      <div class="fc-icon">🐳</div>
+      <div class="fc-title">Docker + Health Checks</div>
+      <div class="fc-desc">Multi-stage Dockerfile: build stage compiles fatJar, runtime stage uses distroless JRE21 image. Docker Compose for local dev with Postgres + Redis. <code style="font-family:var(--fc);font-size:12px">/health</code> endpoint for readiness + liveness probes.</div>
+      <div class="fc-pkgs"><span class="fc-pkg">ktor-status-pages</span><span class="fc-pkg">docker-compose</span></div>
+    </div>
+
+  </div><!-- /feat-grid -->
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ REQUEST LIFECYCLE ═══════════════ -->
+<section class="section reveal" id="lifecycle">
+  <p class="section-label">04 — Request Lifecycle</p>
+  <h2 class="section-title">A Request's <span class="grad-k">Journey</span></h2>
+  <p class="section-intro">Every HTTP call passes through an ordered, auditable pipeline. Plugins run before any route handler sees the request.</p>
+
+  <div class="grid-2 reveal">
+    <div>
+      <h3 style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:20px;color:var(--k1)">Inbound Pipeline</h3>
+      <div class="lifecycle">
+        <div class="lc-step">
+          <div class="lc-num">1</div>
+          <div class="lc-content">
+            <div class="lc-title">CORS Check</div>
+            <div class="lc-desc">Origin validated against allow-list. Pre-flight OPTIONS handled. Rejects unauthorized origins with 403 before any processing.</div>
+          </div>
+          <div class="lc-tag">Plugin</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-num">2</div>
+          <div class="lc-content">
+            <div class="lc-title">Rate Limit</div>
+            <div class="lc-desc">Token bucket checked for key (userId or IP). Exceeded requests receive 429 Too Many Requests with Retry-After header.</div>
+          </div>
+          <div class="lc-tag">Plugin</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-num">3</div>
+          <div class="lc-content">
+            <div class="lc-title">Decompression</div>
+            <div class="lc-desc">GZIP/deflate encoded bodies are decompressed transparently. Compressed responses negotiated via Accept-Encoding.</div>
+          </div>
+          <div class="lc-tag">Plugin</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-num">4</div>
+          <div class="lc-content">
+            <div class="lc-title">Body Decryption</div>
+            <div class="lc-desc">AES-256-GCM decryption using session key. Routes see plaintext JSON — unaware of encryption layer entirely.</div>
+          </div>
+          <div class="lc-tag">Plugin</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-num">5</div>
+          <div class="lc-content">
+            <div class="lc-title">JWT Verification</div>
+            <div class="lc-desc">Bearer token extracted, signature verified, expiry checked. Principal set on call. Fails to 401 if invalid.</div>
+          </div>
+          <div class="lc-tag">Auth</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-num">6</div>
+          <div class="lc-content">
+            <div class="lc-title">Route Match + Validation</div>
+            <div class="lc-desc">Ktor routes matched. Request body deserialized and validated against DTO validators. Validation errors become 422.</div>
+          </div>
+          <div class="lc-tag">Route</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-num">7</div>
+          <div class="lc-content">
+            <div class="lc-title">Use Case Execution</div>
+            <div class="lc-desc">Route delegates to use case. Coroutine-suspended. Business logic runs, cache checked, DB queried as needed.</div>
+          </div>
+          <div class="lc-tag">Domain</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-num">8</div>
+          <div class="lc-content">
+            <div class="lc-title">Response + Encryption</div>
+            <div class="lc-desc">Result mapped to ApiResponse DTO. Body serialized to JSON, encrypted with session key, compressed, sent.</div>
+          </div>
+          <div class="lc-tag">Plugin</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:20px;color:var(--k3)">WebSocket Lifecycle</h3>
+      <div class="flow-section">
+        <div class="flow-node">
+          <div class="fn-title">Client Connect</div>
+          <div class="fn-desc">WS handshake via HTTP Upgrade. JWT token validated from query param or first message. Anonymous connections rejected.</div>
+        </div>
+        <div class="flow-node">
+          <div class="fn-title">Session Registration</div>
+          <div class="fn-desc"><code style="font-family:var(--fc);font-size:12px">ConnectionManager.connect(userId, session)</code> stores the session. Previous session for same userId is closed (single device).</div>
+        </div>
+        <div class="flow-node">
+          <div class="fn-title">Message Loop</div>
+          <div class="fn-desc">Coroutine <code style="font-family:var(--fc);font-size:12px">for (frame in incoming)</code> processes frames. Text frames deserialized to sealed WsMessage. Each handler is a coroutine launch.</div>
+        </div>
+        <div class="flow-node">
+          <div class="fn-title">Server → Client Push</div>
+          <div class="fn-desc">Business events (via Channel) fan-out to ConnectionManager. Broadcast or targeted send based on event type. Fire-and-forget with try/catch for closed sessions.</div>
+        </div>
+        <div class="flow-node">
+          <div class="fn-title">Ping / Keepalive</div>
+          <div class="fn-desc">Server sends <code style="font-family:var(--fc);font-size:12px">Ping</code> WsMessage every 30 seconds. Client expected to respond with <code style="font-family:var(--fc);font-size:12px">Pong</code>. No response within 60s → session closed.</div>
+        </div>
+        <div class="flow-node">
+          <div class="fn-title">Disconnect + Cleanup</div>
+          <div class="fn-desc"><code style="font-family:var(--fc);font-size:12px">finally { ConnectionManager.disconnect(userId) }</code> in the coroutine ensures cleanup even on abnormal close.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ PRINCIPLES ═══════════════ -->
+<section class="section reveal" id="principles">
+  <p class="section-label">05 — Principles</p>
+  <h2 class="section-title">SOLID + KISS <span class="grad-g">Applied</span></h2>
+  <p class="section-intro">Not abstract philosophy — concrete Ktor/Kotlin decisions made because of these principles. Every architecture choice is justifiable.</p>
+
+  <div class="principle-grid">
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--k1)">S</div>
+      <div class="p-title">Single Responsibility</div>
+      <div class="p-desc"><code style="font-family:var(--fc);font-size:12px">LoginUseCase</code> authenticates — it does not send emails. <code style="font-family:var(--fc);font-size:12px">EncryptionService</code> only encrypts. <code style="font-family:var(--fc);font-size:12px">JwtService</code> only signs/verifies. <code style="font-family:var(--fc);font-size:12px">UserRoutes.kt</code> only routes — zero business logic. Every class has one reason to change.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--k3)">O</div>
+      <div class="p-title">Open / Closed</div>
+      <div class="p-desc">Add a new feature by adding a new route file, use case, and repository — never modifying the domain layer. Plugins are open to addition in <code style="font-family:var(--fc);font-size:12px">Application.kt</code>; existing plugins are closed for modification. New WsMessage types extend the sealed class, never edit handlers.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--k4)">L</div>
+      <div class="p-title">Liskov Substitution</div>
+      <div class="p-desc">Any <code style="font-family:var(--fc);font-size:12px">UserRepository</code> implementation (Postgres, H2 for tests, in-memory fake) can replace another without the use case knowing. Tests use <code style="font-family:var(--fc);font-size:12px">FakeUserRepository</code> — behavior identical from the use case's perspective.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--k5)">I</div>
+      <div class="p-title">Interface Segregation</div>
+      <div class="p-desc"><code style="font-family:var(--fc);font-size:12px">CacheRepository</code> exposes get/set/delete/exists — not a full Redis client. <code style="font-family:var(--fc);font-size:12px">UserRepository</code> exposes only what use cases need. No use case knows about <code style="font-family:var(--fc);font-size:12px">findByEmailWithJoins()</code> unless it needs it.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--k2)">D</div>
+      <div class="p-title">Dependency Inversion</div>
+      <div class="p-desc"><code style="font-family:var(--fc);font-size:12px">LoginUseCase</code> depends on <code style="font-family:var(--fc);font-size:12px">UserRepository</code> (interface) and <code style="font-family:var(--fc);font-size:12px">JwtService</code> (interface). The domain layer knows nothing about Exposed, Lettuce, or Ktor. Koin wires the concretions — the domain is clean.</div>
+    </div>
+    <div class="p-card">
+      <div class="p-letter" style="color:var(--k6)">K</div>
+      <div class="p-title">Keep It Simple</div>
+      <div class="p-desc"><code style="font-family:var(--fc);font-size:12px">ConnectionManager</code> is a ConcurrentHashMap — not a complex actor system. <code style="font-family:var(--fc);font-size:12px">dbQuery { }</code> is a single-line dispatcher wrapper. <code style="font-family:var(--fc);font-size:12px">AppError</code> is a sealed class — no exception hierarchy. The simplest approach that meets the constraint always wins.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ PACKAGE TABLE ═══════════════ -->
+<section class="section reveal" id="packages">
+  <p class="section-label">06 — Dependency Registry</p>
+  <h2 class="section-title">The Right Tool <span class="grad-o">Every Time</span></h2>
+  <p class="section-intro">Curated for stability, active maintenance, and Kotlin-first design. No Spring. No ORMs with reflection. No legacy Java baggage unless strictly necessary.</p>
+
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);overflow:hidden;overflow-x:auto;">
+    <table class="pkg-table">
+      <thead>
+        <tr>
+          <th>Dependency</th>
+          <th>Version</th>
+          <th>Purpose</th>
+          <th>Layer</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="pkg-name">ktor-server-core</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">Ktor server foundation — coroutine-native HTTP, plugin system, routing DSL</td><td><span class="layer-pill tag-routing">routing</span></td></tr>
+        <tr><td><code class="pkg-name">ktor-server-netty</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">Netty engine — high-throughput, non-blocking I/O. Preferred over CIO for production</td><td><span class="layer-pill tag-routing">routing</span></td></tr>
+        <tr><td><code class="pkg-name">ktor-server-auth-jwt</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">JWT bearer plugin for Ktor Authentication — uses java-jwt under the hood</td><td><span class="layer-pill tag-routing">routing</span></td></tr>
+        <tr><td><code class="pkg-name">ktor-server-websockets</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">WebSocket support with coroutine-native Frame processing</td><td><span class="layer-pill tag-rt">real-time</span></td></tr>
+        <tr><td><code class="pkg-name">ktor-server-rate-limit</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">Built-in rate limiting plugin with named tiers and custom key resolvers</td><td><span class="layer-pill tag-routing">routing</span></td></tr>
+        <tr><td><code class="pkg-name">ktor-server-content-negotiation</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">Content negotiation + kotlinx.serialization JSON codec</td><td><span class="layer-pill tag-routing">routing</span></td></tr>
+        <tr><td><code class="pkg-name">ktor-server-request-validation</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">Declarative request body validation with typed validators per DTO</td><td><span class="layer-pill tag-routing">routing</span></td></tr>
+        <tr><td><code class="pkg-name">ktor-server-compression</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">GZIP/deflate response compression negotiated via Accept-Encoding</td><td><span class="layer-pill tag-routing">routing</span></td></tr>
+        <tr><td><code class="pkg-name">ktor-client-core</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">Ktor HTTP client for outbound API calls — coroutine-native, same plugin model</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">exposed-core + exposed-dao</code></td><td class="pkg-version">^0.55</td><td class="pkg-desc">JetBrains Exposed — type-safe SQL DSL & DAO. No reflection, compile-time SQL</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">exposed-kotlin-datetime</code></td><td class="pkg-version">^0.55</td><td class="pkg-desc">kotlinx.datetime column types for Exposed — avoid java.util.Date entirely</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">HikariCP</code></td><td class="pkg-version">^6.0</td><td class="pkg-desc">Best-in-class JDBC connection pool — used by Exposed DatabaseFactory</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">postgresql</code></td><td class="pkg-version">^42.7</td><td class="pkg-desc">PostgreSQL JDBC driver</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">flyway-core</code></td><td class="pkg-version">^10.0</td><td class="pkg-desc">Versioned database schema migrations — run at startup before server boot</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">lettuce-core</code></td><td class="pkg-version">^6.4</td><td class="pkg-desc">Async/reactive Redis client with coroutine bridges — Jedis is deprecated</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">koin-ktor</code></td><td class="pkg-version">^4.0</td><td class="pkg-desc">Koin DI integration for Ktor — zero reflection, Kotlin DSL modules</td><td><span class="layer-pill tag-di">di</span></td></tr>
+        <tr><td><code class="pkg-name">koin-logger-slf4j</code></td><td class="pkg-version">^4.0</td><td class="pkg-desc">SLF4J bridge for Koin diagnostic output</td><td><span class="layer-pill tag-di">di</span></td></tr>
+        <tr><td><code class="pkg-name">kotlinx-serialization-json</code></td><td class="pkg-version">^1.7</td><td class="pkg-desc">Official Kotlin JSON serialization — sealed class discriminators, camelCase, strict mode</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">kotlinx-datetime</code></td><td class="pkg-version">^0.6</td><td class="pkg-desc">Multiplatform datetime — Instant, LocalDateTime. Zero java.util.Date in domain</td><td><span class="layer-pill tag-data">data</span></td></tr>
+        <tr><td><code class="pkg-name">java-jwt</code></td><td class="pkg-version">^4.4</td><td class="pkg-desc">Auth0 java-jwt — sign & verify JWTs. Used by JwtService under Ktor's auth plugin</td><td><span class="layer-pill tag-security">security</span></td></tr>
+        <tr><td><code class="pkg-name">bcprov-jdk18on</code></td><td class="pkg-version">^1.79</td><td class="pkg-desc">Bouncy Castle — Argon2id password hashing + AES-GCM beyond JDK limits</td><td><span class="layer-pill tag-security">security</span></td></tr>
+        <tr><td><code class="pkg-name">logback-classic</code></td><td class="pkg-version">^1.5</td><td class="pkg-desc">Structured JSON logging in production, colored console in dev. SLF4J backend</td><td><span class="layer-pill tag-infra">infra</span></td></tr>
+        <tr><td><code class="pkg-name">kotlin-test + mockk</code></td><td class="pkg-version">latest</td><td class="pkg-desc">MockK for coroutine-aware mocking. testApplication { } for integration tests with real Ktor pipeline</td><td><span class="layer-pill tag-dev">dev</span></td></tr>
+        <tr><td><code class="pkg-name">ktor-server-test-host</code></td><td class="pkg-version">^3.0</td><td class="pkg-desc">In-memory test server — full plugin stack, real routing, no port binding needed</td><td><span class="layer-pill tag-dev">dev</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- GRADLE snippet -->
+  <div class="code-block reveal" style="margin-top:40px">
+    <div class="code-header">
+      <span class="code-lang">Kotlin DSL</span>
+      <span class="code-file">build.gradle.kts</span>
+      <button class="code-copy" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><code><span class="kw">val</span> ktor_version = <span class="st">"3.0.3"</span>
+<span class="kw">val</span> exposed_version = <span class="st">"0.55.0"</span>
+<span class="kw">val</span> koin_version = <span class="st">"4.0.0"</span>
+
+dependencies {
+    <span class="cm">// Ktor server</span>
+    implementation(<span class="st">"io.ktor:ktor-server-core:$ktor_version"</span>)
+    implementation(<span class="st">"io.ktor:ktor-server-netty:$ktor_version"</span>)
+    implementation(<span class="st">"io.ktor:ktor-server-auth-jwt:$ktor_version"</span>)
+    implementation(<span class="st">"io.ktor:ktor-server-websockets:$ktor_version"</span>)
+    implementation(<span class="st">"io.ktor:ktor-server-rate-limit:$ktor_version"</span>)
+    implementation(<span class="st">"io.ktor:ktor-server-content-negotiation:$ktor_version"</span>)
+    implementation(<span class="st">"io.ktor:ktor-server-request-validation:$ktor_version"</span>)
+    implementation(<span class="st">"io.ktor:ktor-server-compression:$ktor_version"</span>)
+    implementation(<span class="st">"io.ktor:ktor-serialization-kotlinx-json:$ktor_version"</span>)
+    implementation(<span class="st">"io.ktor:ktor-client-core:$ktor_version"</span>)
+    implementation(<span class="st">"io.ktor:ktor-client-cio:$ktor_version"</span>)
+
+    <span class="cm">// Exposed ORM + DB</span>
+    implementation(<span class="st">"org.jetbrains.exposed:exposed-core:$exposed_version"</span>)
+    implementation(<span class="st">"org.jetbrains.exposed:exposed-dao:$exposed_version"</span>)
+    implementation(<span class="st">"org.jetbrains.exposed:exposed-jdbc:$exposed_version"</span>)
+    implementation(<span class="st">"org.jetbrains.exposed:exposed-kotlin-datetime:$exposed_version"</span>)
+    implementation(<span class="st">"com.zaxxer:HikariCP:6.0.0"</span>)
+    implementation(<span class="st">"org.postgresql:postgresql:42.7.4"</span>)
+    implementation(<span class="st">"org.flywaydb:flyway-core:10.15.0"</span>)
+
+    <span class="cm">// Cache</span>
+    implementation(<span class="st">"io.lettuce:lettuce-core:6.4.0.RELEASE"</span>)
+
+    <span class="cm">// DI</span>
+    implementation(<span class="st">"io.insert-koin:koin-ktor:$koin_version"</span>)
+    implementation(<span class="st">"io.insert-koin:koin-logger-slf4j:$koin_version"</span>)
+
+    <span class="cm">// Security</span>
+    implementation(<span class="st">"com.auth0:java-jwt:4.4.0"</span>)
+    implementation(<span class="st">"org.bouncycastle:bcprov-jdk18on:1.79"</span>)
+
+    <span class="cm">// Serialization + datetime</span>
+    implementation(<span class="st">"org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3"</span>)
+    implementation(<span class="st">"org.jetbrains.kotlinx:kotlinx-datetime:0.6.1"</span>)
+
+    <span class="cm">// Logging</span>
+    implementation(<span class="st">"ch.qos.logback:logback-classic:1.5.8"</span>)
+
+    <span class="cm">// Test</span>
+    testImplementation(<span class="st">"io.ktor:ktor-server-test-host:$ktor_version"</span>)
+    testImplementation(<span class="st">"io.mockk:mockk:1.13.12"</span>)
+    testImplementation(kotlin(<span class="st">"test"</span>))
+}</code></pre>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="footer-title">Build backends that <span class="grad-k">endure.</span></div>
+  <p class="footer-sub">Architecture is the set of decisions that are hard to change later — make them consciously, once, well.</p>
+  <p class="footer-copy">Ktor + Kotlin Backend Architecture Field Guide &mdash; 2025</p>
+</footer>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Scroll reveal
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }
+  });
+}, { threshold: 0.07 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Nav active state
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+const navObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.style.color = '');
+      const link = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+      if (link) link.style.color = 'var(--k1)';
+    }
+  });
+}, { threshold: 0.35 });
+sections.forEach(s => navObserver.observe(s));
+
+// Copy code
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.style.color = 'var(--k4)';
+    btn.style.borderColor = 'var(--k4)';
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2000);
+  });
+}
+
+// Stagger arch layer reveals
+const archLayers = document.querySelectorAll('.arch-layer');
+archLayers.forEach((el, i) => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(20px)';
+  el.style.transition = `opacity .5s ${i * 0.12}s, transform .5s ${i * 0.12}s`;
+  setTimeout(() => {
+    el.style.opacity = '1';
+    el.style.transform = 'none';
+  }, 600 + i * 120);
+});
+</script>
+</body>
+</html>
